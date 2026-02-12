@@ -1,0 +1,49 @@
+name: Validate PR Branch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - master
+
+jobs:
+  validate-branch:
+    name: Validate PR Source Branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "🔍 Validating PR source branch..."
+          echo "Source branch: $HEAD_REF"
+          echo "Target branch: ${{ github.base_ref }}"
+
+          # Check if source branch matches allowed patterns
+          if [[ "$HEAD_REF" =~ ^(develop|feature/.+)$ ]]; then
+            echo "✅ Valid source branch: $HEAD_REF"
+            echo "PR is from develop or feature/* branch - APPROVED"
+          else
+            echo "❌ Invalid source branch: $HEAD_REF"
+            echo ""
+            echo "================================"
+            echo "🚨 BRANCH POLICY VIOLATION 🚨"
+            echo "================================"
+            echo ""
+            echo "PRs to 'master' must come from:"
+            echo "  ✓ develop branch"
+            echo "  ✓ feature/* branches"
+            echo ""
+            echo "Your branch: $HEAD_REF"
+            echo ""
+            echo "Please create your PR from one of the allowed branches."
+            exit 1
+          fi
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ Branch Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Source branch **${{ github.head_ref }}** is allowed to merge into **master**" >> $GITHUB_STEP_SUMMARY
