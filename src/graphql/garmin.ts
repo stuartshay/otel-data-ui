@@ -72,6 +72,11 @@ export const GARMIN_ACTIVITY_QUERY = gql`
       total_distance
       avg_pace
       device_manufacturer
+      avg_temperature_c
+      min_temperature_c
+      max_temperature_c
+      total_elapsed_time
+      total_timer_time
       created_at
       uploaded_at
       track_point_count
