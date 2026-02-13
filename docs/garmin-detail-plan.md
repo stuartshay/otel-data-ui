@@ -83,7 +83,7 @@ total_elapsed_time, total_timer_time) for the stats panel.
    (Training Effect, VO2 Max, etc.).
 
 8. Rewrite `src/pages/GarminDetailPage.tsx` — Compose all 5 components.
-   Fetch activity detail + track points (limit: 5000). Pass data down
+   Fetch activity detail + track points (limit: 10000). Pass data down
    as props. Loading/error states. Layout: Header → StatsBar → Map →
    Charts → StatsPanel (vertical stack).
 
