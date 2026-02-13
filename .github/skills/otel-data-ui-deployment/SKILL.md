@@ -60,44 +60,44 @@ This means **version and config updates** require changes to the ConfigMap
 
 ### Runtime Config Variables
 
-| Variable                 | Source    | Default                                    |
-| ------------------------ | --------- | ------------------------------------------ |
-| `VITE_GRAPHQL_URL`       | ConfigMap | `https://gateway.lab.informationcart.com`  |
-| `VITE_COGNITO_DOMAIN`    | Hardcoded | `homelab-auth.auth.us-east-1...`           |
-| `VITE_COGNITO_CLIENT_ID` | Hardcoded | `5j475mtdcm4qevh7q115qf1sfj`              |
-| `VITE_COGNITO_REDIRECT_URI` | ConfigMap | `http://localhost:5173/callback`        |
-| `VITE_COGNITO_ISSUER`    | Hardcoded | `https://cognito-idp.us-east-1...`         |
-| `VITE_APP_VERSION`       | ConfigMap | `dev`                                      |
-| `VITE_APP_NAME`          | Hardcoded | `otel-data-ui`                             |
+| Variable                    | Source    | Default                                   |
+| --------------------------- | --------- | ----------------------------------------- |
+| `VITE_GRAPHQL_URL`          | ConfigMap | `https://gateway.lab.informationcart.com` |
+| `VITE_COGNITO_DOMAIN`       | Hardcoded | `homelab-auth.auth.us-east-1...`          |
+| `VITE_COGNITO_CLIENT_ID`    | Hardcoded | `5j475mtdcm4qevh7q115qf1sfj`              |
+| `VITE_COGNITO_REDIRECT_URI` | ConfigMap | `http://localhost:5173/callback`          |
+| `VITE_COGNITO_ISSUER`       | Hardcoded | `https://cognito-idp.us-east-1...`        |
+| `VITE_APP_VERSION`          | ConfigMap | `dev`                                     |
+| `VITE_APP_NAME`             | Hardcoded | `otel-data-ui`                            |
 
 ## Versioning Scheme
 
-| Component    | Format                   | Example          |
-| ------------ | ------------------------ | ---------------- |
-| VERSION file | `major.minor`            | `1.0`            |
-| Docker tag   | `major.minor.run_number` | `1.0.7`          |
-| SHA tag      | `sha-<7char>`            | `sha-a1b2c3d`    |
-| Branch build | `major.minor.run-branch` | `1.0.8-develop`  |
+| Component    | Format                   | Example         |
+| ------------ | ------------------------ | --------------- |
+| VERSION file | `major.minor`            | `1.0`           |
+| Docker tag   | `major.minor.run_number` | `1.0.7`         |
+| SHA tag      | `sha-<7char>`            | `sha-a1b2c3d`   |
+| Branch build | `major.minor.run-branch` | `1.0.8-develop` |
 
 The `run_number` is the GitHub Actions workflow run number, auto-incremented
 per workflow. Master pushes produce `VERSION.run_number` tags.
 
 ## Repository References
 
-| Repo                       | Purpose            | Key Path                                          |
-| -------------------------- | ------------------ | ------------------------------------------------- |
-| `stuartshay/otel-data-ui`  | Frontend source    | `src/`, `VERSION`, `.github/workflows/docker.yml` |
-| `stuartshay/k8s-gitops`    | K8s manifests      | `apps/base/otel-data-ui/`                         |
-| Docker Hub                 | Container registry | `stuartshay/otel-data-ui`                         |
+| Repo                      | Purpose            | Key Path                                          |
+| ------------------------- | ------------------ | ------------------------------------------------- |
+| `stuartshay/otel-data-ui` | Frontend source    | `src/`, `VERSION`, `.github/workflows/docker.yml` |
+| `stuartshay/k8s-gitops`   | K8s manifests      | `apps/base/otel-data-ui/`                         |
+| Docker Hub                | Container registry | `stuartshay/otel-data-ui`                         |
 
 ## Upstream & Downstream Dependencies
 
 ### Upstream (consumed by this service)
 
-| Dependency                       | Type        | Impact                                               |
-| -------------------------------- | ----------- | ---------------------------------------------------- |
-| `stuartshay/otel-data-gateway`   | GraphQL API | All data queries via Apollo Client                   |
-| AWS Cognito                      | Auth        | OAuth2 PKCE login flow, token management             |
+| Dependency                     | Type        | Impact                                   |
+| ------------------------------ | ----------- | ---------------------------------------- |
+| `stuartshay/otel-data-gateway` | GraphQL API | All data queries via Apollo Client       |
+| AWS Cognito                    | Auth        | OAuth2 PKCE login flow, token management |
 
 ### Downstream (consumes this service)
 
@@ -350,21 +350,21 @@ like other services. Do not pipe through `python3 -m json.tool` or `jq`.
 | ------------------- | ------------------------------------------------------- | -------------- |
 | Docker image exists | `docker manifest inspect stuartshay/otel-data-ui:<ver>` | JSON manifest  |
 | Multi-arch          | Check manifest platforms                                | amd64 + arm64  |
-| SHA tag matches     | Compare digests of version and SHA tags                  | Same digest    |
+| SHA tag matches     | Compare digests of version and SHA tags                 | Same digest    |
 | Latest tag updated  | `docker manifest inspect ...latest`                     | Updated digest |
 
 ### Post-Deploy Checklist
 
-| Check           | Command                                          | Expected                          |
-| --------------- | ------------------------------------------------ | --------------------------------- |
-| Pod running     | `kubectl get pods -n otel-data-ui`               | 1/1 Running                       |
-| Correct image   | `kubectl get deploy ... -o jsonpath='{..image}'` | New version                       |
-| Health endpoint | `curl .../health`                                | `healthy` (plain text)            |
-| config.js       | `kubectl exec ... -- cat .../config.js`          | `APP_VERSION: "<ver>"`            |
-| ConfigMap       | `kubectl get cm ... -o jsonpath='{..VERSION}'`   | New version                       |
-| HTML loads      | `curl .../`                                      | `<!DOCTYPE html>`                 |
-| No restarts     | `kubectl get pods`                               | RESTARTS = 0                      |
-| Argo CD synced  | `argocd app get apps --core`                     | Synced, Healthy                   |
+| Check           | Command                                          | Expected               |
+| --------------- | ------------------------------------------------ | ---------------------- |
+| Pod running     | `kubectl get pods -n otel-data-ui`               | 1/1 Running            |
+| Correct image   | `kubectl get deploy ... -o jsonpath='{..image}'` | New version            |
+| Health endpoint | `curl .../health`                                | `healthy` (plain text) |
+| config.js       | `kubectl exec ... -- cat .../config.js`          | `APP_VERSION: "<ver>"` |
+| ConfigMap       | `kubectl get cm ... -o jsonpath='{..VERSION}'`   | New version            |
+| HTML loads      | `curl .../`                                      | `<!DOCTYPE html>`      |
+| No restarts     | `kubectl get pods`                               | RESTARTS = 0           |
+| Argo CD synced  | `argocd app get apps --core`                     | Synced, Healthy        |
 
 ## Rollback Procedure
 
@@ -564,15 +564,15 @@ git push origin develop --force-with-lease
 
 ## Kubernetes Resources
 
-| Resource       | Namespace    | Details                               |
-| -------------- | ------------ | ------------------------------------- |
-| Deployment     | otel-data-ui | 1 replica, RollingUpdate, non-root    |
-| Service        | otel-data-ui | ClusterIP :80                         |
-| Ingress        | otel-data-ui | data-ui.lab.informationcart.com       |
-| ConfigMap      | otel-data-ui | otel-data-ui-config                   |
-| SealedSecret   | otel-data-ui | dockerhub-registry                    |
-| TLS Secret     | otel-data-ui | otel-data-ui-tls (cert-mgr)           |
-| ServiceAccount | otel-data-ui | otel-data-ui                          |
+| Resource       | Namespace    | Details                            |
+| -------------- | ------------ | ---------------------------------- |
+| Deployment     | otel-data-ui | 1 replica, RollingUpdate, non-root |
+| Service        | otel-data-ui | ClusterIP :80                      |
+| Ingress        | otel-data-ui | data-ui.lab.informationcart.com    |
+| ConfigMap      | otel-data-ui | otel-data-ui-config                |
+| SealedSecret   | otel-data-ui | dockerhub-registry                 |
+| TLS Secret     | otel-data-ui | otel-data-ui-tls (cert-mgr)        |
+| ServiceAccount | otel-data-ui | otel-data-ui                       |
 
 ### ConfigMap Values
 
@@ -612,6 +612,6 @@ docker manifest inspect stuartshay/otel-data-ui:<tag> 2>&1 | head -3
 
 ## Version History
 
-| Version | Date       | Changes                                                   |
-| ------- | ---------- | --------------------------------------------------------- |
+| Version | Date       | Changes                                                    |
+| ------- | ---------- | ---------------------------------------------------------- |
 | 1.0.7   | 2026-02-13 | Docker workflow alignment, version scheme, package updates |

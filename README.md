@@ -5,16 +5,16 @@ GraphQL BFF for location and activity data visualization.
 
 ## Stack
 
-| Component | Version |
-|-----------|---------|
-| React | 19.x |
-| Vite | 7.x |
-| TypeScript | 5.9 |
-| Apollo Client | 4.x |
-| Tailwind CSS | 4.x |
-| shadcn/ui | Manual components |
-| Leaflet | 1.9 |
-| Recharts | 3.x |
+| Component     | Version           |
+| ------------- | ----------------- |
+| React         | 19.x              |
+| Vite          | 7.x               |
+| TypeScript    | 5.9               |
+| Apollo Client | 4.x               |
+| Tailwind CSS  | 4.x               |
+| shadcn/ui     | Manual components |
+| Leaflet       | 1.9               |
+| Recharts      | 3.x               |
 
 ## Pages
 
@@ -71,12 +71,12 @@ docker run -p 8080:80 -e VITE_GRAPHQL_URL=https://gateway.lab.informationcart.co
 
 ## Infrastructure
 
-| Property | Value |
-|----------|-------|
-| URL | <https://data-ui.lab.informationcart.com> |
-| Gateway | <https://gateway.lab.informationcart.com> |
-| K8s Namespace | otel-data-ui |
-| Auth | AWS Cognito (PKCE) |
+| Property      | Value                                     |
+| ------------- | ----------------------------------------- |
+| URL           | <https://data-ui.lab.informationcart.com> |
+| Gateway       | <https://gateway.lab.informationcart.com> |
+| K8s Namespace | otel-data-ui                              |
+| Auth          | AWS Cognito (PKCE)                        |
 
 ## Related Repositories
 

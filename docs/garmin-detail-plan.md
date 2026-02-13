@@ -16,7 +16,7 @@ Imperial units (mi, mph, ft, °F) match the Garmin Connect screenshots. Backend
 exposes 5 additional DB columns (avg/min/max_temperature_c,
 total_elapsed_time, total_timer_time) for the stats panel.
 
-**Steps**
+### Steps
 
 ### Phase 1 — Backend (otel-data-api) `develop` branch
 
@@ -34,7 +34,7 @@ total_elapsed_time, total_timer_time) for the stats panel.
 
 ### Phase 2 — Gateway (otel-data-gateway) `develop` branch
 
-4. Add 5 new fields to `GarminActivity` GraphQL type in
+1. Add 5 new fields to `GarminActivity` GraphQL type in
    `src/schema/typeDefs.ts`: `avg_temperature_c: Int`,
    `min_temperature_c: Int`, `max_temperature_c: Int`,
    `total_elapsed_time: Float`, `total_timer_time: Float`. No resolver
@@ -42,66 +42,66 @@ total_elapsed_time, total_timer_time) for the stats panel.
 
 ### Phase 3 — Frontend (otel-data-ui) `develop` branch
 
-5. Create `src/lib/units.ts` — Unit conversion helpers:
+1. Create `src/lib/units.ts` — Unit conversion helpers:
    `kmToMi()`, `kmhToMph()`, `metersToFeet()`, `celsiusToFahrenheit()`,
    `formatDuration()` (moved from page), `formatPace()`. These are pure
    functions, all stateless.
 
-6. Update `src/graphql/garmin.ts` — Add the 5 new fields to
+2. Update `src/graphql/garmin.ts` — Add the 5 new fields to
    `GARMIN_ACTIVITY_QUERY`. No changes to `GARMIN_TRACK_POINTS_QUERY`
    (already returns all needed fields).
 
-7. Create `src/components/garmin/ActivityHeader.tsx` — Sport icon
+3. Create `src/components/garmin/ActivityHeader.tsx` — Sport icon
    (lucide-react: Bike, Footprints, Dumbbell, etc.), activity date/time,
    device manufacturer badge, sub_sport badge, back button to `/garmin`.
 
-8. Create `src/components/garmin/ActivityStatsBar.tsx` — 4 large
+4. Create `src/components/garmin/ActivityStatsBar.tsx` — 4 large
    highlighted stat cards in a horizontal row: Distance (mi), Time
    (h:mm:ss), Avg Speed (mph), Elevation Gain (ft). Uses existing
    `Card` component with larger typography.
 
-9. Create `src/components/garmin/ActivityRouteMap.tsx` — Leaflet map
+5. Create `src/components/garmin/ActivityRouteMap.tsx` — Leaflet map
    using the raw `L.map()` + `useRef` pattern from `MapPage.tsx`.
    Renders track points as a `L.polyline` with speed-based color
    segments (blue→green→yellow→red gradient). Includes a speed color
    legend. Start/end markers. Auto-fits bounds. Height: ~400px.
 
-10. Create `src/components/garmin/ActivityCharts.tsx` — Recharts
-    `AreaChart` components for Elevation, Speed, Heart Rate, and
-    Temperature. X-axis is `distance_from_start_km` (converted to mi).
-    Includes a Time/Distance toggle button group. Downsamples to ~800
-    points for performance using nth-point sampling. Each chart is a
-    separate card with consistent styling.
+6. Create `src/components/garmin/ActivityCharts.tsx` — Recharts
+   `AreaChart` components for Elevation, Speed, Heart Rate, and
+   Temperature. X-axis is `distance_from_start_km` (converted to mi).
+   Includes a Time/Distance toggle button group. Downsamples to ~800
+   points for performance using nth-point sampling. Each chart is a
+   separate card with consistent styling.
 
-11. Create `src/components/garmin/ActivityStatsPanel.tsx` — Detailed
-    stats grid inspired by Garmin Connect's tabbed panels. Sections:
-    Distance (total distance mi, total distance km), Timing (elapsed
-    time, timer time, moving time), Elevation (ascent ft, descent ft),
-    Speed (avg mph, max mph, avg km/h, max km/h), Heart Rate (avg bpm,
-    max bpm), Cadence (avg rpm, max rpm), Temperature (avg/min/max °F),
-    Calories. Placeholder sections with "—" for unavailable metrics
-    (Training Effect, VO2 Max, etc.).
+7. Create `src/components/garmin/ActivityStatsPanel.tsx` — Detailed
+   stats grid inspired by Garmin Connect's tabbed panels. Sections:
+   Distance (total distance mi, total distance km), Timing (elapsed
+   time, timer time, moving time), Elevation (ascent ft, descent ft),
+   Speed (avg mph, max mph, avg km/h, max km/h), Heart Rate (avg bpm,
+   max bpm), Cadence (avg rpm, max rpm), Temperature (avg/min/max °F),
+   Calories. Placeholder sections with "—" for unavailable metrics
+   (Training Effect, VO2 Max, etc.).
 
-12. Rewrite `src/pages/GarminDetailPage.tsx` — Compose all 5 components.
-    Fetch activity detail + track points (limit: 5000). Pass data down
-    as props. Loading/error states. Layout: Header → StatsBar → Map →
-    Charts → StatsPanel (vertical stack).
+8. Rewrite `src/pages/GarminDetailPage.tsx` — Compose all 5 components.
+   Fetch activity detail + track points (limit: 10000). Pass data down
+   as props. Loading/error states. Layout: Header → StatsBar → Map →
+   Charts → StatsPanel (vertical stack).
 
 ### Phase 4 — Quality & Deploy
 
-13. Run `npm run lint:all` and `npm run type-check` in otel-data-ui.
-    Run `pre-commit run -a` in otel-data-api and otel-data-gateway.
+1. Run `npm run lint:all` and `npm run type-check` in otel-data-ui.
+   Run `pre-commit run -a` in otel-data-api and otel-data-gateway.
 
-14. Build Docker images and push to registries. Verify locally with
-    `npm run build` (otel-data-ui), `make dev` (otel-data-api),
-    `npm run build` (otel-data-gateway).
+2. Build Docker images and push to registries. Verify locally with
+   `npm run build` (otel-data-ui), `make dev` (otel-data-api),
+   `npm run build` (otel-data-gateway).
 
-15. Commit to `develop` branches, create PRs, merge to production
-    branches (master/main). Argo CD auto-syncs the k8s deployments.
+3. Commit to `develop` branches, create PRs, merge to production
+   branches (master/main). Argo CD auto-syncs the k8s deployments.
 
-16. Verify live at `https://data-ui.lab.informationcart.com/garmin/{id}`.
+4. Verify live at `https://data-ui.lab.informationcart.com/garmin/{id}`.
 
-**Verification**
+### Verification
 
 - `npm run build` passes with no errors (otel-data-ui)
 - `npm run lint:all` and `npm run type-check` clean (otel-data-ui)
@@ -112,7 +112,7 @@ total_elapsed_time, total_timer_time) for the stats panel.
 - Responsive layout works on mobile widths
 - Loading and error states display correctly
 
-**Decisions**
+### Decisions
 
 - Imperial units (mi/mph/ft/°F) to match Garmin Connect screenshots
 - Raw Leaflet (`L.map`) pattern, NOT react-leaflet components (matches MapPage.tsx)
@@ -123,23 +123,23 @@ total_elapsed_time, total_timer_time) for the stats panel.
 - 5 backend fields added for stats panel completeness (temperature summary, elapsed/timer time)
 - No new npm packages needed — all dependencies already installed
 
-**Files Modified (existing)**
+### Files Modified (existing)
 
-| File | Repo | Change |
-|------|------|--------|
-| `app/models/garmin.py` | otel-data-api | +5 fields |
-| `app/routers/garmin.py` | otel-data-api | SQL SELECT + limit bump |
-| `src/schema/typeDefs.ts` | otel-data-gateway | +5 GarminActivity fields |
-| `src/graphql/garmin.ts` | otel-data-ui | +5 fields in query |
-| `src/pages/GarminDetailPage.tsx` | otel-data-ui | Full rewrite |
+| File                             | Repo              | Change                   |
+| -------------------------------- | ----------------- | ------------------------ |
+| `app/models/garmin.py`           | otel-data-api     | +5 fields                |
+| `app/routers/garmin.py`          | otel-data-api     | SQL SELECT + limit bump  |
+| `src/schema/typeDefs.ts`         | otel-data-gateway | +5 GarminActivity fields |
+| `src/graphql/garmin.ts`          | otel-data-ui      | +5 fields in query       |
+| `src/pages/GarminDetailPage.tsx` | otel-data-ui      | Full rewrite             |
 
-**Files Created (new)**
+### Files Created (new)
 
-| File | Repo | Purpose |
-|------|------|---------|
-| `src/lib/units.ts` | otel-data-ui | Unit conversion helpers |
-| `src/components/garmin/ActivityHeader.tsx` | otel-data-ui | Sport + date header |
-| `src/components/garmin/ActivityStatsBar.tsx` | otel-data-ui | 4 key stat cards |
-| `src/components/garmin/ActivityRouteMap.tsx` | otel-data-ui | Leaflet route map |
-| `src/components/garmin/ActivityCharts.tsx` | otel-data-ui | Recharts elevation/speed/HR/temp |
-| `src/components/garmin/ActivityStatsPanel.tsx` | otel-data-ui | Detailed stats grid |
+| File                                           | Repo         | Purpose                          |
+| ---------------------------------------------- | ------------ | -------------------------------- |
+| `src/lib/units.ts`                             | otel-data-ui | Unit conversion helpers          |
+| `src/components/garmin/ActivityHeader.tsx`     | otel-data-ui | Sport + date header              |
+| `src/components/garmin/ActivityStatsBar.tsx`   | otel-data-ui | 4 key stat cards                 |
+| `src/components/garmin/ActivityRouteMap.tsx`   | otel-data-ui | Leaflet route map                |
+| `src/components/garmin/ActivityCharts.tsx`     | otel-data-ui | Recharts elevation/speed/HR/temp |
+| `src/components/garmin/ActivityStatsPanel.tsx` | otel-data-ui | Detailed stats grid              |
