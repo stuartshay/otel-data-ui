@@ -19,7 +19,7 @@ echo -e "${GREEN}otel-data-ui Setup${NC}"
 echo -e "${GREEN}=================================${NC}"
 echo ""
 
-REQUIRED_NODE_VERSION="24"
+REQUIRED_NODE_VERSION="22"
 
 # Step 1: Check git
 echo -e "${BLUE}Step 1: Checking git...${NC}"
