@@ -114,29 +114,35 @@ otel-data-gateway).
 Before merging any PR, verify:
 
 ```bash
-# 0. Always rebase develop onto master before committing/pushing
+# 0. Bootstrap local environment (first time or after dependency changes)
+cd /home/ubuntu/git/otel-data-ui
+./setup.sh
+# This installs deps, configures Husky pre-commit hooks (lint-staged),
+# and validates the build
+
+# 1. Always rebase develop onto master before committing/pushing
 cd /home/ubuntu/git/otel-data-ui
 git fetch origin master
 git rebase origin/master
 # Resolve any conflicts, then: git rebase --continue
 # If rebased, push with: git push origin develop --force-with-lease
 
-# 1. Install dependencies
+# 2. Install dependencies
 npm ci
 
-# 2. ESLint
+# 3. ESLint
 npm run lint
 
-# 3. TypeScript check
+# 4. TypeScript check
 npm run type-check
 
-# 4. Markdown lint (if available)
+# 5. Markdown lint (if available)
 npm run lint:md
 
-# 5. Build succeeds
+# 6. Build succeeds
 npm run build
 
-# 6. Local dev server starts
+# 7. Local dev server starts
 npm run dev
 # Visit http://localhost:5173/ in browser
 ```
@@ -163,7 +169,8 @@ gh pr merge <PR_NUMBER> --squash --repo stuartshay/otel-data-ui
 
 - Never commit directly to `master` — always use PRs
 - Use squash merge to maintain clean commit history
-- Branch protection requires 1 approving review
+- Branch protection requires all 4 CI status checks to pass
+- All PRs are reviewed manually before merge (no auto-approve)
 
 #### Post-Merge: Rebase develop onto master
 
@@ -264,6 +271,19 @@ gh pr create --base master --head develop \
 gh pr merge <PR_NUMBER> --squash --repo stuartshay/k8s-gitops
 ```
 
+#### Post-Merge: Rebase k8s-gitops develop onto master
+
+Same as otel-data-ui, squash merges cause branch divergence. Always rebase
+k8s-gitops develop after merging a PR to master:
+
+```bash
+cd /home/ubuntu/git/k8s-gitops
+git checkout develop
+git fetch origin master
+git rebase origin/master
+git push origin develop --force-with-lease
+```
+
 **Why the ConfigMap matters**: The `entrypoint.sh` reads `VITE_APP_VERSION`
 from the environment (sourced from ConfigMap) to generate `config.js`. If you
 only update the image tag without updating the ConfigMap, the app will display
@@ -276,7 +296,7 @@ After merging to k8s-gitops master:
 ```bash
 # Option A: Wait for auto-sync (up to 3 minutes)
 
-# Option B: Force sync via CLI
+# Option B: Force sync via argocd CLI
 kubectl config set-context --current --namespace=argocd
 
 # Hard refresh to detect new commit
@@ -289,6 +309,58 @@ argocd app sync apps --core --timeout 120
 argocd app terminate-op apps --core
 sleep 5
 argocd app sync apps --core --force --timeout 180
+```
+
+#### Alternative: kubectl CRD Inspection
+
+If the `argocd` CLI hangs or DNS doesn't resolve from your host, use kubectl
+to inspect the Argo CD Application CRD directly:
+
+```bash
+# Check sync status via Application CRD
+kubectl get application apps -n argocd \
+  -o jsonpath='{.status.sync.status}' && echo
+# Expected: Synced
+
+# Check health status
+kubectl get application apps -n argocd \
+  -o jsonpath='{.status.health.status}' && echo
+# Expected: Healthy
+
+# Full status summary
+kubectl get application apps -n argocd \
+  -o jsonpath='Sync: {.status.sync.status}, Health: {.status.health.status}, Revision: {.status.sync.revision}' && echo
+```
+
+#### Alternative: Argo CD REST API
+
+The Argo CD server is a ClusterIP service exposed via ingress at
+`argocd.lab.informationcart.com` (IP: 192.168.1.100). DNS may not resolve
+from the host, so use the IP with a Host header:
+
+```bash
+# 1. Authenticate
+ARGOCD_TOKEN=$(curl -sk \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"<password>"}' \
+  https://192.168.1.100/api/v1/session | python3 -c \
+  "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# 2. Check app status
+curl -sk \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Authorization: Bearer $ARGOCD_TOKEN" \
+  https://192.168.1.100/api/v1/applications/apps \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); \
+    print(f\"Sync: {d['status']['sync']['status']}, Health: {d['status']['health']['status']}\")"
+
+# 3. Trigger manual sync
+curl -sk -X POST \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Authorization: Bearer $ARGOCD_TOKEN" \
+  -H "Content-Type: application/json" \
+  https://192.168.1.100/api/v1/applications/apps/sync
 ```
 
 **Verify rollout**:
@@ -500,15 +572,21 @@ kubectl get configmap otel-data-ui-config -n otel-data-ui \
 
 The `master` branch on `stuartshay/otel-data-ui` enforces these protections:
 
-| Rule                             | Setting |
-| -------------------------------- | ------- |
-| Required status checks           | None    |
-| Required approving reviews       | 1       |
-| Dismiss stale reviews            | No      |
-| Required conversation resolution | Yes     |
-| Enforce admins                   | Yes     |
-| Allow force pushes               | No      |
-| Allow deletions                  | No      |
+| Rule                             | Setting                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| Required status checks           | ESLint and TypeScript Check, Build Check, Dockerfile Lint, Security Audit |
+| Strict status checks             | No                                                                        |
+| Required approving reviews       | 0 (see note below)                                                        |
+| Dismiss stale reviews            | No                                                                        |
+| Required conversation resolution | Yes                                                                       |
+| Enforce admins                   | Yes                                                                       |
+| Allow force pushes               | No                                                                        |
+| Allow deletions                  | No                                                                        |
+
+**Note on review policy**: The `auto-approve.yml` workflow was intentionally
+removed — all PRs are reviewed manually before merge. The
+`required_approving_review_count: 0` setting allows the repo owner to merge
+after self-review, since GitHub blocks self-approval.
 
 To inspect current settings:
 
@@ -614,4 +692,5 @@ docker manifest inspect stuartshay/otel-data-ui:<tag> 2>&1 | head -3
 
 | Version | Date       | Changes                                                    |
 | ------- | ---------- | ---------------------------------------------------------- |
+| 1.0.16  | 2026-02-13 | Markdown lint fixes, setup.sh, pre-commit hooks, Node 24   |
 | 1.0.7   | 2026-02-13 | Docker workflow alignment, version scheme, package updates |
