@@ -91,6 +91,7 @@ export const GARMIN_TRACK_POINTS_QUERY = gql`
     $offset: Int
     $sort: String
     $order: SortOrder
+    $simplify: Float
   ) {
     garminTrackPoints(
       activity_id: $activity_id
@@ -98,6 +99,7 @@ export const GARMIN_TRACK_POINTS_QUERY = gql`
       offset: $offset
       sort: $sort
       order: $order
+      simplify: $simplify
     ) {
       items {
         id
