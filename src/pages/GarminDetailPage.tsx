@@ -12,6 +12,9 @@ import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 
+/** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
+const SIMPLIFY_TOLERANCE = 0.00001
+
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const { data, loading, error, refetch } = useQuery<Record<string, any>>(
@@ -21,10 +24,24 @@ export function GarminDetailPage() {
       skip: !activityId,
     },
   )
-  const { data: trackData, loading: trackLoading } = useQuery<
+
+  // Simplified geometry for map rendering — drops collinear points
+  const { data: mapTrackData, loading: mapTrackLoading } = useQuery<
     Record<string, any>
   >(GARMIN_TRACK_POINTS_QUERY, {
-    variables: { activity_id: activityId, simplify: 0.00001 },
+    variables: {
+      activity_id: activityId,
+      simplify: SIMPLIFY_TOLERANCE,
+      limit: 5000,
+    },
+    skip: !activityId,
+  })
+
+  // Full-resolution points for accurate time-series charts (HR, speed, temp)
+  const { data: chartTrackData, loading: chartTrackLoading } = useQuery<
+    Record<string, any>
+  >(GARMIN_TRACK_POINTS_QUERY, {
+    variables: { activity_id: activityId, limit: 5000 },
     skip: !activityId,
   })
 
@@ -35,7 +52,9 @@ export function GarminDetailPage() {
   const a = data?.garminActivity
   if (!a) return <ErrorState message="Activity not found" />
 
-  const trackPoints = trackData?.garminTrackPoints?.items ?? []
+  const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
+  const chartTrackPoints = chartTrackData?.garminTrackPoints?.items ?? []
+  const trackLoading = mapTrackLoading || chartTrackLoading
 
   return (
     <div className="space-y-6">
@@ -55,11 +74,12 @@ export function GarminDetailPage() {
 
       {trackLoading && <LoadingState message="Loading track data..." />}
 
-      {trackPoints.length > 0 && (
-        <>
-          <ActivityRouteMap trackPoints={trackPoints} />
-          <ActivityCharts trackPoints={trackPoints} />
-        </>
+      {mapTrackPoints.length > 0 && (
+        <ActivityRouteMap trackPoints={mapTrackPoints} />
+      )}
+
+      {chartTrackPoints.length > 0 && (
+        <ActivityCharts trackPoints={chartTrackPoints} />
       )}
 
       <ActivityStatsPanel activity={a} />
