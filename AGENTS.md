@@ -23,13 +23,14 @@ All automation, assistants, and developers must follow
 
 ## Development Workflow
 
-1. Switch to develop: `git checkout develop && git pull`
-2. Make changes to components in `src/`
-3. Run `npm run lint:all`
-4. Run `npm run type-check`
-5. Test locally: `npm run dev`
-6. Commit and push to `develop` or `feature/*` branch
-7. Create PR to `master` when ready for production
+1. Switch to develop: `git checkout develop && git pull origin develop`
+2. **Rebase from master**: `git fetch origin master && git rebase origin/master`
+3. Make changes to components in `src/`
+4. Run `npm run lint:all`
+5. Run `npm run type-check`
+6. Test locally: `npm run dev`
+7. Commit and push to `develop` or `feature/*` branch
+8. Create PR to `master` when ready for production
 
 ## Project Structure
 
