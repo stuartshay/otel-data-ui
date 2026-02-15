@@ -127,8 +127,9 @@ review before proceeding. The agent never merges PRs autonomously.
 6. Validate Argo CD sync and live deployment
 7. If Copilot review comments exist on any PR:
    - Analyze each comment for validity
-   - Fix valid suggestions, dismiss invalid ones with rationale
-   - Push fixes and reply to threads
+   - Implement fixes for valid suggestions
+   - For invalid suggestions, reply with rationale and resolve the conversation
+   - Push fixes and ensure all relevant threads are replied-to and resolved
    ⏸️ PAUSE — Present updated PR for re-review if changes were made
 ```
 
@@ -166,8 +167,12 @@ not update `configmap.yaml` (`VITE_APP_VERSION`). Verify the auto-PR diff
 includes the ConfigMap update — if not, the agent must add it manually before
 presenting the PR for review.
 
-The agent should check for this auto-created PR rather than manually creating
-one. Use: `gh pr list --repo stuartshay/k8s-gitops --state open`
+The agent should first check for this auto-created PR rather than immediately
+creating one manually. Use: `gh pr list --repo stuartshay/k8s-gitops --state open`.
+If no appropriate auto-PR exists (for example, the dispatch workflow failed or
+did not run), then follow the manual fallback procedure described in
+**Step 4: Update k8s-gitops Manifests** below (including running
+`update-version.sh`, pushing to the appropriate branch, and opening a PR).
 
 ## Deployment Procedure
 
@@ -176,11 +181,11 @@ one. Use: `gh pr list --repo stuartshay/k8s-gitops --state open`
 Before merging any PR, verify:
 
 ```bash
-# 0. Bootstrap local environment (first time or after dependency changes)
+# 0. Bootstrap local environment (first time only, or after dependency changes)
+# setup.sh uses npm install (not npm ci) and also runs type-check + build.
+# Skip this step if your environment is already set up.
 cd /home/ubuntu/git/otel-data-ui
 ./setup.sh
-# This installs deps, configures Husky pre-commit hooks (lint-staged),
-# and validates the build
 
 # 1. Always rebase develop onto master before committing/pushing
 cd /home/ubuntu/git/otel-data-ui
@@ -402,10 +407,12 @@ from the host, so use the IP with a Host header:
 
 ```bash
 # 1. Authenticate
+# Note: -k disables TLS verification (intended for local/trusted use only)
+read -rsp 'Argo CD admin password: ' ARGOCD_PASSWORD && echo
 ARGOCD_TOKEN=$(curl -sk \
   -H "Host: argocd.lab.informationcart.com" \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"<password>"}' \
+  -d "{\"username\":\"admin\",\"password\":\"$ARGOCD_PASSWORD\"}" \
   https://192.168.1.100/api/v1/session | python3 -c \
   "import sys,json; print(json.load(sys.stdin)['token'])")
 
