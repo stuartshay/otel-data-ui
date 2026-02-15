@@ -160,7 +160,6 @@ When the Docker build completes, the CI workflow dispatches a
 2. Runs `update-version.sh <version>` to update VERSION, deployment.yaml
 3. Creates a PR to `master` with title "Update otel-data-ui to v\<version\>"
 4. CI checks and Copilot review run automatically
-5. Auto-approve workflow provides the required review
 
 **Important for otel-data-ui**: The auto-PR updates `deployment.yaml` but may
 not update `configmap.yaml` (`VITE_APP_VERSION`). Verify the auto-PR diff
