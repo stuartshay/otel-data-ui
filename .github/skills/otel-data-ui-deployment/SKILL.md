@@ -107,6 +107,69 @@ None — this is the end-user-facing frontend.
 `src/graphql/` match the gateway schema (`src/schema/typeDefs.ts` in
 otel-data-gateway).
 
+## Agent-Assisted Deployment Flow
+
+When an agent executes a deployment, it **MUST pause at every PR** for user
+review before proceeding. The agent never merges PRs autonomously.
+
+### Flow Overview
+
+```text
+1. Pre-deployment checks (rebase, lint, type-check, build)
+2. Commit & push to develop
+3. Create PR (develop → master)
+   ⏸️ PAUSE — Present PR link, CI status, and diff summary to user
+   → User reviews and merges PR
+4. Wait for Docker build CI to complete → determine version tag
+5. k8s-gitops auto-creates version update PR via repository_dispatch
+   ⏸️ PAUSE — Present auto-created PR link, CI status, and diff to user
+   → User reviews and merges k8s-gitops PR
+6. Validate Argo CD sync and live deployment
+7. If Copilot review comments exist on any PR:
+   - Analyze each comment for validity
+   - Fix valid suggestions, dismiss invalid ones with rationale
+   - Push fixes and reply to threads
+   ⏸️ PAUSE — Present updated PR for re-review if changes were made
+```
+
+### PAUSE Point Requirements
+
+At each ⏸️ PAUSE, the agent must present:
+
+| Item            | Details                                        |
+| --------------- | ---------------------------------------------- |
+| PR link         | Full GitHub URL                                |
+| Branch          | Source → target (e.g., `develop` → `master`)   |
+| Changes summary | Files changed and brief description            |
+| CI status       | All check names with pass/fail/pending         |
+| Review status   | Approved / pending / changes requested         |
+| Mergeable       | Yes/No with merge state                        |
+| Blocking items  | Any unresolved conversations or failing checks |
+
+The agent **waits for the user to confirm the merge** before proceeding to
+the next step. Never assume a PR is merged — verify via API after user
+confirmation.
+
+### k8s-gitops Auto-PR Mechanism
+
+When the Docker build completes, the CI workflow dispatches a
+`repository_dispatch` event (type: `otel-data-ui-release`) to
+`stuartshay/k8s-gitops`. This triggers an automated workflow that:
+
+1. Creates a branch `update-otel-data-ui-<version>`
+2. Runs `update-version.sh <version>` to update VERSION, deployment.yaml
+3. Creates a PR to `master` with title "Update otel-data-ui to v\<version\>"
+4. CI checks and Copilot review run automatically
+5. Auto-approve workflow provides the required review
+
+**Important for otel-data-ui**: The auto-PR updates `deployment.yaml` but may
+not update `configmap.yaml` (`VITE_APP_VERSION`). Verify the auto-PR diff
+includes the ConfigMap update — if not, the agent must add it manually before
+presenting the PR for review.
+
+The agent should check for this auto-created PR rather than manually creating
+one. Use: `gh pr list --repo stuartshay/k8s-gitops --state open`
+
 ## Deployment Procedure
 
 ### Step 1: Pre-Deployment Checks
