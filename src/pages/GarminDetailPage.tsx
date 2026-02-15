@@ -41,7 +41,7 @@ export function GarminDetailPage() {
   const { data: chartTrackData, loading: chartTrackLoading } = useQuery<
     Record<string, any>
   >(GARMIN_TRACK_POINTS_QUERY, {
-    variables: { activity_id: activityId, limit: 5000 },
+    variables: { activity_id: activityId, simplify: 0.00001 },
     skip: !activityId,
   })
 
