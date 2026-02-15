@@ -107,6 +107,73 @@ None — this is the end-user-facing frontend.
 `src/graphql/` match the gateway schema (`src/schema/typeDefs.ts` in
 otel-data-gateway).
 
+## Agent-Assisted Deployment Flow
+
+When an agent executes a deployment, it **MUST pause at every PR** for user
+review before proceeding. The agent never merges PRs autonomously.
+
+### Flow Overview
+
+```text
+1. Pre-deployment checks (rebase, lint, type-check, build)
+2. Commit & push to develop
+3. Create PR (develop → master)
+   ⏸️ PAUSE — Present PR link, CI status, and diff summary to user
+   → User reviews and merges PR
+4. Wait for Docker build CI to complete → determine version tag
+5. k8s-gitops auto-creates version update PR via repository_dispatch
+   ⏸️ PAUSE — Present auto-created PR link, CI status, and diff to user
+   → User reviews and merges k8s-gitops PR
+6. Validate Argo CD sync and live deployment
+7. If Copilot review comments exist on any PR:
+   - Analyze each comment for validity
+   - Implement fixes for valid suggestions
+   - For invalid suggestions, reply with rationale and resolve the conversation
+   - Push fixes and ensure all relevant threads are replied-to and resolved
+   ⏸️ PAUSE — Present updated PR for re-review if changes were made
+```
+
+### PAUSE Point Requirements
+
+At each ⏸️ PAUSE, the agent must present:
+
+| Item            | Details                                        |
+| --------------- | ---------------------------------------------- |
+| PR link         | Full GitHub URL                                |
+| Branch          | Source → target (e.g., `develop` → `master`)   |
+| Changes summary | Files changed and brief description            |
+| CI status       | All check names with pass/fail/pending         |
+| Review status   | Approved / pending / changes requested         |
+| Mergeable       | Yes/No with merge state                        |
+| Blocking items  | Any unresolved conversations or failing checks |
+
+The agent **waits for the user to confirm the merge** before proceeding to
+the next step. Never assume a PR is merged — verify via API after user
+confirmation.
+
+### k8s-gitops Auto-PR Mechanism
+
+When the Docker build completes, the CI workflow dispatches a
+`repository_dispatch` event (type: `otel-data-ui-release`) to
+`stuartshay/k8s-gitops`. This triggers an automated workflow that:
+
+1. Creates a branch `update-otel-data-ui-<version>`
+2. Runs `update-version.sh <version>` to update VERSION, deployment.yaml
+3. Creates a PR to `master` with title "Update otel-data-ui to v\<version\>"
+4. CI checks and Copilot review run automatically
+
+**Important for otel-data-ui**: The auto-PR updates `deployment.yaml` but may
+not update `configmap.yaml` (`VITE_APP_VERSION`). Verify the auto-PR diff
+includes the ConfigMap update — if not, the agent must add it manually before
+presenting the PR for review.
+
+The agent should first check for this auto-created PR rather than immediately
+creating one manually. Use: `gh pr list --repo stuartshay/k8s-gitops --state open`.
+If no appropriate auto-PR exists (for example, the dispatch workflow failed or
+did not run), then follow the manual fallback procedure described in
+**Step 4: Update k8s-gitops Manifests** below (including running
+`update-version.sh`, pushing to the appropriate branch, and opening a PR).
+
 ## Deployment Procedure
 
 ### Step 1: Pre-Deployment Checks
@@ -114,29 +181,35 @@ otel-data-gateway).
 Before merging any PR, verify:
 
 ```bash
-# 0. Always rebase develop onto master before committing/pushing
+# 0. Bootstrap local environment (first time only, or after dependency changes)
+# setup.sh uses npm install (not npm ci) and also runs type-check + build.
+# Skip this step if your environment is already set up.
+cd /home/ubuntu/git/otel-data-ui
+./setup.sh
+
+# 1. Always rebase develop onto master before committing/pushing
 cd /home/ubuntu/git/otel-data-ui
 git fetch origin master
 git rebase origin/master
 # Resolve any conflicts, then: git rebase --continue
 # If rebased, push with: git push origin develop --force-with-lease
 
-# 1. Install dependencies
+# 2. Install dependencies
 npm ci
 
-# 2. ESLint
+# 3. ESLint
 npm run lint
 
-# 3. TypeScript check
+# 4. TypeScript check
 npm run type-check
 
-# 4. Markdown lint (if available)
+# 5. Markdown lint (if available)
 npm run lint:md
 
-# 5. Build succeeds
+# 6. Build succeeds
 npm run build
 
-# 6. Local dev server starts
+# 7. Local dev server starts
 npm run dev
 # Visit http://localhost:5173/ in browser
 ```
@@ -163,7 +236,8 @@ gh pr merge <PR_NUMBER> --squash --repo stuartshay/otel-data-ui
 
 - Never commit directly to `master` — always use PRs
 - Use squash merge to maintain clean commit history
-- Branch protection requires 1 approving review
+- Branch protection requires all 4 CI status checks to pass
+- All PRs are reviewed manually before merge (no auto-approve)
 
 #### Post-Merge: Rebase develop onto master
 
@@ -264,6 +338,19 @@ gh pr create --base master --head develop \
 gh pr merge <PR_NUMBER> --squash --repo stuartshay/k8s-gitops
 ```
 
+#### Post-Merge: Rebase k8s-gitops develop onto master
+
+Same as otel-data-ui, squash merges cause branch divergence. Always rebase
+k8s-gitops develop after merging a PR to master:
+
+```bash
+cd /home/ubuntu/git/k8s-gitops
+git checkout develop
+git fetch origin master
+git rebase origin/master
+git push origin develop --force-with-lease
+```
+
 **Why the ConfigMap matters**: The `entrypoint.sh` reads `VITE_APP_VERSION`
 from the environment (sourced from ConfigMap) to generate `config.js`. If you
 only update the image tag without updating the ConfigMap, the app will display
@@ -276,7 +363,7 @@ After merging to k8s-gitops master:
 ```bash
 # Option A: Wait for auto-sync (up to 3 minutes)
 
-# Option B: Force sync via CLI
+# Option B: Force sync via argocd CLI
 kubectl config set-context --current --namespace=argocd
 
 # Hard refresh to detect new commit
@@ -289,6 +376,60 @@ argocd app sync apps --core --timeout 120
 argocd app terminate-op apps --core
 sleep 5
 argocd app sync apps --core --force --timeout 180
+```
+
+#### Alternative: kubectl CRD Inspection
+
+If the `argocd` CLI hangs or DNS doesn't resolve from your host, use kubectl
+to inspect the Argo CD Application CRD directly:
+
+```bash
+# Check sync status via Application CRD
+kubectl get application apps -n argocd \
+  -o jsonpath='{.status.sync.status}' && echo
+# Expected: Synced
+
+# Check health status
+kubectl get application apps -n argocd \
+  -o jsonpath='{.status.health.status}' && echo
+# Expected: Healthy
+
+# Full status summary
+kubectl get application apps -n argocd \
+  -o jsonpath='Sync: {.status.sync.status}, Health: {.status.health.status}, Revision: {.status.sync.revision}' && echo
+```
+
+#### Alternative: Argo CD REST API
+
+The Argo CD server is a ClusterIP service exposed via ingress at
+`argocd.lab.informationcart.com` (IP: 192.168.1.100). DNS may not resolve
+from the host, so use the IP with a Host header:
+
+```bash
+# 1. Authenticate
+# Note: -k disables TLS verification (intended for local/trusted use only)
+read -rsp 'Argo CD admin password: ' ARGOCD_PASSWORD && echo
+ARGOCD_TOKEN=$(curl -sk \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"admin\",\"password\":\"$ARGOCD_PASSWORD\"}" \
+  https://192.168.1.100/api/v1/session | python3 -c \
+  "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# 2. Check app status
+curl -sk \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Authorization: Bearer $ARGOCD_TOKEN" \
+  https://192.168.1.100/api/v1/applications/apps \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); \
+    print(f\"Sync: {d['status']['sync']['status']}, Health: {d['status']['health']['status']}\")"
+
+# 3. Trigger manual sync
+curl -sk -X POST \
+  -H "Host: argocd.lab.informationcart.com" \
+  -H "Authorization: Bearer $ARGOCD_TOKEN" \
+  -H "Content-Type: application/json" \
+  https://192.168.1.100/api/v1/applications/apps/sync
 ```
 
 **Verify rollout**:
@@ -500,15 +641,21 @@ kubectl get configmap otel-data-ui-config -n otel-data-ui \
 
 The `master` branch on `stuartshay/otel-data-ui` enforces these protections:
 
-| Rule                             | Setting |
-| -------------------------------- | ------- |
-| Required status checks           | None    |
-| Required approving reviews       | 1       |
-| Dismiss stale reviews            | No      |
-| Required conversation resolution | Yes     |
-| Enforce admins                   | Yes     |
-| Allow force pushes               | No      |
-| Allow deletions                  | No      |
+| Rule                             | Setting                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| Required status checks           | ESLint and TypeScript Check, Build Check, Dockerfile Lint, Security Audit |
+| Strict status checks             | No                                                                        |
+| Required approving reviews       | 0 (see note below)                                                        |
+| Dismiss stale reviews            | No                                                                        |
+| Required conversation resolution | Yes                                                                       |
+| Enforce admins                   | Yes                                                                       |
+| Allow force pushes               | No                                                                        |
+| Allow deletions                  | No                                                                        |
+
+**Note on review policy**: The `auto-approve.yml` workflow was intentionally
+removed — all PRs are reviewed manually before merge. The
+`required_approving_review_count: 0` setting allows the repo owner to merge
+after self-review, since GitHub blocks self-approval.
 
 To inspect current settings:
 
@@ -614,4 +761,5 @@ docker manifest inspect stuartshay/otel-data-ui:<tag> 2>&1 | head -3
 
 | Version | Date       | Changes                                                    |
 | ------- | ---------- | ---------------------------------------------------------- |
+| 1.0.16  | 2026-02-13 | Markdown lint fixes, setup.sh, pre-commit hooks, Node 24   |
 | 1.0.7   | 2026-02-13 | Docker workflow alignment, version scheme, package updates |
