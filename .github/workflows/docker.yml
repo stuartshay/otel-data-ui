@@ -149,6 +149,53 @@ jobs:
           client-payload: '{"version": "${{ steps.version.outputs.version }}"}'
         continue-on-error: true
 
+      - name: Record New Relic deployment marker
+        if: github.ref == 'refs/heads/master' && steps.push.outputs.should_push == 'true'
+        env:
+          NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
+          NEW_RELIC_APP_GUID: ${{ secrets.NEW_RELIC_APP_GUID }}
+        run: |
+          if [[ -z "${NEW_RELIC_API_KEY}" || -z "${NEW_RELIC_APP_GUID}" ]]; then
+            echo "⚠️ Skipping: NEW_RELIC_API_KEY or NEW_RELIC_APP_GUID not configured"
+            exit 0
+          fi
+
+          VERSION="${{ steps.version.outputs.version }}"
+          DESCRIPTION="${{ env.IMAGE_NAME }} v${VERSION}"
+
+          QUERY='mutation($version: String!, $entityGuid: EntityGuid!, $commit: String, $user: String, $description: String) {
+            changeTrackingCreateDeployment(deployment: {
+              version: $version
+              entityGuid: $entityGuid
+              commit: $commit
+              user: $user
+              description: $description
+            }) { deploymentId entityGuid }
+          }'
+
+          PAYLOAD=$(jq -n \
+            --arg query "$QUERY" \
+            --arg version "$VERSION" \
+            --arg entityGuid "$NEW_RELIC_APP_GUID" \
+            --arg commit "${{ github.sha }}" \
+            --arg user "${{ github.actor }}" \
+            --arg description "$DESCRIPTION" \
+            '{query: $query, variables: {version: $version, entityGuid: $entityGuid, commit: $commit, user: $user, description: $description}}')
+
+          RESPONSE=$(curl -s -X POST 'https://api.newrelic.com/graphql' \
+            -H 'Content-Type: application/json' \
+            -H "API-Key: ${NEW_RELIC_API_KEY}" \
+            -d "$PAYLOAD")
+
+          if echo "${RESPONSE}" | jq -e '.data.changeTrackingCreateDeployment.deploymentId' > /dev/null 2>&1; then
+            DEPLOY_ID=$(echo "${RESPONSE}" | jq -r '.data.changeTrackingCreateDeployment.deploymentId')
+            echo "✅ Deployment marker recorded: ${DEPLOY_ID}"
+          else
+            echo "⚠️ Failed to record deployment marker"
+            echo "${RESPONSE}"
+          fi
+        continue-on-error: true
+
       - name: Summary
         run: |
           echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
