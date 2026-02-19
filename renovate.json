@@ -1,0 +1,107 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:enableMajor",
+    ":semanticCommits"
+  ],
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "timezone": "America/New_York",
+  "schedule": [
+    "before 9am on Monday"
+  ],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+  "enabledManagers": [
+    "npm",
+    "dockerfile",
+    "github-actions"
+  ],
+  "packageRules": [
+    {
+      "description": "Auto-merge patch updates for npm dependencies",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group React ecosystem",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "react",
+      "groupSlug": "react"
+    },
+    {
+      "description": "Group Tailwind CSS ecosystem",
+      "matchPackageNames": [
+        "tailwindcss",
+        "@tailwindcss/vite",
+        "tailwind-merge"
+      ],
+      "groupName": "tailwindcss",
+      "groupSlug": "tailwindcss"
+    },
+    {
+      "description": "Group ESLint ecosystem",
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/js",
+        "typescript-eslint",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh"
+      ],
+      "groupName": "eslint",
+      "groupSlug": "eslint"
+    },
+    {
+      "description": "Group formatting tools",
+      "matchPackageNames": [
+        "prettier",
+        "markdownlint-cli2",
+        "husky",
+        "lint-staged"
+      ],
+      "groupName": "formatting-tools",
+      "groupSlug": "formatting-tools"
+    },
+    {
+      "description": "Group Apollo GraphQL",
+      "matchPackageNames": [
+        "@apollo/client",
+        "graphql"
+      ],
+      "groupName": "apollo-graphql",
+      "groupSlug": "apollo-graphql"
+    },
+    {
+      "description": "Group Leaflet mapping",
+      "matchPackageNames": [
+        "leaflet",
+        "react-leaflet",
+        "@types/leaflet"
+      ],
+      "groupName": "leaflet",
+      "groupSlug": "leaflet"
+    },
+    {
+      "description": "Docker base image updates",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "groupSlug": "github-actions"
+    }
+  ]
+}
