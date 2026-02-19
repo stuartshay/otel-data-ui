@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Validates that the Garmin activity detail page renders
@@ -12,6 +12,19 @@ import { test, expect } from '@playwright/test'
  */
 const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '21100373038'
 
+/**
+ * Locate a chart card by title text.
+ * Chart cards are the only cards that contain a `.recharts-responsive-container`.
+ * This avoids matching stats-bar or stats-panel cards that also contain
+ * "Elevation" or "Speed" text.
+ */
+function chartCard(page: Page, title: string) {
+  return page
+    .locator('[class*="card"]')
+    .filter({ has: page.locator('.recharts-responsive-container') })
+    .filter({ hasText: title })
+}
+
 test.describe('Garmin Activity Charts', () => {
   test('page loads and activity header is visible', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
@@ -24,9 +37,7 @@ test.describe('Garmin Activity Charts', () => {
   test('renders Elevation chart card', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
 
-    const elevationCard = page
-      .locator('[class*="card"]')
-      .filter({ hasText: 'Elevation' })
+    const elevationCard = chartCard(page, 'Elevation')
     await expect(elevationCard).toBeVisible({ timeout: 20_000 })
 
     // Recharts renders <path> elements inside the Area component
@@ -37,9 +48,7 @@ test.describe('Garmin Activity Charts', () => {
   test('renders Speed chart card', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
 
-    const speedCard = page
-      .locator('[class*="card"]')
-      .filter({ hasText: 'Speed' })
+    const speedCard = chartCard(page, 'Speed')
     await expect(speedCard).toBeVisible({ timeout: 20_000 })
 
     const areaPaths = speedCard.locator('.recharts-area-area')
@@ -48,9 +57,7 @@ test.describe('Garmin Activity Charts', () => {
 
   test('distance/time toggle buttons are visible', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
-    await expect(
-      page.locator('[class*="card"]').filter({ hasText: 'Elevation' }),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(chartCard(page, 'Elevation')).toBeVisible({ timeout: 20_000 })
 
     const distanceBtn = page.getByRole('button', { name: 'Distance' })
     const timeBtn = page.getByRole('button', { name: 'Time' })
@@ -61,9 +68,7 @@ test.describe('Garmin Activity Charts', () => {
 
   test('switching to Time x-axis re-renders charts', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
-    await expect(
-      page.locator('[class*="card"]').filter({ hasText: 'Elevation' }),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(chartCard(page, 'Elevation')).toBeVisible({ timeout: 20_000 })
 
     const timeBtn = page.getByRole('button', { name: 'Time' })
     await timeBtn.click()
