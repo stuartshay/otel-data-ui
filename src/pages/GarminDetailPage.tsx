@@ -37,11 +37,12 @@ export function GarminDetailPage() {
     skip: !activityId,
   })
 
-  // Full-resolution points for accurate time-series charts (HR, speed, temp)
+  // Full-resolution points for accurate time-series charts (speed, elevation).
+  // Do NOT use simplify here — ST_Simplify strips non-spatial attributes.
   const { data: chartTrackData, loading: chartTrackLoading } = useQuery<
     Record<string, any>
   >(GARMIN_TRACK_POINTS_QUERY, {
-    variables: { activity_id: activityId, simplify: 0.00001 },
+    variables: { activity_id: activityId },
     skip: !activityId,
   })
 
