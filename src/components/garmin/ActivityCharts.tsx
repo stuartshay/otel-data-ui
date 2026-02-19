@@ -146,7 +146,9 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                 <XAxis
                   dataKey={xKey}
                   tickFormatter={(v: number) =>
-                    v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
+                    v != null
+                      ? v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
+                      : ''
                   }
                   label={{
                     value: xLabel,
@@ -156,19 +158,23 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                   className="text-xs"
                 />
                 <YAxis
-                  tickFormatter={(v: number) => v.toFixed(0)}
+                  tickFormatter={(v: number) => (v != null ? v.toFixed(0) : '')}
                   className="text-xs"
                   width={50}
                 />
                 <Tooltip
                   formatter={(value) => [
-                    `${Number(value).toFixed(1)} ${chart.unit}`,
+                    value != null
+                      ? `${Number(value).toFixed(1)} ${chart.unit}`
+                      : '—',
                     chart.title,
                   ]}
                   labelFormatter={(label) =>
-                    effectiveXMode === 'distance'
-                      ? `${Number(label).toFixed(2)} mi`
-                      : `${Number(label).toFixed(0)} min`
+                    label != null
+                      ? effectiveXMode === 'distance'
+                        ? `${Number(label).toFixed(2)} mi`
+                        : `${Number(label).toFixed(0)} min`
+                      : ''
                   }
                 />
                 <Area
