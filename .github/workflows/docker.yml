@@ -44,10 +44,10 @@ jobs:
       - name: Get build info
         id: build_info
         run: |
-          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
           BRANCH_NAME="${GITHUB_REF_NAME}"
           SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[\/]/-/g' | sed 's/[^a-zA-Z0-9._-]//g' | tr '[:upper:]' '[:lower:]')
-          echo "branch_sanitized=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch_sanitized=$SANITIZED_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Determine version tag
         id: version
@@ -65,14 +65,15 @@ jobs:
             exit 1
           fi
 
+          # shellcheck disable=SC2193
           if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
             VERSION="${BASE_VERSION}.${{ github.run_number }}"
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            echo "is_main=true" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
           else
             VERSION="${BASE_VERSION}.${{ github.run_number }}-${BRANCH}"
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            echo "is_main=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
           fi
           echo "Version: ${VERSION}"
 
@@ -108,12 +109,14 @@ jobs:
       - name: Determine push condition
         id: push
         run: |
+          # shellcheck disable=SC2193
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "should_push=true" >> $GITHUB_OUTPUT
+            echo "should_push=true" >> "$GITHUB_OUTPUT"
+          # shellcheck disable=SC2193
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.push_image }}" == "true" ]]; then
-            echo "should_push=true" >> $GITHUB_OUTPUT
+            echo "should_push=true" >> "$GITHUB_OUTPUT"
           else
-            echo "should_push=false" >> $GITHUB_OUTPUT
+            echo "should_push=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and push
@@ -163,6 +166,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           DESCRIPTION="${{ env.IMAGE_NAME }} v${VERSION}"
 
+          # shellcheck disable=SC2016
           QUERY='mutation($version: String!, $entityGuid: EntityGuid!, $commit: String, $user: String, $description: String) {
             changeTrackingCreateDeployment(deployment: {
               version: $version
@@ -198,16 +202,18 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ steps.build_info.outputs.branch_sanitized }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build # | \`${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Pushed | \`${{ steps.push.outputs.should_push }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Tags" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Docker Build Summary"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Version | \`${{ steps.version.outputs.version }}\` |"
+            echo "| Branch | \`${{ steps.build_info.outputs.branch_sanitized }}\` |"
+            echo "| Build # | \`${{ github.run_number }}\` |"
+            echo "| Pushed | \`${{ steps.push.outputs.should_push }}\` |"
+            echo ""
+            echo "### Tags"
+            echo "\`\`\`"
+            echo "${{ steps.meta.outputs.tags }}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

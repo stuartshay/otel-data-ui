@@ -24,6 +24,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Cache
+.cache/
+
 # Environment
 .env
 .env.local

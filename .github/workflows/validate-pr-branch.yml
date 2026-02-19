@@ -44,6 +44,8 @@ jobs:
       - name: Summary
         if: success()
         run: |
-          echo "### ✅ Branch Validation Passed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Source branch **${{ github.head_ref }}** is allowed to merge into **master**" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### ✅ Branch Validation Passed"
+            echo ""
+            echo "Source branch **${{ github.head_ref }}** is allowed to merge into **master**"
+          } >> "$GITHUB_STEP_SUMMARY"
