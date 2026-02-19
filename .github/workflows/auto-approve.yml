@@ -12,8 +12,8 @@ jobs:
     name: Auto Approve Bot PRs
     runs-on: ubuntu-latest
     if: >-
-      github.actor == 'renovate[bot]' ||
-      github.actor == 'dependabot[bot]'
+      github.event.pull_request.user.login == 'renovate[bot]' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - name: Auto approve
         uses: hmarr/auto-approve-action@v4
