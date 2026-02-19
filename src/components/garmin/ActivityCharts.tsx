@@ -56,9 +56,9 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
   const sampled = downsample(trackPoints, 800)
   const startTime = new Date(sampled[0].timestamp).getTime()
 
-  // Compute cumulative distance from lat/lon when distance_from_start_km is sparse
+  // Determine whether distance_from_start_km is sufficiently populated to use as the X-axis
   const hasReliableDistance =
-    sampled.filter((pt) => pt.distance_from_start_km != null).length >
+    sampled.filter((pt) => pt.distance_from_start_km != null).length >=
     sampled.length * 0.5
 
   const chartData = sampled.map((pt) => ({
@@ -106,19 +106,22 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
     <div className="space-y-4">
       {/* Toggle buttons */}
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={effectiveXMode === 'distance' ? 'default' : 'outline'}
-          onClick={() => setXMode('distance')}
-          disabled={!hasReliableDistance}
+        <span
           title={
             !hasReliableDistance
               ? 'Distance data unavailable for this activity'
               : undefined
           }
         >
-          Distance
-        </Button>
+          <Button
+            size="sm"
+            variant={effectiveXMode === 'distance' ? 'default' : 'outline'}
+            onClick={() => setXMode('distance')}
+            disabled={!hasReliableDistance}
+          >
+            Distance
+          </Button>
+        </span>
         <Button
           size="sm"
           variant={effectiveXMode === 'time' ? 'default' : 'outline'}
