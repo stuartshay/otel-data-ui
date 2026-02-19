@@ -10,20 +10,13 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import {
-  kmToMi,
-  metersToFeet,
-  kmhToMph,
-  celsiusToFahrenheit,
-} from '@/lib/units'
+import { kmToMi, metersToFeet, kmhToMph } from '@/lib/units'
 
 interface TrackPoint {
   distance_from_start_km?: number | null
   timestamp: string
   altitude?: number | null
   speed_kmh?: number | null
-  heart_rate?: number | null
-  temperature_c?: number | null
 }
 
 interface ActivityChartsProps {
@@ -63,24 +56,30 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
   const sampled = downsample(trackPoints, 800)
   const startTime = new Date(sampled[0].timestamp).getTime()
 
+  // Compute cumulative distance from lat/lon when distance_from_start_km is sparse
+  const hasReliableDistance =
+    sampled.filter((pt) => pt.distance_from_start_km != null).length >
+    sampled.length * 0.5
+
   const chartData = sampled.map((pt) => ({
-    distance:
-      pt.distance_from_start_km != null ? kmToMi(pt.distance_from_start_km) : 0,
+    distance: hasReliableDistance
+      ? pt.distance_from_start_km != null
+        ? kmToMi(pt.distance_from_start_km)
+        : null
+      : null,
     time: (new Date(pt.timestamp).getTime() - startTime) / 60000, // minutes
     elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
     speed: pt.speed_kmh != null ? kmhToMph(pt.speed_kmh) : null,
-    heartRate: pt.heart_rate ?? null,
-    temperature:
-      pt.temperature_c != null ? celsiusToFahrenheit(pt.temperature_c) : null,
   }))
 
-  const xKey = xMode === 'distance' ? 'distance' : 'time'
-  const xLabel = xMode === 'distance' ? 'Distance (mi)' : 'Time (min)'
+  // Fall back to time if distance data is too sparse
+  const effectiveXMode =
+    xMode === 'distance' && !hasReliableDistance ? 'time' : xMode
+  const xKey = effectiveXMode === 'distance' ? 'distance' : 'time'
+  const xLabel = effectiveXMode === 'distance' ? 'Distance (mi)' : 'Time (min)'
 
   const hasElevation = chartData.some((d) => d.elevation != null)
   const hasSpeed = chartData.some((d) => d.speed != null)
-  const hasHR = chartData.some((d) => d.heartRate != null)
-  const hasTemp = chartData.some((d) => d.temperature != null)
 
   const charts: ChartConfig[] = [
     {
@@ -97,20 +96,6 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
       unit: 'mph',
       hasData: hasSpeed,
     },
-    {
-      title: 'Heart Rate',
-      dataKey: 'heartRate',
-      color: '#ef4444',
-      unit: 'bpm',
-      hasData: hasHR,
-    },
-    {
-      title: 'Temperature',
-      dataKey: 'temperature',
-      color: '#f97316',
-      unit: '°F',
-      hasData: hasTemp,
-    },
   ]
 
   const activeCharts = charts.filter((c) => c.hasData)
@@ -123,14 +108,20 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
       <div className="flex gap-2">
         <Button
           size="sm"
-          variant={xMode === 'distance' ? 'default' : 'outline'}
+          variant={effectiveXMode === 'distance' ? 'default' : 'outline'}
           onClick={() => setXMode('distance')}
+          disabled={!hasReliableDistance}
+          title={
+            !hasReliableDistance
+              ? 'Distance data unavailable for this activity'
+              : undefined
+          }
         >
           Distance
         </Button>
         <Button
           size="sm"
-          variant={xMode === 'time' ? 'default' : 'outline'}
+          variant={effectiveXMode === 'time' ? 'default' : 'outline'}
           onClick={() => setXMode('time')}
         >
           Time
@@ -152,7 +143,7 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                 <XAxis
                   dataKey={xKey}
                   tickFormatter={(v: number) =>
-                    v.toFixed(xMode === 'distance' ? 1 : 0)
+                    v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
                   }
                   label={{
                     value: xLabel,
@@ -172,7 +163,7 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                     chart.title,
                   ]}
                   labelFormatter={(label) =>
-                    xMode === 'distance'
+                    effectiveXMode === 'distance'
                       ? `${Number(label).toFixed(2)} mi`
                       : `${Number(label).toFixed(0)} min`
                   }
