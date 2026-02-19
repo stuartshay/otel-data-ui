@@ -6,6 +6,7 @@ export default defineConfig({
   retries: 1,
   use: {
     baseURL: process.env.BASE_URL ?? 'https://data-ui.lab.informationcart.com',
+    // Lab environment uses self-signed certs behind Cloudflare tunnel
     ignoreHTTPSErrors: true,
     screenshot: 'only-on-failure',
   },
