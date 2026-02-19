@@ -38,9 +38,11 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "## Lint Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All linting checks completed" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Lint Summary"
+            echo ""
+            echo "✅ All linting checks completed"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: Build Check
