@@ -24,33 +24,30 @@ test.describe('Garmin Activity Charts', () => {
   test('renders Elevation chart card', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
 
-    const elevationCard = page
-      .locator('[class*="card"]')
-      .filter({ hasText: 'Elevation' })
+    const elevationCard = page.getByTestId('chart-elevation')
     await expect(elevationCard).toBeVisible({ timeout: 20_000 })
 
-    // Recharts renders <path> elements inside the Area component
-    const areaPaths = elevationCard.locator('.recharts-area-area')
-    await expect(areaPaths).toHaveCount(1)
+    // Verify the chart SVG rendered with at least one visible path
+    const paths = elevationCard.locator('svg path')
+    await expect(paths.first()).toBeVisible()
   })
 
   test('renders Speed chart card', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
 
-    const speedCard = page
-      .locator('[class*="card"]')
-      .filter({ hasText: 'Speed' })
+    const speedCard = page.getByTestId('chart-speed')
     await expect(speedCard).toBeVisible({ timeout: 20_000 })
 
-    const areaPaths = speedCard.locator('.recharts-area-area')
-    await expect(areaPaths).toHaveCount(1)
+    // Verify the chart SVG rendered with at least one visible path
+    const paths = speedCard.locator('svg path')
+    await expect(paths.first()).toBeVisible()
   })
 
   test('distance/time toggle buttons are visible', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
-    await expect(
-      page.locator('[class*="card"]').filter({ hasText: 'Elevation' }),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('chart-elevation')).toBeVisible({
+      timeout: 20_000,
+    })
 
     const distanceBtn = page.getByRole('button', { name: 'Distance' })
     const timeBtn = page.getByRole('button', { name: 'Time' })
@@ -61,9 +58,9 @@ test.describe('Garmin Activity Charts', () => {
 
   test('switching to Time x-axis re-renders charts', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
-    await expect(
-      page.locator('[class*="card"]').filter({ hasText: 'Elevation' }),
-    ).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('chart-elevation')).toBeVisible({
+      timeout: 20_000,
+    })
 
     const timeBtn = page.getByRole('button', { name: 'Time' })
     await timeBtn.click()

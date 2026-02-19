@@ -132,7 +132,7 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
       </div>
 
       {activeCharts.map((chart) => (
-        <Card key={chart.dataKey}>
+        <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{chart.title}</CardTitle>
           </CardHeader>

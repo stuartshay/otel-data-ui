@@ -1,6 +1,11 @@
 {
-  "globs": ["**/*.md"],
-  "ignores": ["node_modules", ".cache/**"],
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    "node_modules",
+    ".cache/**"
+  ],
   "config": {
     "MD013": false,
     "MD033": false,

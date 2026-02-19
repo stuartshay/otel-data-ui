@@ -55,12 +55,24 @@ git checkout master && git fetch origin && git pull origin master
 git checkout -b feature/my-feature
 ```
 
-**ALWAYS rebase feature branches onto the latest protected branch before creating a PR:**
+**ALWAYS rebase onto the latest protected branch before creating a PR:**
 
 ```bash
-# For feature branches only (do NOT rebase the shared develop branch):
 git fetch origin master && git rebase origin/master
 ```
+
+### Before Creating a PR
+
+⚠️ **ALWAYS check for and resolve conflicts before creating a PR:**
+
+1. Rebase onto the latest protected branch:
+   `git fetch origin master && git rebase origin/master`
+2. Resolve any conflicts during rebase
+3. Force-push the rebased branch: `git push origin <branch> --force-with-lease`
+4. Verify the PR shows no conflicts on GitHub before requesting review
+
+This is especially important after squash merges, which cause develop to
+diverge from master.
 
 ### Daily Workflow
 
