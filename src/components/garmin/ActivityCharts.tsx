@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   AreaChart,
   Area,
@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
+import type { TooltipProps } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { kmToMi, metersToFeet, kmhToMph } from '@/lib/units'
@@ -17,6 +18,8 @@ interface TrackPoint {
   timestamp: string
   altitude?: number | null
   speed_kmh?: number | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 interface ActivityChartsProps {
@@ -47,6 +50,60 @@ interface ChartConfig {
   hasData: boolean
 }
 
+interface ChartDataPoint {
+  distance: number | null
+  distanceKm: number | null
+  time: number
+  elevation: number | null
+  speed: number | null
+  latitude: number | null
+  longitude: number | null
+  timestamp: string
+}
+
+function ChartTooltipContent({
+  active,
+  payload,
+  chartConfig,
+}: TooltipProps<number, string> & { chartConfig: ChartConfig }): ReactNode {
+  if (!active || !payload?.length) return null
+  const pt = payload[0].payload as ChartDataPoint
+  const value = payload[0].value
+
+  const timeStr = new Date(pt.timestamp).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
+  return (
+    <div className="rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+      <p className="font-semibold">
+        {chartConfig.title}:{' '}
+        {value != null
+          ? `${Number(value).toFixed(1)} ${chartConfig.unit}`
+          : '—'}
+      </p>
+      <div className="mt-1 space-y-0.5 text-muted-foreground">
+        <p>
+          Time: {timeStr} ({pt.time.toFixed(1)} min)
+        </p>
+        {pt.distance != null && (
+          <p>
+            Distance: {pt.distance.toFixed(2)} mi ({pt.distanceKm?.toFixed(2)}{' '}
+            km)
+          </p>
+        )}
+        {pt.latitude != null && pt.longitude != null && (
+          <p>
+            Lat/Lon: {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
 
@@ -67,9 +124,13 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
         ? kmToMi(pt.distance_from_start_km)
         : null
       : null,
+    distanceKm: pt.distance_from_start_km ?? null,
     time: (new Date(pt.timestamp).getTime() - startTime) / 60000, // minutes
     elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
     speed: pt.speed_kmh != null ? kmhToMph(pt.speed_kmh) : null,
+    latitude: pt.latitude ?? null,
+    longitude: pt.longitude ?? null,
+    timestamp: pt.timestamp,
   }))
 
   // Fall back to time if distance data is too sparse
@@ -145,6 +206,8 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey={xKey}
+                  type="number"
+                  domain={[0, 'dataMax']}
                   tickFormatter={(v: number) =>
                     v != null
                       ? v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
@@ -163,19 +226,9 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                   width={50}
                 />
                 <Tooltip
-                  formatter={(value) => [
-                    value != null
-                      ? `${Number(value).toFixed(1)} ${chart.unit}`
-                      : '—',
-                    chart.title,
-                  ]}
-                  labelFormatter={(label) =>
-                    label != null
-                      ? effectiveXMode === 'distance'
-                        ? `${Number(label).toFixed(2)} mi`
-                        : `${Number(label).toFixed(0)} min`
-                      : ''
-                  }
+                  content={(props) => (
+                    <ChartTooltipContent {...props} chartConfig={chart} />
+                  )}
                 />
                 <Area
                   type="monotone"
