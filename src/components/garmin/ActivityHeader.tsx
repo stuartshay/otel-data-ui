@@ -22,6 +22,7 @@ interface ActivityHeaderProps {
   subSport?: string | null
   startTime?: string | null
   deviceManufacturer?: string | null
+  backTo?: string
 }
 
 export function ActivityHeader({
@@ -29,13 +30,14 @@ export function ActivityHeader({
   subSport,
   startTime,
   deviceManufacturer,
+  backTo = '/garmin',
 }: ActivityHeaderProps) {
   const icon = sportIcons[sport] ?? <Activity className="h-6 w-6" />
 
   return (
     <div className="flex items-center gap-4">
       <Button variant="ghost" size="icon" asChild>
-        <Link to="/garmin">
+        <Link to={backTo}>
           <ArrowLeft className="h-5 w-5" />
         </Link>
       </Button>
