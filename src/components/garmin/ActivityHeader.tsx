@@ -37,7 +37,7 @@ export function ActivityHeader({
   return (
     <div className="flex items-center gap-4">
       <Button variant="ghost" size="icon" asChild>
-        <Link to={backTo}>
+        <Link to={backTo} data-testid="back-to-list">
           <ArrowLeft className="h-5 w-5" />
         </Link>
       </Button>

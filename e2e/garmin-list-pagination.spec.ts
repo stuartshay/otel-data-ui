@@ -34,7 +34,7 @@ test.describe('Garmin Activities List Pagination', () => {
     })
 
     // Click the back arrow to return to the list
-    const backButton = page.locator('a[href*="/garmin?"]').first()
+    const backButton = page.getByTestId('back-to-list')
     await backButton.click()
 
     // Should be back on page 3, not page 1
