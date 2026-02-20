@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@apollo/client/react'
 import {
   GARMIN_ACTIVITY_QUERY,
@@ -17,6 +17,11 @@ const SIMPLIFY_TOLERANCE = 0.00001
 
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
+  const location = useLocation()
+  const garminListSearch = (
+    location.state as { garminListSearch?: string } | null
+  )?.garminListSearch
+  const backTo = garminListSearch ? `/garmin?${garminListSearch}` : '/garmin'
   const { data, loading, error, refetch } = useQuery<Record<string, any>>(
     GARMIN_ACTIVITY_QUERY,
     {
@@ -64,6 +69,7 @@ export function GarminDetailPage() {
         subSport={a.sub_sport}
         startTime={a.start_time}
         deviceManufacturer={a.device_manufacturer}
+        backTo={backTo}
       />
 
       <ActivityStatsBar

@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { GARMIN_ACTIVITIES_QUERY, GARMIN_SPORTS_QUERY } from '@/graphql/garmin'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -28,8 +27,10 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function GarminPage() {
-  const [offset, setOffset] = useState(0)
-  const [sportFilter, setSportFilter] = useState<string | undefined>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Math.max(1, Number(searchParams.get('page')) || 1)
+  const sportFilter = searchParams.get('sport') || undefined
+  const offset = (page - 1) * PAGE_SIZE
 
   const { data: sportsData } =
     useQuery<Record<string, any>>(GARMIN_SPORTS_QUERY)
@@ -67,10 +68,7 @@ export function GarminPage() {
         <Button
           variant={!sportFilter ? 'default' : 'outline'}
           size="sm"
-          onClick={() => {
-            setSportFilter(undefined)
-            setOffset(0)
-          }}
+          onClick={() => setSearchParams({})}
         >
           All
         </Button>
@@ -80,10 +78,7 @@ export function GarminPage() {
               key={s.sport}
               variant={sportFilter === s.sport ? 'default' : 'outline'}
               size="sm"
-              onClick={() => {
-                setSportFilter(s.sport)
-                setOffset(0)
-              }}
+              onClick={() => setSearchParams({ sport: s.sport })}
             >
               <span className="capitalize">{s.sport}</span>
               <Badge variant="secondary" className="ml-1">
@@ -124,6 +119,7 @@ export function GarminPage() {
                   <TableCell>
                     <Link
                       to={`/garmin/${a.activity_id}`}
+                      state={{ garminListSearch: searchParams.toString() }}
                       className="font-medium capitalize text-primary hover:underline"
                     >
                       {a.sport}
@@ -166,8 +162,13 @@ export function GarminPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            disabled={page <= 1}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams)
+              if (page - 1 <= 1) params.delete('page')
+              else params.set('page', String(page - 1))
+              setSearchParams(params)
+            }}
           >
             <ChevronLeft className="h-4 w-4" /> Prev
           </Button>
@@ -175,7 +176,11 @@ export function GarminPage() {
             variant="outline"
             size="sm"
             disabled={offset + PAGE_SIZE >= total}
-            onClick={() => setOffset(offset + PAGE_SIZE)}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams)
+              params.set('page', String(page + 1))
+              setSearchParams(params)
+            }}
           >
             Next <ChevronRight className="h-4 w-4" />
           </Button>
