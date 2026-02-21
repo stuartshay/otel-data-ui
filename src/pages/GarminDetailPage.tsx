@@ -40,11 +40,15 @@ export function GarminDetailPage() {
 
   // Full-resolution points for accurate time-series charts (speed, elevation).
   // Dedicated chart-data endpoint returns ALL points without pagination.
-  const { data: chartData, loading: chartTrackLoading } =
-    useGarminChartDataQuery({
-      variables: { activity_id: activityId ?? '' },
-      skip: !activityId,
-    })
+  const {
+    data: chartData,
+    loading: chartLoading,
+    error: chartError,
+  } = useGarminChartDataQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+    fetchPolicy: 'no-cache',
+  })
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
@@ -54,8 +58,8 @@ export function GarminDetailPage() {
   if (!a) return <ErrorState message="Activity not found" />
 
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
-  const chartTrackPoints = chartData?.garminChartData ?? []
-  const trackLoading = mapTrackLoading || chartTrackLoading
+  const chartPoints = chartData?.garminChartData ?? []
+  const trackLoading = mapTrackLoading || chartLoading
 
   return (
     <div className="space-y-6">
@@ -80,9 +84,11 @@ export function GarminDetailPage() {
         <ActivityRouteMap trackPoints={mapTrackPoints} />
       )}
 
-      {chartTrackPoints.length > 0 && (
-        <ActivityCharts trackPoints={chartTrackPoints} />
+      {chartError && (
+        <ErrorState message={`Chart data failed: ${chartError.message}`} />
       )}
+
+      {chartPoints.length > 0 && <ActivityCharts trackPoints={chartPoints} />}
 
       <ActivityStatsPanel activity={a} />
     </div>
