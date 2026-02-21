@@ -4,13 +4,13 @@ import { test, expect } from '@playwright/test'
  * Validates that the Garmin activity detail page renders
  * Elevation and Speed charts using Recharts.
  *
- * By default uses activity 21100373038 which has ~14 906 track points
+ * By default uses activity 9965963574 which has ~2 425 track points
  * with altitude / speed data from a Garmin FIT file.
  *
  * The activity ID can be overridden per-environment via the
  * PLAYWRIGHT_GARMIN_ACTIVITY_ID environment variable.
  */
-const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '21100373038'
+const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '9965963574'
 
 test.describe('Garmin Activity Charts', () => {
   test('page loads and activity header is visible', async ({ page }) => {
