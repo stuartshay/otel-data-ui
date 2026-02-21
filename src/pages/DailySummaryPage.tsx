@@ -1,5 +1,4 @@
-import { useQuery } from '@apollo/client/react'
-import { DAILY_SUMMARY_QUERY } from '@/graphql/unified'
+import { useDailySummaryQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import {
@@ -13,31 +12,15 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 export function DailySummaryPage() {
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    DAILY_SUMMARY_QUERY,
-    {
-      variables: { limit: 30 },
-    },
-  )
+  const { data, loading, error, refetch } = useDailySummaryQuery({
+    variables: { limit: 30 },
+  })
 
   if (loading) return <LoadingState message="Loading daily summaries..." />
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />
 
-  const summaries = (data?.dailySummary ?? []) as Array<{
-    activity_date: string | null
-    owntracks_device: string | null
-    owntracks_points: number | null
-    min_battery: number | null
-    max_battery: number | null
-    avg_accuracy: number | null
-    garmin_sport: string | null
-    garmin_activities: number | null
-    total_distance_km: number | null
-    total_duration_seconds: number | null
-    avg_heart_rate: number | null
-    total_calories: number | null
-  }>
+  const summaries = data?.dailySummary ?? []
 
   return (
     <div className="space-y-6">

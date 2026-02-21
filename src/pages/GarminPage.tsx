@@ -1,6 +1,8 @@
-import { useQuery } from '@apollo/client/react'
+import {
+  useGarminActivitiesQuery,
+  useGarminSportsQuery,
+} from '@/__generated__/graphql'
 import { Link, useSearchParams } from 'react-router-dom'
-import { GARMIN_ACTIVITIES_QUERY, GARMIN_SPORTS_QUERY } from '@/graphql/garmin'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Button } from '@/components/ui/button'
@@ -17,7 +19,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const PAGE_SIZE = 25
 
-function formatDuration(seconds: number | null): string {
+function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return '—'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -32,20 +34,16 @@ export function GarminPage() {
   const sportFilter = searchParams.get('sport') || undefined
   const offset = (page - 1) * PAGE_SIZE
 
-  const { data: sportsData } =
-    useQuery<Record<string, any>>(GARMIN_SPORTS_QUERY)
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    GARMIN_ACTIVITIES_QUERY,
-    {
-      variables: {
-        limit: PAGE_SIZE,
-        offset,
-        sport: sportFilter,
-        order: 'desc' as const,
-        sort: 'start_time',
-      },
+  const { data: sportsData } = useGarminSportsQuery()
+  const { data, loading, error, refetch } = useGarminActivitiesQuery({
+    variables: {
+      limit: PAGE_SIZE,
+      offset,
+      sport: sportFilter,
+      order: 'desc',
+      sort: 'start_time',
     },
-  )
+  })
 
   if (loading && !data) return <LoadingState message="Loading activities..." />
   if (error)
@@ -104,50 +102,37 @@ export function GarminPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activities.map(
-              (a: {
-                activity_id: string
-                sport: string
-                distance_km: number | null
-                duration_seconds: number | null
-                avg_heart_rate: number | null
-                calories: number | null
-                track_point_count: number | null
-                start_time: string | null
-              }) => (
-                <TableRow key={a.activity_id}>
-                  <TableCell>
-                    <Link
-                      to={`/garmin/${a.activity_id}`}
-                      state={{ garminListSearch: searchParams.toString() }}
-                      className="font-medium capitalize text-primary hover:underline"
-                    >
-                      {a.sport}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {a.distance_km != null
-                      ? `${a.distance_km.toFixed(2)} km`
-                      : '—'}
-                  </TableCell>
-                  <TableCell>{formatDuration(a.duration_seconds)}</TableCell>
-                  <TableCell>
-                    {a.avg_heart_rate != null ? `${a.avg_heart_rate} bpm` : '—'}
-                  </TableCell>
-                  <TableCell>{a.calories != null ? a.calories : '—'}</TableCell>
-                  <TableCell>
-                    {a.track_point_count != null
-                      ? a.track_point_count.toLocaleString()
-                      : '—'}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {a.start_time
-                      ? new Date(a.start_time).toLocaleString()
-                      : '—'}
-                  </TableCell>
-                </TableRow>
-              ),
-            )}
+            {activities.map((a) => (
+              <TableRow key={a.activity_id}>
+                <TableCell>
+                  <Link
+                    to={`/garmin/${a.activity_id}`}
+                    state={{ garminListSearch: searchParams.toString() }}
+                    className="font-medium capitalize text-primary hover:underline"
+                  >
+                    {a.sport}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  {a.distance_km != null
+                    ? `${a.distance_km.toFixed(2)} km`
+                    : '—'}
+                </TableCell>
+                <TableCell>{formatDuration(a.duration_seconds)}</TableCell>
+                <TableCell>
+                  {a.avg_heart_rate != null ? `${a.avg_heart_rate} bpm` : '—'}
+                </TableCell>
+                <TableCell>{a.calories != null ? a.calories : '—'}</TableCell>
+                <TableCell>
+                  {a.track_point_count != null
+                    ? a.track_point_count.toLocaleString()
+                    : '—'}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {a.start_time ? new Date(a.start_time).toLocaleString() : '—'}
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

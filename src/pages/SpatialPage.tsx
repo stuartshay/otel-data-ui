@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@apollo/client/react'
 import {
-  NEARBY_POINTS_QUERY,
-  CALCULATE_DISTANCE_QUERY,
-} from '@/graphql/spatial'
+  useNearbyPointsQuery,
+  useCalculateDistanceQuery,
+} from '@/__generated__/graphql'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,9 +27,7 @@ export function SpatialPage() {
   const [toLon, setToLon] = useState('-73.9856')
   const [runDistance, setRunDistance] = useState(false)
 
-  const { data: nearbyData, loading: nearbyLoading } = useQuery<
-    Record<string, any>
-  >(NEARBY_POINTS_QUERY, {
+  const { data: nearbyData, loading: nearbyLoading } = useNearbyPointsQuery({
     variables: {
       lat: parseFloat(nearbyLat),
       lon: parseFloat(nearbyLon),
@@ -40,17 +37,16 @@ export function SpatialPage() {
     skip: !runNearby,
   })
 
-  const { data: distanceData, loading: distanceLoading } = useQuery<
-    Record<string, any>
-  >(CALCULATE_DISTANCE_QUERY, {
-    variables: {
-      from_lat: parseFloat(fromLat),
-      from_lon: parseFloat(fromLon),
-      to_lat: parseFloat(toLat),
-      to_lon: parseFloat(toLon),
-    },
-    skip: !runDistance,
-  })
+  const { data: distanceData, loading: distanceLoading } =
+    useCalculateDistanceQuery({
+      variables: {
+        from_lat: parseFloat(fromLat),
+        from_lon: parseFloat(fromLon),
+        to_lat: parseFloat(toLat),
+        to_lon: parseFloat(toLon),
+      },
+      skip: !runDistance,
+    })
 
   return (
     <div className="space-y-6">
@@ -122,14 +118,7 @@ export function SpatialPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(
-                      nearbyData.nearbyPoints as Array<{
-                        source: string
-                        id: number
-                        distance_meters: number
-                        timestamp: string
-                      }>
-                    ).map((p) => (
+                    {(nearbyData.nearbyPoints ?? []).map((p) => (
                       <TableRow key={`${p.source}-${p.id}`}>
                         <TableCell>
                           <Badge variant="outline">{p.source}</Badge>

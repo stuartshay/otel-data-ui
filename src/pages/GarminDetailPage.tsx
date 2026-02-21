@@ -1,9 +1,8 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useQuery } from '@apollo/client/react'
 import {
-  GARMIN_ACTIVITY_QUERY,
-  GARMIN_TRACK_POINTS_QUERY,
-} from '@/graphql/garmin'
+  useGarminActivityQuery,
+  useGarminTrackPointsQuery,
+} from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { ActivityHeader } from '@/components/garmin/ActivityHeader'
@@ -22,34 +21,29 @@ export function GarminDetailPage() {
     location.state as { garminListSearch?: string } | null
   )?.garminListSearch
   const backTo = garminListSearch ? `/garmin?${garminListSearch}` : '/garmin'
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    GARMIN_ACTIVITY_QUERY,
-    {
-      variables: { activity_id: activityId },
-      skip: !activityId,
-    },
-  )
-
-  // Simplified geometry for map rendering — drops collinear points
-  const { data: mapTrackData, loading: mapTrackLoading } = useQuery<
-    Record<string, any>
-  >(GARMIN_TRACK_POINTS_QUERY, {
-    variables: {
-      activity_id: activityId,
-      simplify: SIMPLIFY_TOLERANCE,
-      limit: 5000,
-    },
+  const { data, loading, error, refetch } = useGarminActivityQuery({
+    variables: { activity_id: activityId! },
     skip: !activityId,
   })
+
+  // Simplified geometry for map rendering — drops collinear points
+  const { data: mapTrackData, loading: mapTrackLoading } =
+    useGarminTrackPointsQuery({
+      variables: {
+        activity_id: activityId!,
+        simplify: SIMPLIFY_TOLERANCE,
+        limit: 5000,
+      },
+      skip: !activityId,
+    })
 
   // Full-resolution points for accurate time-series charts (speed, elevation).
   // Do NOT use simplify here — ST_Simplify strips non-spatial attributes.
-  const { data: chartTrackData, loading: chartTrackLoading } = useQuery<
-    Record<string, any>
-  >(GARMIN_TRACK_POINTS_QUERY, {
-    variables: { activity_id: activityId },
-    skip: !activityId,
-  })
+  const { data: chartTrackData, loading: chartTrackLoading } =
+    useGarminTrackPointsQuery({
+      variables: { activity_id: activityId! },
+      skip: !activityId,
+    })
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)

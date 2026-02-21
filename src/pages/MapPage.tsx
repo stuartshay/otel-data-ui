@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useQuery } from '@apollo/client/react'
-import { UNIFIED_GPS_QUERY } from '@/graphql/unified'
+import { useUnifiedGpsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Badge } from '@/components/ui/badge'
@@ -11,12 +10,9 @@ export function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    UNIFIED_GPS_QUERY,
-    {
-      variables: { limit: 500, order: 'desc' as const },
-    },
-  )
+  const { data, loading, error, refetch } = useUnifiedGpsQuery({
+    variables: { limit: 500, order: 'desc' },
+  })
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
@@ -47,13 +43,7 @@ export function MapPage() {
       }
     })
 
-    const points = data.unifiedGps.items as Array<{
-      latitude: number
-      longitude: number
-      source: string
-      identifier: string
-      timestamp: string
-    }>
+    const points = data.unifiedGps.items ?? []
 
     if (points.length === 0) return
 
