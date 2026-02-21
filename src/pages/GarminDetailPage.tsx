@@ -2,6 +2,7 @@ import { useParams, useLocation } from 'react-router-dom'
 import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
+  useGarminChartDataQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -38,9 +39,9 @@ export function GarminDetailPage() {
     })
 
   // Full-resolution points for accurate time-series charts (speed, elevation).
-  // Do NOT use simplify here — ST_Simplify strips non-spatial attributes.
-  const { data: chartTrackData, loading: chartTrackLoading } =
-    useGarminTrackPointsQuery({
+  // Dedicated chart-data endpoint returns ALL points without pagination.
+  const { data: chartData, loading: chartTrackLoading } =
+    useGarminChartDataQuery({
       variables: { activity_id: activityId ?? '' },
       skip: !activityId,
     })
@@ -53,7 +54,7 @@ export function GarminDetailPage() {
   if (!a) return <ErrorState message="Activity not found" />
 
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
-  const chartTrackPoints = chartTrackData?.garminTrackPoints?.items ?? []
+  const chartTrackPoints = chartData?.garminChartData ?? []
   const trackLoading = mapTrackLoading || chartTrackLoading
 
   return (

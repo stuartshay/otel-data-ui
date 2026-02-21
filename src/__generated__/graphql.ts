@@ -91,6 +91,19 @@ export type GarminActivityConnection = {
   total: Scalars['Int']['output'];
 };
 
+export type GarminChartPoint = {
+  __typename?: 'GarminChartPoint';
+  altitude?: Maybe<Scalars['Float']['output']>;
+  cadence?: Maybe<Scalars['Int']['output']>;
+  distance_from_start_km?: Maybe<Scalars['Float']['output']>;
+  heart_rate?: Maybe<Scalars['Int']['output']>;
+  latitude: Scalars['Float']['output'];
+  longitude: Scalars['Float']['output'];
+  speed_kmh?: Maybe<Scalars['Float']['output']>;
+  temperature_c?: Maybe<Scalars['Float']['output']>;
+  timestamp: Scalars['DateTime']['output'];
+};
+
 export type GarminTrackPoint = {
   __typename?: 'GarminTrackPoint';
   activity_id: Scalars['String']['output'];
@@ -197,6 +210,7 @@ export type Query = {
   devices: Array<DeviceInfo>;
   garminActivities: GarminActivityConnection;
   garminActivity?: Maybe<GarminActivity>;
+  garminChartData: Array<GarminChartPoint>;
   garminSports: Array<SportInfo>;
   garminTrackPoints: GarminTrackPointConnection;
   health: HealthStatus;
@@ -239,6 +253,11 @@ export type QueryGarminActivitiesArgs = {
 
 
 export type QueryGarminActivityArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminChartDataArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -400,6 +419,13 @@ export type GarminSportsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GarminSportsQuery = { __typename?: 'Query', garminSports: Array<{ __typename?: 'SportInfo', sport: string, activity_count: number }> };
+
+export type GarminChartDataQueryVariables = Exact<{
+  activity_id: Scalars['String']['input'];
+}>;
+
+
+export type GarminChartDataQuery = { __typename?: 'Query', garminChartData: Array<{ __typename?: 'GarminChartPoint', timestamp: string, altitude?: number | null, distance_from_start_km?: number | null, speed_kmh?: number | null, heart_rate?: number | null, cadence?: number | null, temperature_c?: number | null, latitude: number, longitude: number }> };
 
 export type HealthQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -774,6 +800,57 @@ export type GarminSportsQueryHookResult = ReturnType<typeof useGarminSportsQuery
 export type GarminSportsLazyQueryHookResult = ReturnType<typeof useGarminSportsLazyQuery>;
 export type GarminSportsSuspenseQueryHookResult = ReturnType<typeof useGarminSportsSuspenseQuery>;
 export type GarminSportsQueryResult = ApolloReactCommon.QueryResult<GarminSportsQuery, GarminSportsQueryVariables>;
+export const GarminChartDataDocument = gql`
+    query GarminChartData($activity_id: String!) {
+  garminChartData(activity_id: $activity_id) {
+    timestamp
+    altitude
+    distance_from_start_km
+    speed_kmh
+    heart_rate
+    cadence
+    temperature_c
+    latitude
+    longitude
+  }
+}
+    `;
+
+/**
+ * __useGarminChartDataQuery__
+ *
+ * To run a query within a React component, call `useGarminChartDataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminChartDataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminChartDataQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminChartDataQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminChartDataQuery, GarminChartDataQueryVariables> & ({ variables: GarminChartDataQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminChartDataQuery, GarminChartDataQueryVariables>(GarminChartDataDocument, options);
+      }
+export function useGarminChartDataLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminChartDataQuery, GarminChartDataQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminChartDataQuery, GarminChartDataQueryVariables>(GarminChartDataDocument, options);
+        }
+// @ts-ignore
+export function useGarminChartDataSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminChartDataQuery, GarminChartDataQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminChartDataQuery, GarminChartDataQueryVariables>;
+export function useGarminChartDataSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminChartDataQuery, GarminChartDataQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminChartDataQuery | undefined, GarminChartDataQueryVariables>;
+export function useGarminChartDataSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminChartDataQuery, GarminChartDataQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminChartDataQuery, GarminChartDataQueryVariables>(GarminChartDataDocument, options);
+        }
+export type GarminChartDataQueryHookResult = ReturnType<typeof useGarminChartDataQuery>;
+export type GarminChartDataLazyQueryHookResult = ReturnType<typeof useGarminChartDataLazyQuery>;
+export type GarminChartDataSuspenseQueryHookResult = ReturnType<typeof useGarminChartDataSuspenseQuery>;
+export type GarminChartDataQueryResult = ApolloReactCommon.QueryResult<GarminChartDataQuery, GarminChartDataQueryVariables>;
 export const HealthDocument = gql`
     query Health {
   health {
