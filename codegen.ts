@@ -1,9 +1,15 @@
+import { existsSync } from 'fs'
 import type { CodegenConfig } from '@graphql-codegen/cli'
 
+const NPM_SCHEMA = 'node_modules/@stuartshay/otel-graphql-types/schema.graphql'
+const LOCAL_SCHEMA = '../otel-data-gateway/src/schema/schema.graphql'
+
+const schema =
+  process.env.GRAPHQL_SCHEMA_PATH ??
+  (existsSync(NPM_SCHEMA) ? NPM_SCHEMA : LOCAL_SCHEMA)
+
 const config: CodegenConfig = {
-  // TODO: Switch to npm package path once @stuartshay/otel-graphql-types is published:
-  // schema: 'node_modules/@stuartshay/otel-graphql-types/schema.graphql',
-  schema: '../otel-data-gateway/src/schema/schema.graphql',
+  schema,
   documents: 'src/graphql/**/*.ts',
   generates: {
     'src/__generated__/graphql.ts': {

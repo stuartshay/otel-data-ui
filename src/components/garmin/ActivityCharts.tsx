@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { TooltipProps } from 'recharts'
+import type { TooltipContentProps } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { kmToMi, metersToFeet, kmhToMph } from '@/lib/units'
@@ -65,7 +65,9 @@ function ChartTooltipContent({
   active,
   payload,
   chartConfig,
-}: TooltipProps<number, string> & { chartConfig: ChartConfig }): ReactNode {
+}: TooltipContentProps<number, string> & {
+  chartConfig: ChartConfig
+}): ReactNode {
   if (!active || !payload?.length) return null
   const pt = payload[0].payload as ChartDataPoint
   const value = payload[0].value
@@ -227,7 +229,10 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                 />
                 <Tooltip
                   content={(props) => (
-                    <ChartTooltipContent {...props} chartConfig={chart} />
+                    <ChartTooltipContent
+                      {...(props as TooltipContentProps<number, string>)}
+                      chartConfig={chart}
+                    />
                   )}
                 />
                 <Area

@@ -22,7 +22,7 @@ export function GarminDetailPage() {
   )?.garminListSearch
   const backTo = garminListSearch ? `/garmin?${garminListSearch}` : '/garmin'
   const { data, loading, error, refetch } = useGarminActivityQuery({
-    variables: { activity_id: activityId! },
+    variables: { activity_id: activityId ?? '' },
     skip: !activityId,
   })
 
@@ -30,7 +30,7 @@ export function GarminDetailPage() {
   const { data: mapTrackData, loading: mapTrackLoading } =
     useGarminTrackPointsQuery({
       variables: {
-        activity_id: activityId!,
+        activity_id: activityId ?? '',
         simplify: SIMPLIFY_TOLERANCE,
         limit: 5000,
       },
@@ -41,7 +41,7 @@ export function GarminDetailPage() {
   // Do NOT use simplify here — ST_Simplify strips non-spatial attributes.
   const { data: chartTrackData, loading: chartTrackLoading } =
     useGarminTrackPointsQuery({
-      variables: { activity_id: activityId! },
+      variables: { activity_id: activityId ?? '' },
       skip: !activityId,
     })
 
