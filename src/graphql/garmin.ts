@@ -130,3 +130,19 @@ export const GARMIN_SPORTS_QUERY = gql`
     }
   }
 `
+
+export const GARMIN_CHART_DATA_QUERY = gql`
+  query GarminChartData($activity_id: String!) {
+    garminChartData(activity_id: $activity_id) {
+      timestamp
+      altitude
+      distance_from_start_km
+      speed_kmh
+      heart_rate
+      cadence
+      temperature_c
+      latitude
+      longitude
+    }
+  }
+`

@@ -2,6 +2,7 @@ import { useParams, useLocation } from 'react-router-dom'
 import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
+  useGarminChartDataQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -38,12 +39,16 @@ export function GarminDetailPage() {
     })
 
   // Full-resolution points for accurate time-series charts (speed, elevation).
-  // Do NOT use simplify here — ST_Simplify strips non-spatial attributes.
-  const { data: chartTrackData, loading: chartTrackLoading } =
-    useGarminTrackPointsQuery({
-      variables: { activity_id: activityId ?? '' },
-      skip: !activityId,
-    })
+  // Dedicated chart-data endpoint returns ALL points without pagination.
+  const {
+    data: chartData,
+    loading: chartLoading,
+    error: chartError,
+  } = useGarminChartDataQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+    fetchPolicy: 'no-cache',
+  })
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
@@ -53,8 +58,8 @@ export function GarminDetailPage() {
   if (!a) return <ErrorState message="Activity not found" />
 
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
-  const chartTrackPoints = chartTrackData?.garminTrackPoints?.items ?? []
-  const trackLoading = mapTrackLoading || chartTrackLoading
+  const chartPoints = chartData?.garminChartData ?? []
+  const trackLoading = mapTrackLoading || chartLoading
 
   return (
     <div className="space-y-6">
@@ -79,9 +84,11 @@ export function GarminDetailPage() {
         <ActivityRouteMap trackPoints={mapTrackPoints} />
       )}
 
-      {chartTrackPoints.length > 0 && (
-        <ActivityCharts trackPoints={chartTrackPoints} />
+      {chartError && (
+        <ErrorState message={`Chart data failed: ${chartError.message}`} />
       )}
+
+      {chartPoints.length > 0 && <ActivityCharts trackPoints={chartPoints} />}
 
       <ActivityStatsPanel activity={a} />
     </div>
