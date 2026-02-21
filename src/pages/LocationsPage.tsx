@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@apollo/client/react'
-import { LOCATIONS_QUERY, DEVICES_QUERY } from '@/graphql/locations'
+import { useDevicesQuery, useLocationsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Button } from '@/components/ui/button'
@@ -22,19 +21,16 @@ export function LocationsPage() {
   const [offset, setOffset] = useState(0)
   const [deviceFilter, setDeviceFilter] = useState<string | undefined>()
 
-  const { data: devicesData } = useQuery<Record<string, any>>(DEVICES_QUERY)
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    LOCATIONS_QUERY,
-    {
-      variables: {
-        limit: PAGE_SIZE,
-        offset,
-        device_id: deviceFilter,
-        order: 'desc' as const,
-        sort: 'timestamp',
-      },
+  const { data: devicesData } = useDevicesQuery()
+  const { data, loading, error, refetch } = useLocationsQuery({
+    variables: {
+      limit: PAGE_SIZE,
+      offset,
+      device_id: deviceFilter,
+      order: 'desc',
+      sort: 'timestamp',
     },
-  )
+  })
 
   if (loading && !data) return <LoadingState message="Loading locations..." />
   if (error)
@@ -93,43 +89,33 @@ export function LocationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {locations.map(
-              (loc: {
-                id: number
-                device_id: string
-                latitude: number
-                longitude: number
-                battery: number | null
-                accuracy: number | null
-                timestamp: string
-              }) => (
-                <TableRow key={loc.id}>
-                  <TableCell>
-                    <Link
-                      to={`/locations/${loc.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {loc.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{loc.device_id}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {loc.latitude.toFixed(6)}, {loc.longitude.toFixed(6)}
-                  </TableCell>
-                  <TableCell>
-                    {loc.battery != null ? `${loc.battery}%` : '—'}
-                  </TableCell>
-                  <TableCell>
-                    {loc.accuracy != null ? `${loc.accuracy.toFixed(0)}m` : '—'}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {new Date(loc.timestamp).toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ),
-            )}
+            {locations.map((loc) => (
+              <TableRow key={loc.id}>
+                <TableCell>
+                  <Link
+                    to={`/locations/${loc.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {loc.id}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{loc.device_id}</Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {loc.latitude.toFixed(6)}, {loc.longitude.toFixed(6)}
+                </TableCell>
+                <TableCell>
+                  {loc.battery != null ? `${loc.battery}%` : '—'}
+                </TableCell>
+                <TableCell>
+                  {loc.accuracy != null ? `${loc.accuracy.toFixed(0)}m` : '—'}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {new Date(loc.timestamp).toLocaleString()}
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

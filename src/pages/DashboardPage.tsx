@@ -1,8 +1,10 @@
-import { useQuery } from '@apollo/client/react'
+import {
+  useHealthQuery,
+  useLocationCountQuery,
+  useDevicesQuery,
+  useGarminSportsQuery,
+} from '@/__generated__/graphql'
 import { MapPin, Activity, Database, Heart } from 'lucide-react'
-import { HEALTH_QUERY } from '@/graphql/health'
-import { LOCATION_COUNT_QUERY, DEVICES_QUERY } from '@/graphql/locations'
-import { GARMIN_SPORTS_QUERY } from '@/graphql/garmin'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -10,18 +12,15 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export function DashboardPage() {
-  const { data: healthData, loading: healthLoading } =
-    useQuery<Record<string, any>>(HEALTH_QUERY)
+  const { data: healthData, loading: healthLoading } = useHealthQuery()
   const {
     data: countData,
     loading: countLoading,
     error: countError,
     refetch: refetchCount,
-  } = useQuery<Record<string, any>>(LOCATION_COUNT_QUERY)
-  const { data: devicesData, loading: devicesLoading } =
-    useQuery<Record<string, any>>(DEVICES_QUERY)
-  const { data: sportsData, loading: sportsLoading } =
-    useQuery<Record<string, any>>(GARMIN_SPORTS_QUERY)
+  } = useLocationCountQuery()
+  const { data: devicesData, loading: devicesLoading } = useDevicesQuery()
+  const { data: sportsData, loading: sportsLoading } = useGarminSportsQuery()
 
   if (countLoading && devicesLoading && sportsLoading && healthLoading) {
     return <LoadingState message="Loading dashboard..." />

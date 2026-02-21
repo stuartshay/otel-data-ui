@@ -1,5 +1,4 @@
-import { useQuery } from '@apollo/client/react'
-import { REFERENCE_LOCATIONS_QUERY } from '@/graphql/reference'
+import { useReferenceLocationsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,23 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin } from 'lucide-react'
 
 export function ReferencesPage() {
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    REFERENCE_LOCATIONS_QUERY,
-  )
+  const { data, loading, error, refetch } = useReferenceLocationsQuery()
 
   if (loading) return <LoadingState message="Loading reference locations..." />
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />
 
-  const locations = (data?.referenceLocations ?? []) as Array<{
-    id: number
-    name: string
-    latitude: number
-    longitude: number
-    radius_meters: number
-    description: string | null
-    created_at: string | null
-  }>
+  const locations = data?.referenceLocations ?? []
 
   return (
     <div className="space-y-6">

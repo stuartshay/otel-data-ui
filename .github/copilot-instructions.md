@@ -115,6 +115,22 @@ diverge from master.
 - Unified Map (Leaflet), Daily Summary
 - Reference Locations, Spatial Tools
 
+## Local Development Services
+
+⚠️ **ALWAYS start local services in hot-reload mode.** Never use production
+mode for local development.
+
+- **Start command**: `make dev` (runs Vite with HMR)
+- **Port**: 5173
+- **Hot reload**: Vite HMR — instant browser refresh on file changes
+- Do NOT use `npm run build && npm run preview` for development
+
+When starting the full local stack, start services in this order:
+
+1. `otel-data-api` — `make dev` (port 8080)
+2. `otel-data-gateway` — `make dev` (port 4000)
+3. `otel-data-ui` — `make dev` (port 5173)
+
 ## Safety Rules (Do Not)
 
 - ⛔ **NEVER commit directly to master branch**

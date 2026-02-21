@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@apollo/client/react'
-import { LOCATION_DETAIL_QUERY } from '@/graphql/locations'
+import { useLocationDetailQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,13 +9,10 @@ import { ArrowLeft } from 'lucide-react'
 
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { data, loading, error, refetch } = useQuery<Record<string, any>>(
-    LOCATION_DETAIL_QUERY,
-    {
-      variables: { id: Number(id) },
-      skip: !id,
-    },
-  )
+  const { data, loading, error, refetch } = useLocationDetailQuery({
+    variables: { id: Number(id) },
+    skip: !id,
+  })
 
   if (loading) return <LoadingState message="Loading location..." />
   if (error)
