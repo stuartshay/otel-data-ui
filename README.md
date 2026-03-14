@@ -65,6 +65,7 @@ npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
 npm run format        # Prettier format
 npm run format:check  # Prettier check
+npm run lint:spell    # Spell check
 npm run type-check    # TypeScript check
 npm run lint:all      # All linters
 ```

@@ -32,6 +32,9 @@ jobs:
       - name: Markdown Lint
         run: npm run lint:md
 
+      - name: Spell Check
+        run: npm run lint:spell
+
       - name: Format Check
         run: npm run format:check
 

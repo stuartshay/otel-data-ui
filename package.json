@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
-    "lint:all": "npm run lint && npm run lint:md",
+    "lint:spell": "cspell --no-progress --no-summary --gitignore \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \".github/**/*.{md,yml,yaml}\" \"docs/**/*.md\" \"*.md\" \"*.json\" \"*.ts\" \"*.js\" \"*.sh\" \"Dockerfile\" \"Makefile\" \"index.html\" \"nginx.conf\"",
+    "lint:all": "npm run lint && npm run lint:md && npm run lint:spell",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
     "type-check": "tsc --noEmit",
@@ -49,6 +50,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cspell": "^9.6.4",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.0",
@@ -66,6 +68,9 @@
     "*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write"
+    ],
+    "*.{ts,tsx,js,md,yml,yaml,sh,html}": [
+      "cspell --no-progress --no-summary --no-must-find-files"
     ],
     "*.{json,css}": [
       "prettier --write"
