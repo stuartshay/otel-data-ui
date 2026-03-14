@@ -20,6 +20,7 @@
     "elif",
     "fontobject",
     "Garmin",
+    "geofence",
     "gitops",
     "GraphQL",
     "gzipped",
@@ -54,6 +55,7 @@
     "stuartshay",
     "textarea",
     "tsconfig",
+    "unstub",
     "venv",
     "Vite"
   ],

@@ -1,4 +1,4 @@
-name: Lint and Validate
+name: Lint, Validate and Test
 
 on:
   push:
@@ -96,3 +96,46 @@ jobs:
 
       - name: Run npm audit
         run: npm audit --audit-level=moderate || true
+
+  test:
+    name: Tests and Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Coverage Report
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            {
+              echo "## Test Coverage Report"
+              echo ""
+              echo "| Category | Covered | Total | Percentage |"
+              echo "|----------|---------|-------|------------|"
+              for key in lines statements functions branches; do
+                covered=$(jq -r ".total.${key}.covered" coverage/coverage-summary.json)
+                total=$(jq -r ".total.${key}.total" coverage/coverage-summary.json)
+                pct=$(jq -r ".total.${key}.pct" coverage/coverage-summary.json)
+                echo "| ${key^} | ${covered} | ${total} | ${pct}% |"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## Test Coverage Report"
+              echo ""
+              echo "⚠️ No coverage data generated"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
