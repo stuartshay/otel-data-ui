@@ -215,7 +215,6 @@ otel-data-ui/
 │   ├── App.tsx              # Root component + provider tree
 │   ├── index.css            # Tailwind CSS entry
 │   ├── components/          # Reusable UI components
-│   │   ├── dashboard/       # Dashboard-specific components
 │   │   ├── garmin/          # Garmin-specific components
 │   │   ├── layout/          # Header, sidebar, navigation
 │   │   ├── shared/          # Cross-page shared components
@@ -226,9 +225,9 @@ otel-data-ui/
 │   ├── contexts/            # React context providers (Auth, Theme)
 │   ├── config/              # Runtime configuration
 │   ├── lib/                 # Apollo client, utilities
-│   └── services/            # Auth service helpers
-├── tests/                   # Test suite
-├── packages/otel-graphql-types/ # TypeScript type definitions (npm)
+│   ├── services/            # Auth service helpers
+│   └── test/                # Test setup and utilities
+├── e2e/                     # Playwright end-to-end tests
 ├── codegen.ts               # GraphQL codegen configuration
 ├── package.json             # Dependencies and scripts
 ├── tsconfig.json            # TypeScript configuration
@@ -269,7 +268,7 @@ npm run dev           # Development server (port 5173)
 npm run build         # Production build
 npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
-npm run lint:all      # All linters (ESLint + markdownlint)
+npm run lint:all      # All linters (ESLint + markdownlint + cspell)
 npm run format        # Prettier format
 npm run format:check  # Prettier check
 npm run type-check    # TypeScript check
@@ -277,22 +276,21 @@ npm run type-check    # TypeScript check
 
 ## CI/CD Pipelines
 
-Five workflows run on push/PR to `master` and `develop`:
-
-| Workflow           | File                     | Checks                                                                |
-| ------------------ | ------------------------ | --------------------------------------------------------------------- |
-| Lint and Validate  | `lint.yml`               | ESLint, markdownlint, cspell, TypeScript type-check, build validation |
-| Docker             | `docker.yml`             | Build Docker image, push to Docker Hub on master                      |
-| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published            |
-| Auto Approve       | `auto-approve.yml`       | Auto-approves PRs from stuartshay, renovate[bot], dependabot[bot]     |
-| Validate PR Branch | `validate-pr-branch.yml` | Ensures PRs target correct base branch                                |
+| Workflow           | File                     | Triggers                                    | Checks                                                                                 |
+| ------------------ | ------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Lint and Validate  | `lint.yml`               | push/PR to `master` and `develop`           | ESLint, markdownlint, cspell, TypeScript, build, hadolint, npm audit, tests + coverage |
+| Docker             | `docker.yml`             | push to `master`, PR to `master`/`develop`  | Build Docker image, push to Docker Hub on master                                       |
+| Update Types       | `update-types.yml`       | `repository_dispatch` / `workflow_dispatch` | Auto-PR when `@stuartshay/otel-graphql-types` is published                             |
+| Auto Approve       | `auto-approve.yml`       | `pull_request_target`                       | Auto-approves PRs from stuartshay, renovate[bot], dependabot[bot]                      |
+| Validate PR Branch | `validate-pr-branch.yml` | PR targeting `master` only                  | Ensures PRs target correct base branch                                                 |
 
 **Replicate CI locally before pushing:**
 
 ```bash
-npm run lint:all         # ESLint + markdownlint
+npm run lint:all         # ESLint + markdownlint + cspell
 npm run type-check       # TypeScript validation
 npm run build            # Production build
+npm run test:coverage    # Vitest with coverage
 ```
 
 ## Issue Templates
