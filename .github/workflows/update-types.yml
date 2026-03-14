@@ -23,6 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: develop
           persist-credentials: false
 
       - name: Determine version
@@ -92,6 +93,7 @@ jobs:
 
             ---
             *Triggered by:* `${{ github.event_name }}`${{ github.event_name == 'repository_dispatch' && ' from otel-data-gateway' || '' }}
+          base: develop
           branch: update-otel-graphql-types
           delete-branch: true
           labels: |
