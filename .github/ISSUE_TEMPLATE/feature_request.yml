@@ -1,0 +1,84 @@
+---
+name: Feature Request
+description: Propose a new page, component, or UI enhancement
+title: 'feat: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the feature you'd like to see added to the UI.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature or enhancement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature needed? What problem does it solve?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What area does this feature affect?
+      options:
+        - New page
+        - New component
+        - Existing page enhancement
+        - Map / visualization
+        - Charts / data display
+        - Authentication
+        - Styling / UX
+        - Performance
+        - Documentation
+        - Infrastructure / deployment
+    validations:
+      required: true
+
+  - type: textarea
+    id: graphql
+    attributes:
+      label: GraphQL Queries / Mutations
+      description: |
+        Which existing or new GraphQL queries/mutations does this feature use?
+        If the query doesn't exist yet, note that upstream changes may be needed
+        in otel-data-gateway and/or otel-data-api.
+      render: graphql
+      placeholder: |
+        query {
+          garminActivities(limit: 10) {
+            items { id activityName }
+          }
+        }
+
+  - type: textarea
+    id: design
+    attributes:
+      label: UI Design / Wireframe
+      description: |
+        Describe the layout, components, or attach mockups. Reference existing
+        shadcn/ui components where applicable.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you've considered.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have checked the existing issues for duplicates
+          required: true
+        - label: I have verified the required GraphQL queries exist (or filed upstream issues)

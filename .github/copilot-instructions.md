@@ -74,6 +74,20 @@ git fetch origin master && git rebase origin/master
 This is especially important after squash merges, which cause develop to
 diverge from master.
 
+### Issue-First Workflow
+
+All work follows this lifecycle:
+
+1. **Create a GitHub Issue** — Use the bug or feature request template
+2. **Create a branch** — `develop` for small changes, `feature/*` for larger
+   work
+3. **Implement and test** — Write code, run `npm run lint:all` and
+   `npm run type-check`
+4. **Open a PR** — Reference the issue (`Closes #XX`), fill the PR template
+5. **Merge to master** — After review and CI passes
+6. **Auto-deploy** — Merge triggers Docker build → k8s-gitops dispatch →
+   Argo CD sync
+
 ### Upstream Types Dependency PRs (Required)
 
 ⚠️ **ALWAYS verify auto-created PRs that bump
@@ -86,6 +100,63 @@ diverge from master.
 4. Merge promptly once checks pass so UI stays aligned with gateway types.
 5. Post a completion comment on the linked issue/PR confirming the types bump
    PR link, version, and merge status.
+
+### After Deployment (Required)
+
+⚠️ **ALWAYS verify linked issue acceptance criteria after cluster deployment**
+before considering work complete.
+
+1. Track the implementation issue linked to the code PR.
+2. Complete deployment via the corresponding deployment PR (for example in
+   `k8s-gitops`).
+3. Validate each acceptance-criteria checkbox against the deployed cluster
+   behavior (not only local tests/CI).
+4. Post verification evidence on the issue (commands, API responses, logs, or
+   screenshots as applicable).
+5. Only then mark the issue/project item as done.
+
+If an issue is auto-closed by merge keywords (`Closes #...`) before deployment
+validation is complete, reopen it until acceptance criteria are confirmed.
+
+### Release Hygiene Completion (Required)
+
+⚠️ **ALWAYS complete issue/project hygiene before setting work to Done.**
+
+1. Validate acceptance criteria against deployed behavior, not only local
+   tests/CI.
+2. If any earlier comment says validation is blocked, add a new superseding
+   comment after resolution that explicitly states criteria are now met.
+3. Ensure acceptance criteria are explicitly marked complete by either:
+   - updating issue checkboxes, or
+   - posting a final checklist comment mapping each criterion to evidence.
+4. Include links in the final comment to code PR, deployment PR, and upstream
+   types PR context when relevant.
+5. Move the project item to `Done` only after the final validation evidence is
+   posted.
+
+Suggested final comment format:
+
+```text
+Final acceptance validation (YYYY-MM-DD):
+- Criterion 1: PASS — <evidence link/command output>
+- Criterion 2: PASS — <evidence link/command output>
+- Deployment PR: <link>
+- Types PR context (if applicable): <link>
+- Prior blocker status: Resolved (<link>)
+```
+
+### PR Communication Requirements
+
+⚠️ **ALWAYS leave/update GitHub comments for traceability:**
+
+1. Add a status comment on the linked issue when implementation starts and when
+   implementation is complete.
+2. Add a PR comment summarizing what changed, validation performed, and any
+   follow-up work.
+3. Reply to **every** review comment thread with either:
+   - the commit/fix applied, or
+   - a short reason for not applying the suggestion.
+4. Do not leave review threads without a response before merge.
 
 ### Daily Workflow
 
@@ -121,12 +192,50 @@ diverge from master.
 - Environment variables must be prefixed with `VITE_`
 - Never hardcode API URLs or auth credentials
 
+### Spell Checking (cspell)
+
+- The `cspell.json` `words` list **MUST always be sorted in strict alphabetical
+  order** (case-insensitive)
+- When adding a new word, insert it in its correct alphabetical position — do
+  not append it to the end of the list
+
 ### Pages
 
 - Dashboard, Locations, Location Detail
 - Garmin Activities, Garmin Detail
 - Unified Map (Leaflet), Daily Summary
 - Reference Locations, Spatial Tools
+
+## Project Structure
+
+```text
+otel-data-ui/
+├── src/
+│   ├── main.tsx             # App entry point
+│   ├── App.tsx              # Root component + provider tree
+│   ├── index.css            # Tailwind CSS entry
+│   ├── components/          # Reusable UI components
+│   │   ├── dashboard/       # Dashboard-specific components
+│   │   ├── garmin/          # Garmin-specific components
+│   │   ├── layout/          # Header, sidebar, navigation
+│   │   ├── shared/          # Cross-page shared components
+│   │   └── ui/              # shadcn/ui primitives
+│   ├── pages/               # Page-level components (routes)
+│   ├── graphql/             # GraphQL operation definitions
+│   ├── __generated__/       # Codegen output (do not edit manually)
+│   ├── contexts/            # React context providers (Auth, Theme)
+│   ├── config/              # Runtime configuration
+│   ├── lib/                 # Apollo client, utilities
+│   └── services/            # Auth service helpers
+├── tests/                   # Test suite
+├── packages/otel-graphql-types/ # TypeScript type definitions (npm)
+├── codegen.ts               # GraphQL codegen configuration
+├── package.json             # Dependencies and scripts
+├── tsconfig.json            # TypeScript configuration
+├── Dockerfile               # Container image (nginx)
+├── Makefile                 # Build automation
+└── setup.sh                 # Dev environment bootstrap
+```
 
 ## Local Development Services
 
@@ -165,6 +274,41 @@ npm run format        # Prettier format
 npm run format:check  # Prettier check
 npm run type-check    # TypeScript check
 ```
+
+## CI/CD Pipelines
+
+Five workflows run on push/PR to `master` and `develop`:
+
+| Workflow           | File                     | Checks                                                                |
+| ------------------ | ------------------------ | --------------------------------------------------------------------- |
+| Lint and Validate  | `lint.yml`               | ESLint, markdownlint, cspell, TypeScript type-check, build validation |
+| Docker             | `docker.yml`             | Build Docker image, push to Docker Hub on master                      |
+| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published            |
+| Auto Approve       | `auto-approve.yml`       | Auto-approves PRs from stuartshay, renovate[bot], dependabot[bot]     |
+| Validate PR Branch | `validate-pr-branch.yml` | Ensures PRs target correct base branch                                |
+
+**Replicate CI locally before pushing:**
+
+```bash
+npm run lint:all         # ESLint + markdownlint
+npm run type-check       # TypeScript validation
+npm run build            # Production build
+```
+
+## Issue Templates
+
+Issue templates live in `.github/ISSUE_TEMPLATE/` and are a **living document**
+— update them as the project evolves.
+
+| Template        | File                  | Purpose                                                      |
+| --------------- | --------------------- | ------------------------------------------------------------ |
+| Bug Report      | `bug_report.yml`      | UI bugs — page, component, steps, browser, environment       |
+| Feature Request | `feature_request.yml` | New pages/components — design, GraphQL queries, styling      |
+| Performance     | `performance.yml`     | Slow renders, bundle size, lighthouse — metrics, environment |
+
+When filing issues, use the appropriate template. Blank issues are disabled to
+enforce structured intake. When adding new pages or changing the project
+structure, update the templates to reflect the changes.
 
 ## Related Repositories
 
