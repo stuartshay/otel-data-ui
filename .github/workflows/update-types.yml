@@ -1,0 +1,114 @@
+name: Update otel-graphql-types Version
+
+on:
+  repository_dispatch:
+    types: [otel-graphql-types-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update to (e.g., 1.0.158)'
+        required: true
+        type: string
+
+jobs:
+  update-types:
+    name: Update @stuartshay/otel-graphql-types
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Determine version
+        id: version
+        env:
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            VERSION="${DISPATCH_VERSION}"
+          else
+            VERSION="${INPUT_VERSION}"
+          fi
+          if [ -z "${VERSION}" ] || ! echo "${VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid or empty version: '${VERSION}'. Expected semver format (e.g., 1.0.158)"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Updating @stuartshay/otel-graphql-types to version: ${VERSION}"
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT=$(jq -r '.dependencies["@stuartshay/otel-graphql-types"]' package.json)
+          echo "version=${CURRENT}" >> "$GITHUB_OUTPUT"
+          echo "Current version: ${CURRENT}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Update types package version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          npm pkg set "dependencies.@stuartshay/otel-graphql-types=${VERSION}"
+          npm install --package-lock-only --ignore-scripts
+          echo "Updated @stuartshay/otel-graphql-types to ${VERSION}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITOPS_PAT }}
+          commit-message: 'chore: Update @stuartshay/otel-graphql-types to v${{ steps.version.outputs.version }}'
+          title: '📦 Update @stuartshay/otel-graphql-types to v${{ steps.version.outputs.version }}'
+          body: |
+            ## Automated Types Update
+
+            This PR was automatically created when a new version of `@stuartshay/otel-graphql-types` was published to npm.
+
+            | Property | Value |
+            |----------|-------|
+            | Package | `@stuartshay/otel-graphql-types` |
+            | Previous | `${{ steps.current.outputs.version }}` |
+            | Updated | `${{ steps.version.outputs.version }}` |
+            | npm | [npmjs.com](https://www.npmjs.com/package/@stuartshay/otel-graphql-types) |
+
+            ### Changes
+            - Updated `package.json` dependency version
+            - Updated `package-lock.json`
+
+            ### Next Steps
+            1. Review the changes
+            2. Merge when ready
+            3. Docker build will trigger automatically
+
+            ---
+            *Triggered by:* `${{ github.event_name }}`${{ github.event_name == 'repository_dispatch' && ' from otel-data-gateway' || '' }}
+          branch: update-otel-graphql-types
+          delete-branch: true
+          labels: |
+            automated
+            types-update
+            otel-graphql-types
+
+      - name: Summary
+        run: |
+          {
+            echo "## @stuartshay/otel-graphql-types Version Update"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Package | \`@stuartshay/otel-graphql-types\` |"
+            echo "| Previous | \`${{ steps.current.outputs.version }}\` |"
+            echo "| Updated | \`${{ steps.version.outputs.version }}\` |"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+            echo "| Status | PR Created/Updated ✅ |"
+          } >> "$GITHUB_STEP_SUMMARY"

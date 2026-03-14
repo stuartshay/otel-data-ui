@@ -20,6 +20,8 @@ All automation, assistants, and developers must follow
 - **Type check**: `npm run type-check`
 - **Build**: `npm run build`
 - **Run dev**: `npm run dev`
+- **Types PR check**: when `@stuartshay/otel-graphql-types` is published, verify
+  the auto-created dependency PR exists and required CI checks pass
 
 ## Development Workflow
 

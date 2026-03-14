@@ -74,6 +74,19 @@ git fetch origin master && git rebase origin/master
 This is especially important after squash merges, which cause develop to
 diverge from master.
 
+### Upstream Types Dependency PRs (Required)
+
+⚠️ **ALWAYS verify auto-created PRs that bump
+`@stuartshay/otel-graphql-types`.**
+
+1. Confirm the PR was triggered by the upstream package publish workflow.
+2. Verify `package.json` and lockfile bump to the expected released version.
+3. Ensure required checks are green; if they fail, fix workflow/repo issues and
+   rerun before merging.
+4. Merge promptly once checks pass so UI stays aligned with gateway types.
+5. Post a completion comment on the linked issue/PR confirming the types bump
+   PR link, version, and merge status.
+
 ### Daily Workflow
 
 1. **ALWAYS** start from `develop` or create a feature branch
