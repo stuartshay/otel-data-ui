@@ -116,6 +116,15 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Upload coverage summary
+        if: always() && hashFiles('coverage/coverage-summary.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Coverage Report
         if: always()
         run: |
@@ -139,3 +148,106 @@ jobs:
               echo "⚠️ No coverage data generated"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  summary:
+    name: Workflow Summary
+    runs-on: ubuntu-latest
+    needs: [lint, build, docker-lint, security, test]
+    if: always()
+    steps:
+      - name: Download coverage summary artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: coverage-summary
+          path: coverage
+        continue-on-error: true
+
+      - name: Generate workflow summary
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          DOCKER_LINT_RESULT: ${{ needs.docker-lint.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          NODE_VERSION: '24'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REF_NAME: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          SERVER_URL: ${{ github.server_url }}
+          SHA: ${{ github.sha }}
+          TEST_RESULT: ${{ needs.test.result }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          status_icon() {
+            case "$1" in
+              success) echo "✅" ;;
+              failure) echo "❌" ;;
+              cancelled) echo "⚪" ;;
+              skipped) echo "➖" ;;
+              *) echo "❓" ;;
+            esac
+          }
+
+          {
+            echo "# ${WORKFLOW_NAME} Summary"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Repository | \`${REPOSITORY}\` |"
+            echo "| Event | \`${EVENT_NAME}\` |"
+            echo "| Ref | \`${REF_NAME}\` |"
+            echo "| Commit | \`${SHA}\` |"
+            echo "| Run | [#${RUN_NUMBER}](${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}) |"
+            if [ -n "${PR_NUMBER}" ]; then
+              echo "| Pull Request | #${PR_NUMBER} |"
+            fi
+            echo "| Node.js | \`${NODE_VERSION}\` |"
+            echo ""
+            echo "## Job Results"
+            echo ""
+            echo "| Job | Result |"
+            echo "|-----|--------|"
+            echo "| ESLint and TypeScript Check | $(status_icon "${LINT_RESULT}") \`${LINT_RESULT}\` |"
+            echo "| Build Check | $(status_icon "${BUILD_RESULT}") \`${BUILD_RESULT}\` |"
+            echo "| Dockerfile Lint | $(status_icon "${DOCKER_LINT_RESULT}") \`${DOCKER_LINT_RESULT}\` |"
+            echo "| Security Audit | $(status_icon "${SECURITY_RESULT}") \`${SECURITY_RESULT}\` |"
+            echo "| Tests and Coverage | $(status_icon "${TEST_RESULT}") \`${TEST_RESULT}\` |"
+            echo ""
+            echo "## Validation Scope"
+            echo ""
+            echo "- ESLint"
+            echo "- TypeScript type-check"
+            echo "- Markdown lint"
+            echo "- Spell check"
+            echo "- Prettier format check"
+            echo "- Production build"
+            echo "- Dockerfile lint"
+            echo "- npm audit (informational)"
+            echo "- Vitest coverage run"
+            echo ""
+
+            if [ -f coverage/coverage-summary.json ]; then
+              echo "## Code Coverage"
+              echo ""
+              echo "| Category | Covered | Total | Percentage |"
+              echo "|----------|---------|-------|------------|"
+              for key in lines statements functions branches; do
+                covered=$(jq -r ".total.${key}.covered" coverage/coverage-summary.json)
+                total=$(jq -r ".total.${key}.total" coverage/coverage-summary.json)
+                pct=$(jq -r ".total.${key}.pct" coverage/coverage-summary.json)
+                echo "| ${key^} | ${covered} | ${total} | ${pct}% |"
+              done
+            else
+              echo "## Code Coverage"
+              echo ""
+              echo "⚠️ Coverage summary artifact was not available for this run."
+            fi
+
+            echo ""
+            echo "## Notes"
+            echo ""
+            echo "- The security audit is non-blocking (`npm audit --audit-level=moderate || true`)."
+            echo "- Build warnings, if any, remain available in the individual job logs."
+          } >> "$GITHUB_STEP_SUMMARY"

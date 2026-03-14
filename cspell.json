@@ -18,6 +18,7 @@
     "dockerhub",
     "Downsamples",
     "elif",
+    "esac",
     "fontobject",
     "Garmin",
     "geofence",
@@ -57,7 +58,8 @@
     "tsconfig",
     "unstub",
     "venv",
-    "Vite"
+    "Vite",
+    "Vitest"
   ],
   "ignoreRegExpList": ["/5j475mtdcm4qevh7q115qf1sfj/g"],
   "ignorePaths": [
