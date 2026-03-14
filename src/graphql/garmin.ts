@@ -146,3 +146,18 @@ export const GARMIN_CHART_DATA_QUERY = gql`
     }
   }
 `
+
+export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
+  mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
+    triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {
+      status
+      message
+      accepted
+      triggered_at
+      started_at
+      window_hours
+      window_start
+      lookback
+    }
+  }
+`

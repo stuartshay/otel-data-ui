@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ApolloProvider } from '@apollo/client/react'
+import { Toaster } from 'sonner'
 import { getApolloClient } from '@/lib/apollo'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -20,6 +21,7 @@ export default function App() {
     <ApolloProvider client={getApolloClient()}>
       <ThemeProvider>
         <AuthProvider>
+          <Toaster richColors />
           <BrowserRouter>
             <Routes>
               <Route path="/callback" element={<CallbackPage />} />

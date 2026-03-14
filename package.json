@@ -38,6 +38,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
