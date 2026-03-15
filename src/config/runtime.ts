@@ -6,6 +6,11 @@ interface RuntimeConfig {
   COGNITO_ISSUER: string
   APP_VERSION: string
   APP_NAME: string
+  NRBA_ACCOUNT_ID: string
+  NRBA_APPLICATION_ID: string
+  NRBA_LICENSE_KEY: string
+  NRBA_TRUST_KEY: string
+  NRBA_AGENT_ID: string
 }
 
 declare global {
@@ -44,5 +49,10 @@ export function getAllConfig(): RuntimeConfig {
     COGNITO_ISSUER: getConfig('COGNITO_ISSUER'),
     APP_VERSION: getConfig('APP_VERSION', 'dev'),
     APP_NAME: getConfig('APP_NAME', 'otel-data-ui'),
+    NRBA_ACCOUNT_ID: getConfig('NRBA_ACCOUNT_ID', ''),
+    NRBA_APPLICATION_ID: getConfig('NRBA_APPLICATION_ID', ''),
+    NRBA_LICENSE_KEY: getConfig('NRBA_LICENSE_KEY', ''),
+    NRBA_TRUST_KEY: getConfig('NRBA_TRUST_KEY', ''),
+    NRBA_AGENT_ID: getConfig('NRBA_AGENT_ID', ''),
   }
 }

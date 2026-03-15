@@ -1,4 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
@@ -11,6 +12,7 @@ import { ActivityStatsBar } from '@/components/garmin/ActivityStatsBar'
 import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
+import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
 /** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
 const SIMPLIFY_TOLERANCE = 0.00001
@@ -18,6 +20,10 @@ const SIMPLIFY_TOLERANCE = 0.00001
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
+
+  useEffect(() => {
+    setNRCustomAttribute('garmin.flow', true)
+  }, [])
   const garminListSearch = (
     location.state as { garminListSearch?: string } | null
   )?.garminListSearch
