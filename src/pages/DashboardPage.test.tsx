@@ -7,15 +7,32 @@ const dashboardHooks = vi.hoisted(() => ({
   useLocationCountQuery: vi.fn(),
   useDevicesQuery: vi.fn(),
   useGarminSportsQuery: vi.fn(),
+  useTriggerGarminSyncMutation: vi
+    .fn()
+    .mockReturnValue([vi.fn(), { loading: false }]),
 }))
 
 vi.mock('@/__generated__/graphql', () => dashboardHooks)
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn().mockReturnValue({
+    isAuthenticated: false,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    userProfile: null,
+  }),
+}))
 
 import { DashboardPage } from './DashboardPage'
 
 describe('DashboardPage', () => {
   beforeEach(() => {
     Object.values(dashboardHooks).forEach((mock) => mock.mockReset())
+    dashboardHooks.useTriggerGarminSyncMutation.mockReturnValue([
+      vi.fn(),
+      { loading: false },
+    ])
   })
 
   it('shows a loading state when all dashboard queries are loading', () => {

@@ -10,6 +10,7 @@ import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { GarminSyncCard } from '@/components/dashboard/GarminSyncCard'
 
 export function DashboardPage() {
   const { data: healthData, loading: healthLoading } = useHealthQuery()
@@ -77,7 +78,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Devices</CardTitle>
@@ -123,6 +124,8 @@ export function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        <GarminSyncCard />
       </div>
     </div>
   )
