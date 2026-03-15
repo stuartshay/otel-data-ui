@@ -32,6 +32,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Coverage
+coverage/
+
 # Playwright
 test-results/
 playwright-report/

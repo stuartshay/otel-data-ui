@@ -1,26 +1,18 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "docker:enableMajor",
-    ":semanticCommits"
-  ],
-  "labels": [
-    "dependencies",
-    "renovate"
-  ],
+  "extends": ["config:recommended", "docker:enableMajor", ":semanticCommits"],
+  "labels": ["dependencies", "renovate"],
   "timezone": "America/New_York",
-  "schedule": [
-    "before 9am on Monday"
-  ],
+  "schedule": ["before 6am on Monday"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 5,
-  "enabledManagers": [
-    "npm",
-    "dockerfile",
-    "github-actions"
-  ],
+  "enabledManagers": ["npm", "dockerfile", "github-actions"],
   "packageRules": [
+    {
+      "description": "Disable Renovate for stuartshay packages (managed by update-types.yml)",
+      "matchPackagePatterns": ["^@stuartshay/"],
+      "enabled": false
+    },
     {
       "description": "Auto-merge patch updates for npm dependencies",
       "matchManagers": ["npm"],
@@ -67,29 +59,47 @@
         "prettier",
         "markdownlint-cli2",
         "husky",
-        "lint-staged"
+        "lint-staged",
+        "cspell"
       ],
       "groupName": "formatting-tools",
       "groupSlug": "formatting-tools"
     },
     {
       "description": "Group Apollo GraphQL",
-      "matchPackageNames": [
-        "@apollo/client",
-        "graphql"
-      ],
+      "matchPackageNames": ["@apollo/client", "graphql"],
       "groupName": "apollo-graphql",
       "groupSlug": "apollo-graphql"
     },
     {
       "description": "Group Leaflet mapping",
-      "matchPackageNames": [
-        "leaflet",
-        "react-leaflet",
-        "@types/leaflet"
-      ],
+      "matchPackageNames": ["leaflet", "react-leaflet", "@types/leaflet"],
       "groupName": "leaflet",
       "groupSlug": "leaflet"
+    },
+    {
+      "description": "Group Vitest and testing tools",
+      "matchPackageNames": [
+        "vitest",
+        "@vitest/coverage-v8",
+        "@testing-library/react",
+        "@testing-library/jest-dom",
+        "@testing-library/user-event",
+        "jsdom"
+      ],
+      "groupName": "vitest-testing",
+      "groupSlug": "vitest-testing"
+    },
+    {
+      "description": "Group GraphQL Codegen",
+      "matchPackageNames": [
+        "@graphql-codegen/cli",
+        "@graphql-codegen/typescript",
+        "@graphql-codegen/typescript-operations",
+        "@graphql-codegen/typescript-react-apollo"
+      ],
+      "groupName": "graphql-codegen",
+      "groupSlug": "graphql-codegen"
     },
     {
       "description": "Docker base image updates",
@@ -98,10 +108,19 @@
       "automerge": true
     },
     {
-      "description": "GitHub Actions updates",
+      "description": "GitHub Actions minor and patch updates",
       "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
       "groupName": "github-actions",
-      "groupSlug": "github-actions"
+      "groupSlug": "github-actions",
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions major updates (manual review)",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "github-actions-major",
+      "groupSlug": "github-actions-major"
     }
   ]
 }
