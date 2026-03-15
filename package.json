@@ -12,9 +12,13 @@
     "lint:fix": "eslint . --fix",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
-    "lint:all": "npm run lint && npm run lint:md",
+    "lint:spell": "cspell --no-progress --no-summary --gitignore \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \".github/**/*.{md,yml,yaml}\" \"docs/**/*.md\" \"*.md\" \"*.json\" \"*.ts\" \"*.js\" \"*.sh\" \"Dockerfile\" \"Makefile\" \"index.html\" \"nginx.conf\"",
+    "lint:all": "npm run lint && npm run lint:md && npm run lint:spell",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "prepare": "husky"
@@ -44,28 +48,38 @@
     "@graphql-codegen/typescript-react-apollo": "^4.4.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.1.0",
+    "cspell": "^9.6.4",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.0",
     "globals": "^17.3.0",
     "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
     "markdownlint-cli2": "^0.20.0",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write"
+    ],
+    "*.{ts,tsx,js,md,yml,yaml,sh,html}": [
+      "cspell --no-progress --no-summary --no-must-find-files"
     ],
     "*.{json,css}": [
       "prettier --write"

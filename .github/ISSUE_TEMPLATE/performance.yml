@@ -1,0 +1,98 @@
+---
+name: Performance Issue
+description: Report a performance problem (slow renders, large bundle, poor lighthouse score)
+title: 'perf: '
+labels: ['performance']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report performance issues with rendering, bundle size, or page load.
+
+  - type: dropdown
+    id: page
+    attributes:
+      label: Affected Page(s)
+      description: Which page(s) have performance issues?
+      options:
+        - Dashboard
+        - Locations
+        - Location Detail
+        - Garmin Activities
+        - Garmin Detail
+        - Unified Map
+        - Daily Summary
+        - Reference Locations
+        - Spatial Tools
+        - All pages
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the performance issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Performance Metrics
+      description: |
+        Include measured data: Lighthouse scores, bundle size, render times,
+        network waterfall, or React profiler output.
+      render: text
+      placeholder: |
+        Lighthouse (mobile):
+        - Performance: 62
+        - LCP: 3.2s
+        - CLS: 0.15
+
+        Bundle size:
+        - Total: 450 KB gzipped
+        - Largest chunk: leaflet (180 KB)
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of performance issue?
+      options:
+        - Slow initial page load
+        - Slow re-render / interaction
+        - Large bundle size
+        - Excessive network requests
+        - Memory leak
+        - Map rendering
+        - GraphQL query latency
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where was this observed?
+      options:
+        - Production (data-ui.lab.informationcart.com)
+        - Local development
+        - Lighthouse audit
+    validations:
+      required: true
+
+  - type: textarea
+    id: investigation
+    attributes:
+      label: Investigation Notes
+      description: |
+        Any root cause analysis: React DevTools profiler output, network
+        waterfall, bundle analyzer results, or component render counts.
+      render: text
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Fix
+      description: If you have a proposed solution, describe it here.
