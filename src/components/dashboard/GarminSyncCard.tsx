@@ -17,7 +17,7 @@ export function GarminSyncCard() {
       const result = data.triggerGarminSync
       if (result.accepted) {
         toast.success('Garmin sync triggered', {
-          description: `Window: ${result.window_hours}h from ${result.window_start ?? 'now'}`,
+          description: `Window: ${result.window_hours ?? 'default'}h from ${result.window_start ?? 'now'}`,
         })
       } else {
         toast.warning(result.message, {
@@ -75,8 +75,10 @@ export function GarminSyncCard() {
 
         <button
           type="button"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
           onClick={() => setShowAdvanced(!showAdvanced)}
+          aria-expanded={showAdvanced}
+          aria-controls="garmin-sync-advanced"
         >
           {showAdvanced ? (
             <ChevronUp className="h-3 w-3" />
@@ -87,7 +89,10 @@ export function GarminSyncCard() {
         </button>
 
         {showAdvanced && (
-          <div className="space-y-2 rounded-md border p-3">
+          <div
+            id="garmin-sync-advanced"
+            className="space-y-2 rounded-md border p-3"
+          >
             <div>
               <label
                 htmlFor="windowHours"
@@ -99,6 +104,7 @@ export function GarminSyncCard() {
                 id="windowHours"
                 type="number"
                 min="1"
+                step="1"
                 placeholder="e.g. 24"
                 value={windowHours}
                 onChange={(e) => setWindowHours(e.target.value)}
@@ -116,6 +122,7 @@ export function GarminSyncCard() {
                 id="lookback"
                 type="number"
                 min="1"
+                step="1"
                 placeholder="e.g. 5"
                 value={lookback}
                 onChange={(e) => setLookback(e.target.value)}
