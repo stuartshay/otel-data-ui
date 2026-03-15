@@ -83,10 +83,13 @@ All work follows this lifecycle:
    work
 3. **Implement and test** — Write code, run `npm run lint:all` and
    `npm run type-check`
-4. **Open a PR** — Reference the issue (`Closes #XX`), fill the PR template
+4. **Open a PR** — Reference the issue (`Refs #XX`), fill the PR template
 5. **Merge to master** — After review and CI passes
 6. **Auto-deploy** — Merge triggers Docker build → k8s-gitops dispatch →
    Argo CD sync
+7. **Validate on cluster** — Verify acceptance criteria against deployed
+   behavior
+8. **Close the issue** — Post validation evidence and close manually
 
 ### Upstream Types Dependency PRs (Required)
 
@@ -115,8 +118,17 @@ before considering work complete.
    screenshots as applicable).
 5. Only then mark the issue/project item as done.
 
-If an issue is auto-closed by merge keywords (`Closes #...`) before deployment
-validation is complete, reopen it until acceptance criteria are confirmed.
+### Issue Closure Policy
+
+⚠️ **Do NOT use `Closes #` or `Fixes #` in PR descriptions.** Issues must
+remain open until post-deploy acceptance criteria are validated on the cluster.
+
+1. After the PR merges, wait for Docker build and k8s-gitops deployment.
+2. Validate each acceptance criterion against the live cluster.
+3. Post a final validation comment on the issue with evidence.
+4. Close the issue manually only after all criteria pass.
+5. If any criterion cannot be validated, document the reason on the issue
+   instead of closing it.
 
 ### Release Hygiene Completion (Required)
 
