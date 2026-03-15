@@ -40,14 +40,19 @@ npm run build
 ## Post-Merge Validation
 
 ⚠️ **Do NOT use `Closes #` or `Fixes #` in this PR.** Issues must remain open
-until post-deploy acceptance criteria are validated on the cluster.
+until acceptance criteria are validated.
 
 After this PR merges:
+
+### For changes that affect deployed UI (components, pages, GraphQL, config)
 
 - [ ] Docker image built and pushed (CI)
 - [ ] k8s-gitops deployment PR created and merged
 - [ ] Argo CD synced to cluster
 - [ ] Acceptance criteria validated against deployed behavior
+
+### For all PRs
+
 - [ ] Final validation comment posted on the linked issue
 - [ ] Issue closed manually after all criteria confirmed
 - [ ] If any criterion cannot be validated, reason documented on the issue

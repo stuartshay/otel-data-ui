@@ -121,10 +121,12 @@ before considering work complete.
 ### Issue Closure Policy
 
 ⚠️ **Do NOT use `Closes #` or `Fixes #` in PR descriptions.** Issues must
-remain open until post-deploy acceptance criteria are validated on the cluster.
+remain open until acceptance criteria are validated.
 
-1. After the PR merges, wait for Docker build and k8s-gitops deployment.
-2. Validate each acceptance criterion against the live cluster.
+1. After the PR merges, wait for Docker build and k8s-gitops deployment
+   (for changes that affect deployed UI).
+2. Validate each acceptance criterion against the live cluster (for deployed
+   changes) or in the appropriate environment (for docs/CI-only changes).
 3. Post a final validation comment on the issue with evidence.
 4. Close the issue manually only after all criteria pass.
 5. If any criterion cannot be validated, document the reason on the issue
