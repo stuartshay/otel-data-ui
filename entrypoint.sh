@@ -25,7 +25,7 @@ window.__ENV__ = {
 EOF
 
 echo "Generated runtime configuration:"
-cat /usr/share/nginx/html/config.js
+sed 's/\(LICENSE_KEY:\s*"\)[^"]*/\1[REDACTED]/g; s/\(TRUST_KEY:\s*"\)[^"]*/\1[REDACTED]/g' /usr/share/nginx/html/config.js
 
 # Start nginx
 exec nginx -g "daemon off;"
