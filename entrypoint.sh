@@ -15,7 +15,12 @@ window.__ENV__ = {
   COGNITO_REDIRECT_URI: "${VITE_COGNITO_REDIRECT_URI:-http://localhost:5173/callback}",
   COGNITO_ISSUER: "${VITE_COGNITO_ISSUER:-https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K}",
   APP_VERSION: "${VITE_APP_VERSION:-dev}",
-  APP_NAME: "${VITE_APP_NAME:-otel-data-ui}"
+  APP_NAME: "${VITE_APP_NAME:-otel-data-ui}",
+  NRBA_ACCOUNT_ID: "${VITE_NRBA_ACCOUNT_ID:-}",
+  NRBA_APPLICATION_ID: "${VITE_NRBA_APPLICATION_ID:-}",
+  NRBA_LICENSE_KEY: "${VITE_NRBA_LICENSE_KEY:-}",
+  NRBA_TRUST_KEY: "${VITE_NRBA_TRUST_KEY:-}",
+  NRBA_AGENT_ID: "${VITE_NRBA_AGENT_ID:-}"
 };
 EOF
 
