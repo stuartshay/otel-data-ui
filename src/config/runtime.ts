@@ -32,7 +32,7 @@ export function getConfig<K extends keyof RuntimeConfig>(
   const envValue = import.meta.env[envKey]
   if (envValue) return envValue
 
-  if (fallback) return fallback
+  if (fallback !== undefined) return fallback
 
   throw new Error(`Missing required configuration: ${key}`)
 }

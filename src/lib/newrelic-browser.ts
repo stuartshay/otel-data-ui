@@ -13,7 +13,7 @@
  */
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent'
 
-import { getConfig } from '../config/runtime'
+import { getConfig } from '@/config/runtime'
 
 let agent: BrowserAgent | null = null
 
