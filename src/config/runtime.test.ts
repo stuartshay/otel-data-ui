@@ -11,6 +11,11 @@ describe('runtime config', () => {
       COGNITO_ISSUER: 'https://issuer.runtime.example.com',
       APP_VERSION: '2.3.4',
       APP_NAME: 'runtime-ui',
+      NRBA_ACCOUNT_ID: '',
+      NRBA_APPLICATION_ID: '',
+      NRBA_LICENSE_KEY: '',
+      NRBA_TRUST_KEY: '',
+      NRBA_AGENT_ID: '',
     }
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://vite.example.com/graphql')
 
@@ -44,6 +49,11 @@ describe('runtime config', () => {
       COGNITO_ISSUER: 'https://issuer.runtime.example.com',
       APP_VERSION: '9.9.9',
       APP_NAME: 'otel-data-ui-runtime',
+      NRBA_ACCOUNT_ID: '',
+      NRBA_APPLICATION_ID: '',
+      NRBA_LICENSE_KEY: '',
+      NRBA_TRUST_KEY: '',
+      NRBA_AGENT_ID: '',
     }
 
     expect(getAllConfig()).toEqual({
@@ -54,6 +64,11 @@ describe('runtime config', () => {
       COGNITO_ISSUER: 'https://issuer.runtime.example.com',
       APP_VERSION: '9.9.9',
       APP_NAME: 'otel-data-ui-runtime',
+      NRBA_ACCOUNT_ID: '',
+      NRBA_APPLICATION_ID: '',
+      NRBA_LICENSE_KEY: '',
+      NRBA_TRUST_KEY: '',
+      NRBA_AGENT_ID: '',
     })
   })
 })

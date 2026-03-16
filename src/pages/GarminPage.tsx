@@ -3,6 +3,7 @@ import {
   useGarminSportsQuery,
 } from '@/__generated__/graphql'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
 const PAGE_SIZE = 25
 
@@ -31,6 +33,10 @@ function formatDuration(seconds: number | null | undefined): string {
 export function GarminPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
+
+  useEffect(() => {
+    setNRCustomAttribute('garmin.flow', true)
+  }, [])
   const sportFilter = searchParams.get('sport') || undefined
   const offset = (page - 1) * PAGE_SIZE
 
