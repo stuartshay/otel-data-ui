@@ -14,6 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ForwardGeocode } from '@/components/spatial/ForwardGeocode'
+import { ReverseGeocode } from '@/components/spatial/ReverseGeocode'
+import { Autocomplete } from '@/components/spatial/Autocomplete'
 
 export function SpatialPage() {
   const [nearbyLat, setNearbyLat] = useState('40.736097')
@@ -53,162 +57,189 @@ export function SpatialPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Spatial Tools</h1>
         <p className="text-muted-foreground">
-          Nearby point search and distance calculations
+          Nearby point search, distance calculations, and geocoding
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Nearby Points */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Nearby Points</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">
-                  Latitude
-                </label>
-                <input
-                  type="text"
-                  value={nearbyLat}
-                  onChange={(e) => setNearbyLat(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">
-                  Longitude
-                </label>
-                <input
-                  type="text"
-                  value={nearbyLon}
-                  onChange={(e) => setNearbyLon(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">
-                  Radius (m)
-                </label>
-                <input
-                  type="text"
-                  value={nearbyRadius}
-                  onChange={(e) => setNearbyRadius(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => setRunNearby(true)}
-              disabled={nearbyLoading}
-            >
-              {nearbyLoading ? 'Searching...' : 'Search'}
-            </Button>
+      <Tabs defaultValue="spatial">
+        <TabsList>
+          <TabsTrigger value="spatial">Spatial Queries</TabsTrigger>
+          <TabsTrigger value="geocoder">Geocoder</TabsTrigger>
+        </TabsList>
 
-            {nearbyData?.nearbyPoints && (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Distance</TableHead>
-                      <TableHead>Timestamp</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(nearbyData.nearbyPoints ?? []).map((p) => (
-                      <TableRow key={`${p.source}-${p.id}`}>
-                        <TableCell>
-                          <Badge variant="outline">{p.source}</Badge>
-                        </TableCell>
-                        <TableCell>{p.distance_meters.toFixed(1)}m</TableCell>
-                        <TableCell className="text-xs">
-                          {new Date(p.timestamp).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TabsContent value="spatial">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Nearby Points */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Nearby Points</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      Latitude
+                    </label>
+                    <input
+                      type="text"
+                      value={nearbyLat}
+                      onChange={(e) => setNearbyLat(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      Longitude
+                    </label>
+                    <input
+                      type="text"
+                      value={nearbyLon}
+                      onChange={(e) => setNearbyLon(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      Radius (m)
+                    </label>
+                    <input
+                      type="text"
+                      value={nearbyRadius}
+                      onChange={(e) => setNearbyRadius(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setRunNearby(true)}
+                  disabled={nearbyLoading}
+                >
+                  {nearbyLoading ? 'Searching...' : 'Search'}
+                </Button>
 
-        {/* Distance Calculator */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Distance Calculator</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">
-                  From Lat
-                </label>
-                <input
-                  type="text"
-                  value={fromLat}
-                  onChange={(e) => setFromLat(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">
-                  From Lon
-                </label>
-                <input
-                  type="text"
-                  value={fromLon}
-                  onChange={(e) => setFromLon(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">To Lat</label>
-                <input
-                  type="text"
-                  value={toLat}
-                  onChange={(e) => setToLat(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">To Lon</label>
-                <input
-                  type="text"
-                  value={toLon}
-                  onChange={(e) => setToLon(e.target.value)}
-                  className="w-full rounded border bg-background px-2 py-1 text-sm"
-                />
-              </div>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => setRunDistance(true)}
-              disabled={distanceLoading}
-            >
-              {distanceLoading ? 'Calculating...' : 'Calculate'}
-            </Button>
+                {nearbyData?.nearbyPoints && (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Distance</TableHead>
+                          <TableHead>Timestamp</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(nearbyData.nearbyPoints ?? []).map((p) => (
+                          <TableRow key={`${p.source}-${p.id}`}>
+                            <TableCell>
+                              <Badge variant="outline">{p.source}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {p.distance_meters.toFixed(1)}m
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {new Date(p.timestamp).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            {distanceData?.calculateDistance && (
-              <div className="rounded-lg bg-muted p-4">
-                <p className="text-2xl font-bold">
-                  {(
-                    distanceData.calculateDistance.distance_meters / 1000
-                  ).toFixed(3)}{' '}
-                  km
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {distanceData.calculateDistance.distance_meters.toFixed(1)}{' '}
-                  meters
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            {/* Distance Calculator */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Distance Calculator</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      From Lat
+                    </label>
+                    <input
+                      type="text"
+                      value={fromLat}
+                      onChange={(e) => setFromLat(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      From Lon
+                    </label>
+                    <input
+                      type="text"
+                      value={fromLon}
+                      onChange={(e) => setFromLon(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      To Lat
+                    </label>
+                    <input
+                      type="text"
+                      value={toLat}
+                      onChange={(e) => setToLat(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">
+                      To Lon
+                    </label>
+                    <input
+                      type="text"
+                      value={toLon}
+                      onChange={(e) => setToLon(e.target.value)}
+                      className="w-full rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setRunDistance(true)}
+                  disabled={distanceLoading}
+                >
+                  {distanceLoading ? 'Calculating...' : 'Calculate'}
+                </Button>
+
+                {distanceData?.calculateDistance && (
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-2xl font-bold">
+                      {(
+                        distanceData.calculateDistance.distance_meters / 1000
+                      ).toFixed(3)}{' '}
+                      km
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {distanceData.calculateDistance.distance_meters.toFixed(
+                        1,
+                      )}{' '}
+                      meters
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="geocoder">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ForwardGeocode />
+            <ReverseGeocode />
+          </div>
+          <div className="mt-6">
+            <Autocomplete />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

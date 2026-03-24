@@ -15,7 +15,8 @@ window.__ENV__ = {
   COGNITO_REDIRECT_URI: "${VITE_COGNITO_REDIRECT_URI:-http://localhost:5173/callback}",
   COGNITO_ISSUER: "${VITE_COGNITO_ISSUER:-https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K}",
   APP_VERSION: "${VITE_APP_VERSION:-dev}",
-  APP_NAME: "${VITE_APP_NAME:-otel-data-ui}"
+  APP_NAME: "${VITE_APP_NAME:-otel-data-ui}",
+  GEOCODER_URL: "${VITE_GEOCODER_URL:-https://geocoder.lab.informationcart.com}"
 };
 EOF
 

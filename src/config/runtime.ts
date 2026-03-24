@@ -11,6 +11,7 @@ interface RuntimeConfig {
   NRBA_LICENSE_KEY: string
   NRBA_TRUST_KEY: string
   NRBA_AGENT_ID: string
+  GEOCODER_URL: string
 }
 
 declare global {
@@ -54,5 +55,9 @@ export function getAllConfig(): RuntimeConfig {
     NRBA_LICENSE_KEY: getConfig('NRBA_LICENSE_KEY', ''),
     NRBA_TRUST_KEY: getConfig('NRBA_TRUST_KEY', ''),
     NRBA_AGENT_ID: getConfig('NRBA_AGENT_ID', ''),
+    GEOCODER_URL: getConfig(
+      'GEOCODER_URL',
+      'https://geocoder.lab.informationcart.com',
+    ),
   }
 }

@@ -16,6 +16,7 @@ describe('runtime config', () => {
       NRBA_LICENSE_KEY: '',
       NRBA_TRUST_KEY: '',
       NRBA_AGENT_ID: '',
+      GEOCODER_URL: 'https://geocoder.runtime.example.com',
     }
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://vite.example.com/graphql')
 
@@ -54,6 +55,7 @@ describe('runtime config', () => {
       NRBA_LICENSE_KEY: '',
       NRBA_TRUST_KEY: '',
       NRBA_AGENT_ID: '',
+      GEOCODER_URL: 'https://geocoder.runtime.example.com',
     }
 
     expect(getAllConfig()).toEqual({
@@ -69,6 +71,7 @@ describe('runtime config', () => {
       NRBA_LICENSE_KEY: '',
       NRBA_TRUST_KEY: '',
       NRBA_AGENT_ID: '',
+      GEOCODER_URL: 'https://geocoder.runtime.example.com',
     })
   })
 })
