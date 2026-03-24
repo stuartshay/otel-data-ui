@@ -58,10 +58,12 @@ export async function reverseGeocode(
   lon: number,
   size: number = 5,
 ): Promise<PeliasResponse> {
-  if (lat < -90 || lat > 90)
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90)
     throw new Error('Latitude must be between -90 and 90')
-  if (lon < -180 || lon > 180)
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180)
     throw new Error('Longitude must be between -180 and 180')
+  if (!Number.isFinite(size) || size < 1)
+    throw new Error('Size must be a positive number')
 
   const url = `${getBaseUrl()}/v1/reverse?${new URLSearchParams({
     'point.lat': String(lat),

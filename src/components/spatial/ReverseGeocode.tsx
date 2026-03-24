@@ -12,10 +12,28 @@ export function ReverseGeocode() {
   const [error, setError] = useState<string | null>(null)
 
   const handleLookup = async () => {
+    const latNum = parseFloat(lat)
+    const lonNum = parseFloat(lon)
+
+    if (
+      !Number.isFinite(latNum) ||
+      !Number.isFinite(lonNum) ||
+      latNum < -90 ||
+      latNum > 90 ||
+      lonNum < -180 ||
+      lonNum > 180
+    ) {
+      setError(
+        'Please enter a valid latitude (-90 to 90) and longitude (-180 to 180).',
+      )
+      setResults([])
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
-      const data = await reverseGeocode(parseFloat(lat), parseFloat(lon))
+      const data = await reverseGeocode(latNum, lonNum)
       setResults(data.features)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lookup failed')

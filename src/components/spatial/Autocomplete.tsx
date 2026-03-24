@@ -14,31 +14,44 @@ export function Autocomplete() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
 
-    if (query.trim().length < 2) {
+    const trimmedQuery = query.trim()
+
+    if (trimmedQuery.length < 2) {
       setResults([])
+      setLoading(false)
       return
     }
 
+    const currentRequestId = ++requestIdRef.current
+
     timerRef.current = setTimeout(async () => {
+      if (currentRequestId !== requestIdRef.current) return
+
       setLoading(true)
       setError(null)
       try {
-        const data = await fetchAutocomplete(query.trim())
+        const data = await fetchAutocomplete(trimmedQuery)
+        if (currentRequestId !== requestIdRef.current) return
         setResults(data.features)
       } catch (err) {
+        if (currentRequestId !== requestIdRef.current) return
         setError(err instanceof Error ? err.message : 'Autocomplete failed')
         setResults([])
       } finally {
-        setLoading(false)
+        if (currentRequestId === requestIdRef.current) {
+          setLoading(false)
+        }
       }
     }, 300)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
+      requestIdRef.current++
     }
   }, [query])
 
