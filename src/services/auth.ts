@@ -55,10 +55,6 @@ class AuthService {
   constructor() {
     this.userManager = userManager
 
-    this.userManager.events.addAccessTokenExpiring(() => {
-      // Silent renewal handled automatically by oidc-client-ts
-    })
-
     this.userManager.events.addAccessTokenExpired(() => {
       this.logout()
     })
