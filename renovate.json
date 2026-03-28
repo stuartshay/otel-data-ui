@@ -3,7 +3,7 @@
   "extends": ["config:recommended", "docker:enableMajor", ":semanticCommits"],
   "labels": ["dependencies", "renovate"],
   "timezone": "America/New_York",
-  "schedule": ["before 6am on Monday"],
+  "schedule": ["before 6am on Sunday"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 5,
   "enabledManagers": ["npm", "dockerfile", "github-actions"],

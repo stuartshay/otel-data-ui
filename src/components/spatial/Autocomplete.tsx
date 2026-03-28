@@ -28,6 +28,7 @@ export function Autocomplete() {
     }
 
     const currentRequestId = ++requestIdRef.current
+    const currentTimerRef = timerRef
 
     timerRef.current = setTimeout(async () => {
       if (currentRequestId !== requestIdRef.current) return
@@ -50,8 +51,8 @@ export function Autocomplete() {
     }, 300)
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      requestIdRef.current++
+      if (currentTimerRef.current) clearTimeout(currentTimerRef.current)
+      requestIdRef.current = currentRequestId + 1
     }
   }, [query])
 
