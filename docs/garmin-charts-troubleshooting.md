@@ -1,5 +1,7 @@
 # Garmin Charts Fix — Troubleshooting & Local Testing Report
 
+> **Status: Resolved** — Both fixes merged and deployed.
+
 **Date**: 2026-02-19
 **Issue**: Garmin activity detail charts (Elevation, Speed) crash the page
 **Affected Services**: otel-data-ui, otel-data-api
@@ -82,7 +84,7 @@ it was a plain `SELECT ... WHERE activity_id = $1`.
 
 ## Fixes Applied
 
-### Backend Fix (otel-data-api) — PR #23
+### Backend Fix (otel-data-api) — PR #23 ✅ Merged
 
 **File**: `app/routers/garmin.py`
 
@@ -104,7 +106,7 @@ it was a plain `SELECT ... WHERE activity_id = $1`.
 2. **Accurate count**: Changed `COUNT(*)` to `COUNT(DISTINCT timestamp)` so
    pagination metadata reflects the deduplicated total (7,453 vs 14,906).
 
-### Frontend Fix (otel-data-ui) — PR #15
+### Frontend Fix (otel-data-ui) — PR #15 ✅ Merged
 
 **File**: `src/components/garmin/ActivityCharts.tsx`
 

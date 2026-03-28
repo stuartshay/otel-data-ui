@@ -1,5 +1,9 @@
 ## Plan: Garmin Activity Detail Page Redesign
 
+> **Status: Completed** — All phases delivered. Backend (otel-data-api),
+> gateway (otel-data-gateway), and frontend (otel-data-ui) changes are merged
+> and deployed.
+
 Redesign the Garmin activity detail page (`/garmin/:activityId`) to match the
 Garmin Connect professional interface: route map with speed-colored polyline,
 elevation/speed/HR/temperature charts (Recharts), stat summary bar, and detailed

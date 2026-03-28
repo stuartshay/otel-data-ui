@@ -55,12 +55,7 @@ class AuthService {
   constructor() {
     this.userManager = userManager
 
-    this.userManager.events.addAccessTokenExpiring(() => {
-      console.log('Access token expiring, attempting silent renewal...')
-    })
-
     this.userManager.events.addAccessTokenExpired(() => {
-      console.log('Access token expired')
       this.logout()
     })
 
