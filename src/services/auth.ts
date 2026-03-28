@@ -56,11 +56,10 @@ class AuthService {
     this.userManager = userManager
 
     this.userManager.events.addAccessTokenExpiring(() => {
-      console.log('Access token expiring, attempting silent renewal...')
+      // Silent renewal handled automatically by oidc-client-ts
     })
 
     this.userManager.events.addAccessTokenExpired(() => {
-      console.log('Access token expired')
       this.logout()
     })
 

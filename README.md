@@ -10,6 +10,30 @@
 React frontend consuming the [otel-data-gateway](https://github.com/stuartshay/otel-data-gateway)
 GraphQL BFF for location and activity data visualization.
 
+## Architecture
+
+```mermaid
+%%{init: {"theme": "neutral", "flowchart": {"curve": "linear"}}}%%
+flowchart LR
+    browser["Browser"] --> ui["otel-data-ui<br/>(React + Vite)"]
+    ui -->|GraphQL| gateway["otel-data-gateway<br/>(Apollo BFF)"]
+    gateway -->|REST| api["otel-data-api<br/>(FastAPI)"]
+    api --> pool["PgBouncer<br/>:6432"]
+    pool --> db["PostgreSQL<br/>+ PostGIS"]
+    ui -.->|PKCE| cognito["AWS Cognito"]
+```
+
+## Features
+
+- **GraphQL data layer** via Apollo Client — paginated queries, caching
+- **Interactive maps** with Leaflet / react-leaflet (OwnTracks + Garmin tracks)
+- **Activity charts** with Recharts (elevation, speed, heart rate, temperature)
+- **AWS Cognito authentication** — PKCE flow via oidc-client-ts
+- **Runtime environment config** — container-friendly env injection at startup
+- **New Relic browser agent** — Real User Monitoring (RUM)
+- **Playwright E2E tests** — end-to-end testing against deployed services
+- **shadcn/ui components** — Tailwind CSS + Radix UI primitives
+
 ## Stack
 
 | Component     | Version           |
@@ -23,26 +47,47 @@ GraphQL BFF for location and activity data visualization.
 | Leaflet       | 1.9               |
 | Recharts      | 3.x               |
 
-## Pages
+## Routes
 
-- **Dashboard** — Overview stats, device list, sport breakdown
-- **Locations** — OwnTracks GPS points table with pagination and device filter
-- **Location Detail** — Single location with all fields
-- **Garmin Activities** — Activity table with sport filter
-- **Garmin Detail** — Activity stats, elevation, speed, track points
-- **Unified Map** — Leaflet map with OwnTracks + Garmin points
-- **Daily Summary** — Combined daily activity table
-- **Reference Locations** — Saved location cards
-- **Spatial Tools** — Nearby point search and distance calculator
+| Path                  | Page                | Description                                            |
+| --------------------- | ------------------- | ------------------------------------------------------ |
+| `/`                   | Dashboard           | Overview stats, device list, sport breakdown           |
+| `/locations`          | Locations           | OwnTracks GPS points with pagination and device filter |
+| `/locations/:id`      | Location Detail     | Single location with all fields                        |
+| `/garmin`             | Garmin Activities   | Activity table with sport filter                       |
+| `/garmin/:activityId` | Garmin Detail       | Stats, elevation/speed charts, track map               |
+| `/map`                | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
+| `/daily-summary`      | Daily Summary       | Combined daily activity table                          |
+| `/references`         | Reference Locations | Saved location cards                                   |
+| `/spatial`            | Spatial Tools       | Nearby point search and distance calculator            |
 
 ## Quick Start
 
 ```bash
-npm install
+# Setup
+./setup.sh
+
+# Development (hot reload)
 npm run dev
+
+# Open
+open http://localhost:5173
 ```
 
-Open <http://localhost:5173>
+### Prerequisites
+
+- Node.js 24+
+- npm
+
+### Development Setup
+
+```bash
+git clone https://github.com/stuartshay/otel-data-ui.git
+cd otel-data-ui
+./setup.sh          # or: npm install
+cp .env.example .env.local   # configure environment
+npm run dev
+```
 
 ## Environment Variables
 
@@ -59,7 +104,7 @@ VITE_COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Q
 ## Commands
 
 ```bash
-npm run dev           # Development server
+npm run dev           # Development server (port 5173)
 npm run build         # Production build
 npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
@@ -71,6 +116,25 @@ npm run test:coverage # Vitest coverage run
 npm run type-check    # TypeScript check
 npm run lint:all      # All linters
 ```
+
+## Testing
+
+```bash
+npm run test              # Vitest in watch mode
+npm run test:run          # Single run
+npm run test:coverage     # Coverage report
+npx playwright test       # E2E tests (requires running services)
+```
+
+## CI/CD
+
+| Workflow           | File                     | Purpose                                                              |
+| ------------------ | ------------------------ | -------------------------------------------------------------------- |
+| Lint and Validate  | `lint.yml`               | ESLint, TypeScript, cspell, markdownlint, tests, hadolint, npm audit |
+| Docker             | `docker.yml`             | Build and push image to Docker Hub on master merge                   |
+| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published           |
+| Auto Approve       | `auto-approve.yml`       | Auto-approve PRs from renovate[bot] and dependabot[bot]              |
+| Validate PR Branch | `validate-pr-branch.yml` | Ensure PRs target the correct base branch                            |
 
 ## Docker
 
