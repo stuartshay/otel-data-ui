@@ -34,6 +34,7 @@ export const LOCATIONS_QUERY = gql`
         trigger
         timestamp
         created_at
+        display_address
       }
       total
       limit
@@ -60,6 +61,19 @@ export const LOCATION_DETAIL_QUERY = gql`
       timestamp
       created_at
       raw_payload
+      address {
+        display_address
+        street
+        housenumber
+        neighbourhood
+        locality
+        region
+        country
+        postalcode
+        confidence
+        status
+        geocoded_at
+      }
     }
   }
 `

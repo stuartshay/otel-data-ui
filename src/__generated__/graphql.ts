@@ -231,6 +231,63 @@ export type GarminTrackPointConnection = {
   total: Scalars['Int']['output'];
 };
 
+/** Reverse-geocoded address components from Pelias. */
+export type GeocodedAddress = {
+  __typename?: 'GeocodedAddress';
+  /** Pelias confidence score (0-1) */
+  confidence?: Maybe<Scalars['Float']['output']>;
+  /** Country name */
+  country?: Maybe<Scalars['String']['output']>;
+  /** Full formatted address label from Pelias */
+  display_address?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when geocoding was performed */
+  geocoded_at?: Maybe<Scalars['String']['output']>;
+  /** House or building number */
+  housenumber?: Maybe<Scalars['String']['output']>;
+  /** City or town */
+  locality?: Maybe<Scalars['String']['output']>;
+  /** Neighbourhood name */
+  neighbourhood?: Maybe<Scalars['String']['output']>;
+  /** Postal or ZIP code */
+  postalcode?: Maybe<Scalars['String']['output']>;
+  /** State or province */
+  region?: Maybe<Scalars['String']['output']>;
+  /** Geocoding status: success, no_coverage, error, pending */
+  status: Scalars['String']['output'];
+  /** Street name */
+  street?: Maybe<Scalars['String']['output']>;
+};
+
+/** Coverage statistics for geocoded location records. */
+export type GeocodingStatus = {
+  __typename?: 'GeocodingStatus';
+  /** Percentage of locations with a geocoded address */
+  coverage_percent: Scalars['Float']['output'];
+  /** Number of locations that failed geocoding */
+  errors: Scalars['Int']['output'];
+  /** Number of locations with a geocoded address (any status) */
+  geocoded: Scalars['Int']['output'];
+  /** Number of locations outside Pelias coverage area */
+  no_coverage: Scalars['Int']['output'];
+  /** Number of locations awaiting geocoding */
+  pending: Scalars['Int']['output'];
+  /** Number of successfully geocoded locations */
+  success: Scalars['Int']['output'];
+  /** Total number of OwnTracks location records */
+  total_locations: Scalars['Int']['output'];
+};
+
+/** Result of triggering a batch geocoding operation. */
+export type GeocodingTriggerResult = {
+  __typename?: 'GeocodingTriggerResult';
+  /** Number of records processed in this batch */
+  processed: Scalars['Int']['output'];
+  /** Number of records still awaiting geocoding */
+  remaining: Scalars['Int']['output'];
+  /** Number of records skipped via proximity deduplication */
+  skipped_dedup: Scalars['Int']['output'];
+};
+
 /** Service health status. */
 export type HealthStatus = {
   __typename?: 'HealthStatus';
@@ -257,6 +314,8 @@ export type Location = {
   created_at?: Maybe<Scalars['String']['output']>;
   /** OwnTracks device identifier (e.g. iphone_stuart) */
   device_id: Scalars['String']['output'];
+  /** Short formatted address from reverse geocoding */
+  display_address?: Maybe<Scalars['String']['output']>;
   /** Unique location record identifier */
   id: Scalars['Int']['output'];
   /** GPS latitude in decimal degrees (WGS 84) */
@@ -302,6 +361,8 @@ export type LocationDetail = {
   __typename?: 'LocationDetail';
   /** Horizontal accuracy of the GPS fix in meters */
   accuracy?: Maybe<Scalars['Float']['output']>;
+  /** Full reverse-geocoded address components from Pelias */
+  address?: Maybe<GeocodedAddress>;
   /** Altitude above sea level in meters */
   altitude?: Maybe<Scalars['Float']['output']>;
   /** Device battery level as a percentage (0-100) */
@@ -336,12 +397,20 @@ export type Mutation = {
   __typename?: 'Mutation';
   /** Trigger an on-demand Garmin sync in the upstream API. */
   triggerGarminSync: GarminSyncTriggerResult;
+  /** Trigger batch reverse-geocoding of un-geocoded location records. */
+  triggerGeocoding: GeocodingTriggerResult;
 };
 
 
 export type MutationTriggerGarminSyncArgs = {
   lookback?: InputMaybe<Scalars['Int']['input']>;
   window_hours?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type MutationTriggerGeocodingArgs = {
+  batch_size?: InputMaybe<Scalars['Int']['input']>;
+  retry_failed?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 /** GPS point found within a spatial proximity search. */
@@ -390,6 +459,8 @@ export type Query = {
   garminSports: Array<SportInfo>;
   /** Retrieve paginated GPS track points for a Garmin activity. */
   garminTrackPoints: GarminTrackPointConnection;
+  /** Get geocoding coverage statistics. */
+  geocodingStatus: GeocodingStatus;
   /** Get service health status. */
   health: HealthStatus;
   /** Retrieve a single location by its ID, including raw payload. */
@@ -662,6 +733,19 @@ export type TriggerGarminSyncMutationVariables = Exact<{
 
 export type TriggerGarminSyncMutation = { __typename?: 'Mutation', triggerGarminSync: { __typename?: 'GarminSyncTriggerResult', status: string, message: string, accepted: boolean, triggered_at?: string | null, started_at?: string | null, window_hours?: number | null, window_start?: string | null, lookback?: number | null } };
 
+export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeocodingStatusQuery = { __typename?: 'Query', geocodingStatus: { __typename?: 'GeocodingStatus', total_locations: number, geocoded: number, success: number, pending: number, no_coverage: number, errors: number, coverage_percent: number } };
+
+export type TriggerGeocodingMutationVariables = Exact<{
+  batch_size?: InputMaybe<Scalars['Int']['input']>;
+  retry_failed?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+
+export type TriggerGeocodingMutation = { __typename?: 'Mutation', triggerGeocoding: { __typename?: 'GeocodingTriggerResult', processed: number, remaining: number, skipped_dedup: number } };
+
 export type HealthQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -683,14 +767,14 @@ export type LocationsQueryVariables = Exact<{
 }>;
 
 
-export type LocationsQuery = { __typename?: 'Query', locations: { __typename?: 'LocationConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'Location', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null }> } };
+export type LocationsQuery = { __typename?: 'Query', locations: { __typename?: 'LocationConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'Location', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null, display_address?: string | null }> } };
 
 export type LocationDetailQueryVariables = Exact<{
   id: Scalars['Int']['input'];
 }>;
 
 
-export type LocationDetailQuery = { __typename?: 'Query', location?: { __typename?: 'LocationDetail', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null, raw_payload?: Record<string, unknown> | null } | null };
+export type LocationDetailQuery = { __typename?: 'Query', location?: { __typename?: 'LocationDetail', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null, raw_payload?: Record<string, unknown> | null, address?: { __typename?: 'GeocodedAddress', display_address?: string | null, street?: string | null, housenumber?: string | null, neighbourhood?: string | null, locality?: string | null, region?: string | null, country?: string | null, postalcode?: string | null, confidence?: number | null, status: string, geocoded_at?: string | null } | null } | null };
 
 export type DevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1127,6 +1211,90 @@ export function useTriggerGarminSyncMutation(baseOptions?: ApolloReactHooks.Muta
 export type TriggerGarminSyncMutationHookResult = ReturnType<typeof useTriggerGarminSyncMutation>;
 export type TriggerGarminSyncMutationResult = ApolloReactCommon.MutationResult<TriggerGarminSyncMutation>;
 export type TriggerGarminSyncMutationOptions = ApolloReactCommon.BaseMutationOptions<TriggerGarminSyncMutation, TriggerGarminSyncMutationVariables>;
+export const GeocodingStatusDocument = gql`
+    query GeocodingStatus {
+  geocodingStatus {
+    total_locations
+    geocoded
+    success
+    pending
+    no_coverage
+    errors
+    coverage_percent
+  }
+}
+    `;
+
+/**
+ * __useGeocodingStatusQuery__
+ *
+ * To run a query within a React component, call `useGeocodingStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeocodingStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeocodingStatusQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGeocodingStatusQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GeocodingStatusQuery, GeocodingStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GeocodingStatusQuery, GeocodingStatusQueryVariables>(GeocodingStatusDocument, options);
+      }
+export function useGeocodingStatusLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GeocodingStatusQuery, GeocodingStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GeocodingStatusQuery, GeocodingStatusQueryVariables>(GeocodingStatusDocument, options);
+        }
+// @ts-ignore
+export function useGeocodingStatusSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GeocodingStatusQuery, GeocodingStatusQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GeocodingStatusQuery, GeocodingStatusQueryVariables>;
+export function useGeocodingStatusSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GeocodingStatusQuery, GeocodingStatusQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GeocodingStatusQuery | undefined, GeocodingStatusQueryVariables>;
+export function useGeocodingStatusSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GeocodingStatusQuery, GeocodingStatusQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GeocodingStatusQuery, GeocodingStatusQueryVariables>(GeocodingStatusDocument, options);
+        }
+export type GeocodingStatusQueryHookResult = ReturnType<typeof useGeocodingStatusQuery>;
+export type GeocodingStatusLazyQueryHookResult = ReturnType<typeof useGeocodingStatusLazyQuery>;
+export type GeocodingStatusSuspenseQueryHookResult = ReturnType<typeof useGeocodingStatusSuspenseQuery>;
+export type GeocodingStatusQueryResult = ApolloReactCommon.QueryResult<GeocodingStatusQuery, GeocodingStatusQueryVariables>;
+export const TriggerGeocodingDocument = gql`
+    mutation TriggerGeocoding($batch_size: Int, $retry_failed: Boolean) {
+  triggerGeocoding(batch_size: $batch_size, retry_failed: $retry_failed) {
+    processed
+    remaining
+    skipped_dedup
+  }
+}
+    `;
+export type TriggerGeocodingMutationFn = ApolloReactCommon.MutationFunction<TriggerGeocodingMutation, TriggerGeocodingMutationVariables>;
+
+/**
+ * __useTriggerGeocodingMutation__
+ *
+ * To run a mutation, you first call `useTriggerGeocodingMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useTriggerGeocodingMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [triggerGeocodingMutation, { data, loading, error }] = useTriggerGeocodingMutation({
+ *   variables: {
+ *      batch_size: // value for 'batch_size'
+ *      retry_failed: // value for 'retry_failed'
+ *   },
+ * });
+ */
+export function useTriggerGeocodingMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<TriggerGeocodingMutation, TriggerGeocodingMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<TriggerGeocodingMutation, TriggerGeocodingMutationVariables>(TriggerGeocodingDocument, options);
+      }
+export type TriggerGeocodingMutationHookResult = ReturnType<typeof useTriggerGeocodingMutation>;
+export type TriggerGeocodingMutationResult = ApolloReactCommon.MutationResult<TriggerGeocodingMutation>;
+export type TriggerGeocodingMutationOptions = ApolloReactCommon.BaseMutationOptions<TriggerGeocodingMutation, TriggerGeocodingMutationVariables>;
 export const HealthDocument = gql`
     query Health {
   health {
@@ -1240,6 +1408,7 @@ export const LocationsDocument = gql`
       trigger
       timestamp
       created_at
+      display_address
     }
     total
     limit
@@ -1307,6 +1476,19 @@ export const LocationDetailDocument = gql`
     timestamp
     created_at
     raw_payload
+    address {
+      display_address
+      street
+      housenumber
+      neighbourhood
+      locality
+      region
+      country
+      postalcode
+      confidence
+      status
+      geocoded_at
+    }
   }
 }
     `;

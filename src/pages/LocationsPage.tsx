@@ -85,6 +85,7 @@ export function LocationsPage() {
               <TableHead>Lat / Lon</TableHead>
               <TableHead>Battery</TableHead>
               <TableHead>Accuracy</TableHead>
+              <TableHead>Address</TableHead>
               <TableHead>Timestamp</TableHead>
             </TableRow>
           </TableHeader>
@@ -110,6 +111,12 @@ export function LocationsPage() {
                 </TableCell>
                 <TableCell>
                   {loc.accuracy != null ? `${loc.accuracy.toFixed(0)}m` : '—'}
+                </TableCell>
+                <TableCell
+                  className="max-w-[200px] truncate text-xs"
+                  title={loc.display_address ?? undefined}
+                >
+                  {loc.display_address ?? '—'}
                 </TableCell>
                 <TableCell className="text-xs">
                   {new Date(loc.timestamp).toLocaleString()}
