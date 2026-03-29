@@ -93,4 +93,81 @@ describe('LocationDetailPage', () => {
     expect(screen.getByText(/owntracks\/phone/)).toBeInTheDocument()
     expect(screen.getByRole('link')).toHaveAttribute('href', '/locations')
   })
+
+  it('renders address card with full details for a successful geocoded address', () => {
+    locationDetailHooks.useLocationDetailQuery.mockReturnValue({
+      data: {
+        location: {
+          id: 42,
+          device_id: 'phone',
+          latitude: 40.736097,
+          longitude: -74.039373,
+          timestamp: '2026-03-14T09:00:00Z',
+          address: {
+            display_address: '123 Main St, Hoboken, NJ',
+            street: 'Main St',
+            housenumber: '123',
+            neighbourhood: 'Downtown',
+            locality: 'Hoboken',
+            region: 'New Jersey',
+            country: 'United States',
+            postalcode: '07030',
+            confidence: 0.95,
+            status: 'success',
+            geocoded_at: '2026-03-14T10:00:00Z',
+          },
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    expect(screen.getByText('Address')).toBeInTheDocument()
+    expect(screen.getByText('success')).toBeInTheDocument()
+    expect(screen.getByText('123 Main St, Hoboken, NJ')).toBeInTheDocument()
+    expect(screen.getByText('Main St')).toBeInTheDocument()
+    expect(screen.getByText('Hoboken')).toBeInTheDocument()
+    expect(screen.getByText('New Jersey')).toBeInTheDocument()
+    expect(screen.getByText('95%')).toBeInTheDocument()
+  })
+
+  it('renders address card with status badge for non-success statuses', () => {
+    locationDetailHooks.useLocationDetailQuery.mockReturnValue({
+      data: {
+        location: {
+          id: 42,
+          device_id: 'phone',
+          latitude: 40.736097,
+          longitude: -74.039373,
+          timestamp: '2026-03-14T09:00:00Z',
+          address: {
+            status: 'pending',
+            display_address: null,
+            street: null,
+            housenumber: null,
+            neighbourhood: null,
+            locality: null,
+            region: null,
+            country: null,
+            postalcode: null,
+            confidence: null,
+            geocoded_at: null,
+          },
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    expect(screen.getByText('Address')).toBeInTheDocument()
+    expect(screen.getByText('pending')).toBeInTheDocument()
+    expect(screen.queryByText('Display Address')).not.toBeInTheDocument()
+    expect(screen.queryByText('Street')).not.toBeInTheDocument()
+  })
 })

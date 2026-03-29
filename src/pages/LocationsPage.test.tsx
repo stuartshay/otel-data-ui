@@ -137,4 +137,84 @@ describe('LocationsPage', () => {
 
     expect(screen.getByText('locations failed')).toBeInTheDocument()
   })
+
+  it('renders display_address when present and falls back to dash when null', () => {
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: {
+        locations: {
+          total: 2,
+          items: [
+            {
+              id: 1,
+              device_id: 'phone',
+              latitude: 40.736097,
+              longitude: -74.039373,
+              battery: 80,
+              accuracy: 5,
+              timestamp: '2026-03-14T09:00:00Z',
+              display_address: '123 Main St, Hoboken, NJ',
+            },
+            {
+              id: 2,
+              device_id: 'phone',
+              latitude: 40.736097,
+              longitude: -74.039373,
+              battery: 70,
+              accuracy: 10,
+              timestamp: '2026-03-14T10:00:00Z',
+              display_address: null,
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    expect(screen.getByText('123 Main St, Hoboken, NJ')).toBeInTheDocument()
+
+    const rows = screen.getAllByRole('row')
+    // row 0 is header; row 2 is the null-address row
+    const cells = rows[2].querySelectorAll('td')
+    const addressCell = cells[5]
+    expect(addressCell.textContent).toBe('—')
+  })
+
+  it('sets a title attribute on the address cell for truncation tooltip', () => {
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: {
+        locations: {
+          total: 1,
+          items: [
+            {
+              id: 1,
+              device_id: 'phone',
+              latitude: 40.736097,
+              longitude: -74.039373,
+              battery: 80,
+              accuracy: 5,
+              timestamp: '2026-03-14T09:00:00Z',
+              display_address: 'A very long address that would be truncated',
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    const addressCell = screen.getByText(
+      'A very long address that would be truncated',
+    )
+    expect(addressCell.closest('td')).toHaveAttribute(
+      'title',
+      'A very long address that would be truncated',
+    )
+  })
 })

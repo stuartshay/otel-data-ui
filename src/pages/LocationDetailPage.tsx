@@ -85,54 +85,69 @@ export function LocationDetailPage() {
         </CardContent>
       </Card>
 
-      {loc.address && loc.address.status === 'success' && (
+      {loc.address && (
         <Card>
           <CardHeader>
             <CardTitle>Address</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {loc.address.display_address && (
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Display Address
-                  </dt>
-                  <dd className="mt-1 text-sm">
-                    {loc.address.display_address}
-                  </dd>
-                </div>
-              )}
-              {[
-                { label: 'Street', value: loc.address.street },
-                { label: 'House Number', value: loc.address.housenumber },
-                { label: 'Neighbourhood', value: loc.address.neighbourhood },
-                { label: 'Locality', value: loc.address.locality },
-                { label: 'Region', value: loc.address.region },
-                { label: 'Country', value: loc.address.country },
-                { label: 'Postal Code', value: loc.address.postalcode },
-                {
-                  label: 'Confidence',
-                  value:
-                    loc.address.confidence != null
-                      ? `${(loc.address.confidence * 100).toFixed(0)}%`
-                      : null,
-                },
-                {
-                  label: 'Geocoded',
-                  value: loc.address.geocoded_at
-                    ? new Date(loc.address.geocoded_at).toLocaleString()
-                    : null,
-                },
-              ].map(
-                ({ label, value }) =>
-                  value != null && (
-                    <div key={label}>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Status
+                </dt>
+                <dd className="mt-1 text-sm">
+                  <Badge variant="outline">{loc.address.status}</Badge>
+                </dd>
+              </div>
+              {loc.address.status === 'success' && (
+                <>
+                  {loc.address.display_address && (
+                    <div className="sm:col-span-2 lg:col-span-3">
                       <dt className="text-sm font-medium text-muted-foreground">
-                        {label}
+                        Display Address
                       </dt>
-                      <dd className="mt-1 text-sm">{String(value)}</dd>
+                      <dd className="mt-1 text-sm">
+                        {loc.address.display_address}
+                      </dd>
                     </div>
-                  ),
+                  )}
+                  {[
+                    { label: 'Street', value: loc.address.street },
+                    { label: 'House Number', value: loc.address.housenumber },
+                    {
+                      label: 'Neighbourhood',
+                      value: loc.address.neighbourhood,
+                    },
+                    { label: 'Locality', value: loc.address.locality },
+                    { label: 'Region', value: loc.address.region },
+                    { label: 'Country', value: loc.address.country },
+                    { label: 'Postal Code', value: loc.address.postalcode },
+                    {
+                      label: 'Confidence',
+                      value:
+                        loc.address.confidence != null
+                          ? `${(loc.address.confidence * 100).toFixed(0)}%`
+                          : null,
+                    },
+                    {
+                      label: 'Geocoded',
+                      value: loc.address.geocoded_at
+                        ? new Date(loc.address.geocoded_at).toLocaleString()
+                        : null,
+                    },
+                  ].map(
+                    ({ label, value }) =>
+                      value != null && (
+                        <div key={label}>
+                          <dt className="text-sm font-medium text-muted-foreground">
+                            {label}
+                          </dt>
+                          <dd className="mt-1 text-sm">{String(value)}</dd>
+                        </div>
+                      ),
+                  )}
+                </>
               )}
             </dl>
           </CardContent>
