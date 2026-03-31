@@ -14,6 +14,7 @@ import { MapPage } from '@/pages/MapPage'
 import { DailySummaryPage } from '@/pages/DailySummaryPage'
 import { ReferencesPage } from '@/pages/ReferencesPage'
 import { SpatialPage } from '@/pages/SpatialPage'
+import { GeocodingPage } from '@/pages/GeocodingPage'
 import { CallbackPage } from '@/pages/CallbackPage'
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
                 <Route path="daily-summary" element={<DailySummaryPage />} />
                 <Route path="references" element={<ReferencesPage />} />
                 <Route path="spatial" element={<SpatialPage />} />
+                <Route path="geocoding" element={<GeocodingPage />} />
               </Route>
             </Routes>
           </BrowserRouter>
