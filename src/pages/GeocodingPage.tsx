@@ -48,13 +48,20 @@ export function GeocodingPage() {
   const handleTrigger = () => {
     const variables: { batch_size?: number; retry_failed?: boolean } = {}
     const size = parseInt(batchSize, 10)
-    if (!isNaN(size) && size > 0) variables.batch_size = size
+    if (isNaN(size) || size < 1 || size > 1000) {
+      toast.error('Invalid batch size', {
+        description: 'Batch size must be between 1 and 1000.',
+      })
+      return
+    }
+    variables.batch_size = size
     if (retryFailed) variables.retry_failed = true
     triggerGeocoding({ variables })
   }
 
-  if (loading) return <LoadingState />
-  if (error) return <ErrorState message={error.message} />
+  if (loading) return <LoadingState message="Loading geocoding status..." />
+  if (error)
+    return <ErrorState message={error.message} onRetry={() => refetch()} />
 
   const status = data?.geocodingStatus
 
