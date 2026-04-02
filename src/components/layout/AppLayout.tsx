@@ -7,6 +7,7 @@ import {
   Calendar,
   Bookmark,
   Compass,
+  Globe,
   Sun,
   Moon,
   Monitor,
@@ -29,6 +30,7 @@ const navItems = [
   { to: '/daily-summary', label: 'Daily Summary', icon: Calendar },
   { to: '/references', label: 'References', icon: Bookmark },
   { to: '/spatial', label: 'Spatial', icon: Compass },
+  { to: '/geocoding', label: 'Geocoding', icon: Globe },
 ]
 
 function ThemeToggle() {
