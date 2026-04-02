@@ -59,7 +59,8 @@ export function GeocodingPage() {
     triggerGeocoding({ variables })
   }
 
-  if (loading) return <LoadingState message="Loading geocoding status..." />
+  if (loading && !data)
+    return <LoadingState message="Loading geocoding status..." />
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />
 
