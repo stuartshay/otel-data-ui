@@ -98,7 +98,9 @@ describe('apollo client', () => {
     const { getApolloClient } = await import('./apollo')
     getApolloClient()
 
-    const contextFn = apolloMocks.setContextMock.mock.calls[0][0] as (
+    const contextFn = (
+      apolloMocks.setContextMock.mock.calls as unknown[][]
+    )[0][0] as (
       req: unknown,
       prev: { headers?: Record<string, string> },
     ) => Promise<{ headers: Record<string, string> }>
@@ -116,7 +118,9 @@ describe('apollo client', () => {
     const { getApolloClient } = await import('./apollo')
     getApolloClient()
 
-    const contextFn = apolloMocks.setContextMock.mock.calls[0][0] as (
+    const contextFn = (
+      apolloMocks.setContextMock.mock.calls as unknown[][]
+    )[0][0] as (
       req: unknown,
       prev: { headers?: Record<string, string> },
     ) => Promise<{ headers: Record<string, string> }>
