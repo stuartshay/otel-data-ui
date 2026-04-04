@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { format, addDays } from 'date-fns'
+import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import { useUnifiedGpsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
@@ -22,7 +22,7 @@ export function MapPage() {
   const [calendarOpen, setCalendarOpen] = useState(false)
 
   const dateFrom = format(selectedDate, 'yyyy-MM-dd')
-  const dateTo = format(addDays(selectedDate, 1), 'yyyy-MM-dd')
+  const dateTo = dateFrom
 
   const { data, loading, error, refetch } = useUnifiedGpsQuery({
     variables: {
@@ -153,7 +153,8 @@ export function MapPage() {
 
       <div
         ref={mapRef}
-        className="h-[calc(100vh-14rem)] w-full rounded-lg border"
+        data-testid="unified-map-container"
+        className="relative z-0 h-[calc(100vh-14rem)] w-full rounded-lg border"
       />
     </div>
   )
