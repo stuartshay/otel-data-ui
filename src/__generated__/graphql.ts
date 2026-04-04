@@ -569,6 +569,8 @@ export type QueryReferenceLocationArgs = {
 export type QueryUnifiedGpsArgs = {
   date_from?: InputMaybe<Scalars['String']['input']>;
   date_to?: InputMaybe<Scalars['String']['input']>;
+  deduplicate?: InputMaybe<Scalars['Boolean']['input']>;
+  exclude_stationary?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   order?: InputMaybe<SortOrder>;
@@ -838,6 +840,8 @@ export type UnifiedGpsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   order?: InputMaybe<SortOrder>;
+  exclude_stationary?: InputMaybe<Scalars['Boolean']['input']>;
+  deduplicate?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
@@ -1884,7 +1888,7 @@ export type WithinReferenceLazyQueryHookResult = ReturnType<typeof useWithinRefe
 export type WithinReferenceSuspenseQueryHookResult = ReturnType<typeof useWithinReferenceSuspenseQuery>;
 export type WithinReferenceQueryResult = ApolloReactCommon.QueryResult<WithinReferenceQuery, WithinReferenceQueryVariables>;
 export const UnifiedGpsDocument = gql`
-    query UnifiedGps($source: String, $date_from: String, $date_to: String, $limit: Int, $offset: Int, $order: SortOrder) {
+    query UnifiedGps($source: String, $date_from: String, $date_to: String, $limit: Int, $offset: Int, $order: SortOrder, $exclude_stationary: Boolean, $deduplicate: Boolean) {
   unifiedGps(
     source: $source
     date_from: $date_from
@@ -1892,6 +1896,8 @@ export const UnifiedGpsDocument = gql`
     limit: $limit
     offset: $offset
     order: $order
+    exclude_stationary: $exclude_stationary
+    deduplicate: $deduplicate
   ) {
     items {
       source
@@ -1930,6 +1936,8 @@ export const UnifiedGpsDocument = gql`
  *      limit: // value for 'limit'
  *      offset: // value for 'offset'
  *      order: // value for 'order'
+ *      exclude_stationary: // value for 'exclude_stationary'
+ *      deduplicate: // value for 'deduplicate'
  *   },
  * });
  */
