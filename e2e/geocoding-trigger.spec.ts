@@ -27,6 +27,8 @@ test.describe('Geocoding Page', () => {
   test('trigger geocoding batch completes without timeout', async ({
     page,
   }) => {
+    test.setTimeout(180_000)
+
     // Wait for the page to load
     await expect(page.getByText('Total Locations')).toBeVisible({
       timeout: 15_000,
@@ -43,11 +45,13 @@ test.describe('Geocoding Page', () => {
     const batchInput = page.locator('#batchSize')
     await batchInput.fill('5')
 
-    // Intercept the GraphQL mutation response
+    // Intercept the GraphQL TriggerGeocoding mutation response
     const responsePromise = page.waitForResponse(
       (resp) =>
-        resp.url().includes('/graphql') ||
-        resp.url().includes('gateway.lab.informationcart.com'),
+        resp.request().method() === 'POST' &&
+        (resp.url().includes('/graphql') ||
+          resp.url().includes('gateway.lab.informationcart.com')) &&
+        (resp.request().postData()?.includes('TriggerGeocoding') ?? false),
       { timeout: 120_000 },
     )
 
@@ -74,12 +78,13 @@ test.describe('Geocoding Page', () => {
     const toast = page.locator('[data-sonner-toast]').first()
     if (await toast.isVisible({ timeout: 5_000 }).catch(() => false)) {
       const toastText = await toast.textContent()
-      console.log('Toast message:', toastText)
+      expect(toastText).not.toBeNull()
+      const toastMessage = toastText ?? ''
 
       // Fail explicitly if we see a timeout/abort message
-      expect(toastText).not.toContain('abort')
-      expect(toastText).not.toContain('timeout')
-      expect(toastText).not.toContain('Geocoding failed')
+      expect(toastMessage).not.toContain('abort')
+      expect(toastMessage).not.toContain('timeout')
+      expect(toastMessage).not.toContain('Geocoding failed')
     }
   })
 })
