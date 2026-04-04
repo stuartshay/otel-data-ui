@@ -1,17 +1,36 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { format, addDays } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
 import { useUnifiedGpsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 export function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [calendarOpen, setCalendarOpen] = useState(false)
+
+  const dateFrom = format(selectedDate, 'yyyy-MM-dd')
+  const dateTo = format(addDays(selectedDate, 1), 'yyyy-MM-dd')
 
   const { data, loading, error, refetch } = useUnifiedGpsQuery({
-    variables: { limit: 500, order: 'desc' },
+    variables: {
+      date_from: dateFrom,
+      date_to: dateTo,
+      limit: 5000,
+      order: 'desc',
+    },
   })
 
   useEffect(() => {
@@ -34,14 +53,16 @@ export function MapPage() {
 
   useEffect(() => {
     const map = mapInstanceRef.current
-    if (!map || !data?.unifiedGps?.items) return
+    if (!map) return
 
-    // Clear existing markers
+    // Clear existing markers when date changes or data refreshes
     map.eachLayer((layer) => {
       if (layer instanceof L.CircleMarker) {
         map.removeLayer(layer)
       }
     })
+
+    if (!data?.unifiedGps?.items) return
 
     const points = data.unifiedGps.items ?? []
 
@@ -72,13 +93,16 @@ export function MapPage() {
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20] })
     }
-  }, [data])
+  }, [data, selectedDate])
 
   if (loading && !data) return <LoadingState message="Loading map data..." />
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />
 
   const total = data?.unifiedGps?.total ?? 0
+  const displayed = data?.unifiedGps?.items?.length ?? 0
+  const isToday =
+    format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
   return (
     <div className="space-y-4">
@@ -86,11 +110,42 @@ export function MapPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Unified Map</h1>
           <p className="text-muted-foreground">
-            Showing {Math.min(500, total).toLocaleString()} of{' '}
+            {format(selectedDate, 'MMMM d, yyyy')}
+            {isToday ? ' (Today)' : ''} &middot; {displayed.toLocaleString()} of{' '}
             {total.toLocaleString()} points
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {!isToday && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(new Date())}
+            >
+              Today
+            </Button>
+          )}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CalendarIcon className="mr-1 h-4 w-4" />
+                {format(selectedDate, 'MMM d, yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date)
+                    setCalendarOpen(false)
+                  }
+                }}
+                disabled={{ after: new Date() }}
+              />
+            </PopoverContent>
+          </Popover>
           <Badge className="bg-blue-500">OwnTracks</Badge>
           <Badge className="bg-red-500">Garmin</Badge>
         </div>

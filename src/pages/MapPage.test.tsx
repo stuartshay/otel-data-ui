@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const FIXED_DATE = new Date('2026-04-03T12:00:00Z')
 
 const unifiedGpsHook = vi.hoisted(() => ({
   useUnifiedGpsQuery: vi.fn(),
@@ -53,6 +55,8 @@ import { MapPage } from './MapPage'
 
 describe('MapPage', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(FIXED_DATE)
     unifiedGpsHook.useUnifiedGpsQuery.mockReset()
     leafletMocks.map.mockClear()
     leafletMocks.tileLayer.mockClear()
@@ -64,6 +68,10 @@ describe('MapPage', () => {
     leafletMocks.mapInstance.fitBounds.mockClear()
     leafletMocks.mapInstance.remove.mockClear()
     leafletMocks.mapInstance.eachLayer.mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('shows a loading state while map data loads', () => {
@@ -127,7 +135,20 @@ describe('MapPage', () => {
     render(<MapPage />)
 
     expect(screen.getByText('Unified Map')).toBeInTheDocument()
-    expect(screen.getByText('Showing 2 of 2 points')).toBeInTheDocument()
+    expect(screen.getByText(/April 3, 2026/)).toBeInTheDocument()
+    expect(screen.getByText(/\(Today\)/)).toBeInTheDocument()
+    expect(screen.getByText(/2 of 2 points/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Apr 3, 2026/ }),
+    ).toBeInTheDocument()
+    expect(unifiedGpsHook.useUnifiedGpsQuery).toHaveBeenCalledWith({
+      variables: {
+        date_from: '2026-04-03',
+        date_to: '2026-04-04',
+        limit: 5000,
+        order: 'desc',
+      },
+    })
     expect(leafletMocks.map).toHaveBeenCalledTimes(1)
     expect(leafletMocks.tileLayer).toHaveBeenCalledTimes(1)
     expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2)
