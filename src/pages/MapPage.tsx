@@ -153,6 +153,7 @@ export function MapPage() {
 
       <div
         ref={mapRef}
+        data-testid="unified-map-container"
         className="relative z-0 h-[calc(100vh-14rem)] w-full rounded-lg border"
       />
     </div>

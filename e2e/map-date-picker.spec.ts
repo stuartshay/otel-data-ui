@@ -1,5 +1,30 @@
 import { test, expect } from '@playwright/test'
 
+/**
+ * Derive dynamic date strings so tests don't break when run in a different
+ * month/year. The "past date" target is always yesterday relative to today.
+ */
+function getDateContext() {
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+
+  const monthYear = today.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+  const pastDay = yesterday.getDate()
+  const pastDateLabel = yesterday.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  // data-day attribute uses locale date string (e.g. "4/3/2026")
+  const pastDataDay = `${yesterday.getMonth() + 1}/${pastDay}/${yesterday.getFullYear()}`
+
+  return { monthYear, pastDay, pastDateLabel, pastDataDay }
+}
+
 test.describe('Unified Map Date Picker', () => {
   test.beforeEach(async ({ page }) => {
     // Retry page load in case of transient 503 errors
@@ -26,8 +51,12 @@ test.describe('Unified Map Date Picker', () => {
     await expect(main.getByText('OwnTracks')).toBeVisible()
     await expect(main.getByText('Garmin')).toBeVisible()
 
-    // Map container div should render
-    await expect(page.locator('.rounded-lg.border').first()).toBeVisible()
+    // Map container div should render (use data-testid when deployed, class fallback)
+    const mapContainer =
+      (await page.getByTestId('unified-map-container').count()) > 0
+        ? page.getByTestId('unified-map-container')
+        : page.locator('.rounded-lg.border').first()
+    await expect(mapContainer).toBeVisible()
 
     // Point count summary should be visible (handles comma-formatted numbers)
     await expect(page.getByText(/[\d,]+ of [\d,]+ points/)).toBeVisible({
@@ -38,6 +67,7 @@ test.describe('Unified Map Date Picker', () => {
   test('date picker opens calendar and allows date selection', async ({
     page,
   }) => {
+    const { monthYear, pastDateLabel, pastDataDay } = getDateContext()
     const main = page.getByRole('main')
 
     // Wait for data to load before interacting
@@ -49,17 +79,16 @@ test.describe('Unified Map Date Picker', () => {
     const dateButton = main.getByRole('button', { name: /\w+ \d+, \d{4}/ })
     await dateButton.click()
 
-    // Calendar should be visible (month/year navigation)
-    await expect(page.getByText(/April 2026/)).toBeVisible({ timeout: 5_000 })
+    // Calendar should be visible with current month/year
+    await expect(page.getByText(monthYear)).toBeVisible({ timeout: 5_000 })
 
-    // Select day 3 (past date; use button text inside calendar grid)
+    // Select yesterday using the stable data-day attribute (scoped to current month)
     await page
-      .locator('[data-slot="calendar"] td button')
-      .filter({ hasText: /^3$/ })
+      .locator(`[data-slot="calendar"] button[data-day="${pastDataDay}"]`)
       .click()
 
-    // Calendar should close and date label should update to April 3
-    await expect(page.getByText(/April 3, 2026/)).toBeVisible({
+    // Calendar should close and date label should update to the selected date
+    await expect(page.getByText(pastDateLabel)).toBeVisible({
       timeout: 10_000,
     })
 
@@ -68,6 +97,7 @@ test.describe('Unified Map Date Picker', () => {
   })
 
   test('Today button returns to current date', async ({ page }) => {
+    const { monthYear, pastDataDay } = getDateContext()
     const main = page.getByRole('main')
 
     // Wait for data to load
@@ -78,11 +108,10 @@ test.describe('Unified Map Date Picker', () => {
     // Open calendar and select a past date
     const dateButton = main.getByRole('button', { name: /\w+ \d+, \d{4}/ })
     await dateButton.click()
-    await expect(page.getByText(/April 2026/)).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByText(monthYear)).toBeVisible({ timeout: 5_000 })
 
     await page
-      .locator('[data-slot="calendar"] td button')
-      .filter({ hasText: /^3$/ })
+      .locator(`[data-slot="calendar"] button[data-day="${pastDataDay}"]`)
       .click()
 
     // Wait for the "Today" button to appear
