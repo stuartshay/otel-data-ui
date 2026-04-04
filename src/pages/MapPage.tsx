@@ -53,14 +53,16 @@ export function MapPage() {
 
   useEffect(() => {
     const map = mapInstanceRef.current
-    if (!map || !data?.unifiedGps?.items) return
+    if (!map) return
 
-    // Clear existing markers
+    // Clear existing markers when date changes or data refreshes
     map.eachLayer((layer) => {
       if (layer instanceof L.CircleMarker) {
         map.removeLayer(layer)
       }
     })
+
+    if (!data?.unifiedGps?.items) return
 
     const points = data.unifiedGps.items ?? []
 
@@ -91,7 +93,7 @@ export function MapPage() {
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20] })
     }
-  }, [data])
+  }, [data, selectedDate])
 
   if (loading && !data) return <LoadingState message="Loading map data..." />
   if (error)
