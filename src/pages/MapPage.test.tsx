@@ -127,7 +127,8 @@ describe('MapPage', () => {
     render(<MapPage />)
 
     expect(screen.getByText('Unified Map')).toBeInTheDocument()
-    expect(screen.getByText('Showing 2 of 2 points')).toBeInTheDocument()
+    expect(screen.getByText(/2 of 2 points/)).toBeInTheDocument()
+    expect(screen.getByText(/\(Today\)/)).toBeInTheDocument()
     expect(leafletMocks.map).toHaveBeenCalledTimes(1)
     expect(leafletMocks.tileLayer).toHaveBeenCalledTimes(1)
     expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2)

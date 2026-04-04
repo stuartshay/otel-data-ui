@@ -74,6 +74,14 @@ git fetch origin master && git rebase origin/master
 This is especially important after squash merges, which cause develop to
 diverge from master.
 
+⚠️ **ALWAYS run the full test suite before creating a PR:**
+
+1. Run `npm run test:run` and confirm all tests pass
+2. Run `npm run type-check` to verify TypeScript compilation
+3. Run `npm run build` to verify the production build succeeds
+4. If any test fails, fix it before opening the PR — do NOT create a PR with
+   known test failures
+
 ### Issue-First Workflow
 
 All work follows this lifecycle:
