@@ -147,6 +147,8 @@ describe('MapPage', () => {
         date_to: '2026-04-03',
         limit: 5000,
         order: 'desc',
+        exclude_stationary: true,
+        deduplicate: true,
       },
     })
     expect(leafletMocks.map).toHaveBeenCalledTimes(1)

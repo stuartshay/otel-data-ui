@@ -8,6 +8,8 @@ export const UNIFIED_GPS_QUERY = gql`
     $limit: Int
     $offset: Int
     $order: SortOrder
+    $exclude_stationary: Boolean
+    $deduplicate: Boolean
   ) {
     unifiedGps(
       source: $source
@@ -16,6 +18,8 @@ export const UNIFIED_GPS_QUERY = gql`
       limit: $limit
       offset: $offset
       order: $order
+      exclude_stationary: $exclude_stationary
+      deduplicate: $deduplicate
     ) {
       items {
         source

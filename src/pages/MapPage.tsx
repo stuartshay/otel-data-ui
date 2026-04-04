@@ -30,6 +30,8 @@ export function MapPage() {
       date_to: dateTo,
       limit: 5000,
       order: 'desc',
+      exclude_stationary: true,
+      deduplicate: true,
     },
   })
 
