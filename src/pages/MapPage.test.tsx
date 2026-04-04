@@ -144,7 +144,7 @@ describe('MapPage', () => {
     expect(unifiedGpsHook.useUnifiedGpsQuery).toHaveBeenCalledWith({
       variables: {
         date_from: '2026-04-03',
-        date_to: '2026-04-04',
+        date_to: '2026-04-03',
         limit: 5000,
         order: 'desc',
       },
