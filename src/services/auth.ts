@@ -97,7 +97,8 @@ class AuthService {
 
   async getAccessToken(): Promise<string | null> {
     const user = await this.getUser()
-    return user?.access_token || null
+    if (!user || user.expired) return null
+    return user.access_token || null
   }
 
   async getUserProfile(): Promise<{
