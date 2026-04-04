@@ -48,9 +48,9 @@ export function GeocodingPage() {
   const handleTrigger = () => {
     const variables: { batch_size?: number; retry_failed?: boolean } = {}
     const size = parseInt(batchSize, 10)
-    if (isNaN(size) || size < 1 || size > 1000) {
+    if (isNaN(size) || size < 1 || size > 200) {
       toast.error('Invalid batch size', {
-        description: 'Batch size must be between 1 and 1000.',
+        description: 'Batch size must be between 1 and 200.',
       })
       return
     }
@@ -156,7 +156,7 @@ export function GeocodingPage() {
                     id="batchSize"
                     type="number"
                     min="1"
-                    max="1000"
+                    max="200"
                     step="1"
                     value={batchSize}
                     onChange={(e) => setBatchSize(e.target.value)}
