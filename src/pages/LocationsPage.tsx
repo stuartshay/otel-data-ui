@@ -18,7 +18,8 @@ const PAGE_SIZE = 25
 
 export function LocationsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const page = Math.max(1, Number(searchParams.get('page')) || 1)
+  const parsedPage = Number.parseInt(searchParams.get('page') ?? '', 10)
+  const page = Math.max(1, Number.isNaN(parsedPage) ? 1 : parsedPage)
   const deviceFilter = searchParams.get('device') || undefined
   const offset = (page - 1) * PAGE_SIZE
 
@@ -133,10 +134,11 @@ export function LocationsPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={offset === 0}
+            disabled={page <= 1}
             onClick={() => {
-              const params: Record<string, string> = { page: String(page - 1) }
-              if (deviceFilter) params.device = deviceFilter
+              const params = new URLSearchParams(searchParams)
+              if (page - 1 <= 1) params.delete('page')
+              else params.set('page', String(page - 1))
               setSearchParams(params)
             }}
           >
@@ -147,8 +149,8 @@ export function LocationsPage() {
             size="sm"
             disabled={offset + PAGE_SIZE >= total}
             onClick={() => {
-              const params: Record<string, string> = { page: String(page + 1) }
-              if (deviceFilter) params.device = deviceFilter
+              const params = new URLSearchParams(searchParams)
+              params.set('page', String(page + 1))
               setSearchParams(params)
             }}
           >
