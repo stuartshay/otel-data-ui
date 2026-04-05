@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useDevicesQuery, useLocationsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -13,13 +12,15 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 25
 
 export function LocationsPage() {
-  const [offset, setOffset] = useState(0)
-  const [deviceFilter, setDeviceFilter] = useState<string | undefined>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Math.max(1, Number(searchParams.get('page')) || 1)
+  const deviceFilter = searchParams.get('device') || undefined
+  const offset = (page - 1) * PAGE_SIZE
 
   const { data: devicesData } = useDevicesQuery()
   const { data, loading, error, refetch } = useLocationsQuery({
@@ -53,10 +54,7 @@ export function LocationsPage() {
         <Button
           variant={!deviceFilter ? 'default' : 'outline'}
           size="sm"
-          onClick={() => {
-            setDeviceFilter(undefined)
-            setOffset(0)
-          }}
+          onClick={() => setSearchParams({})}
         >
           All
         </Button>
@@ -65,10 +63,7 @@ export function LocationsPage() {
             key={d.device_id}
             variant={deviceFilter === d.device_id ? 'default' : 'outline'}
             size="sm"
-            onClick={() => {
-              setDeviceFilter(d.device_id)
-              setOffset(0)
-            }}
+            onClick={() => setSearchParams({ device: d.device_id })}
           >
             {d.device_id}
           </Button>
@@ -95,6 +90,7 @@ export function LocationsPage() {
                 <TableCell>
                   <Link
                     to={`/locations/${loc.id}`}
+                    state={{ locationsListSearch: searchParams.toString() }}
                     className="font-medium text-primary hover:underline"
                   >
                     {loc.id}
@@ -138,7 +134,11 @@ export function LocationsPage() {
             variant="outline"
             size="sm"
             disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            onClick={() => {
+              const params: Record<string, string> = { page: String(page - 1) }
+              if (deviceFilter) params.device = deviceFilter
+              setSearchParams(params)
+            }}
           >
             <ChevronLeft className="h-4 w-4" /> Prev
           </Button>
@@ -146,7 +146,11 @@ export function LocationsPage() {
             variant="outline"
             size="sm"
             disabled={offset + PAGE_SIZE >= total}
-            onClick={() => setOffset(offset + PAGE_SIZE)}
+            onClick={() => {
+              const params: Record<string, string> = { page: String(page + 1) }
+              if (deviceFilter) params.device = deviceFilter
+              setSearchParams(params)
+            }}
           >
             Next <ChevronRight className="h-4 w-4" />
           </Button>
