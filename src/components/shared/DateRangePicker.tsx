@@ -112,8 +112,19 @@ export function DateRangePicker({
                 size="sm"
                 onClick={() => {
                   const { from, to } = preset.getRange()
-                  const clampedFrom = minDate && from < minDate ? minDate : from
-                  onRangeChange(clampedFrom, to)
+                  const minClampedFrom =
+                    minDate && from < minDate ? minDate : from
+                  const clampedFrom =
+                    maxDate && minClampedFrom > maxDate
+                      ? maxDate
+                      : minClampedFrom
+                  const minClampedTo = minDate && to < minDate ? minDate : to
+                  const clampedTo =
+                    maxDate && minClampedTo > maxDate ? maxDate : minClampedTo
+                  const normalizedTo =
+                    clampedTo < clampedFrom ? clampedFrom : clampedTo
+
+                  onRangeChange(clampedFrom, normalizedTo)
                 }}
               >
                 {preset.label}

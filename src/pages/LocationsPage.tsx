@@ -25,12 +25,28 @@ export function LocationsPage() {
   const deviceFilter = searchParams.get('device') || undefined
   const dateFromParam = searchParams.get('date_from')
   const dateToParam = searchParams.get('date_to')
+  const DATA_MIN_DATE = new Date(2026, 0, 1)
+  const DATA_MAX_DATE = new Date()
   const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
-  const dateFrom =
+  const dateFromValid =
     dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
+  const dateFrom = dateFromValid
+    ? dateFromValid < DATA_MIN_DATE
+      ? DATA_MIN_DATE
+      : dateFromValid > DATA_MAX_DATE
+        ? DATA_MAX_DATE
+        : dateFromValid
+    : undefined
   const dateToParsed = dateToParam ? parseISO(dateToParam) : undefined
-  const dateTo =
+  const dateToValid =
     dateToParsed && isValid(dateToParsed) ? dateToParsed : undefined
+  const dateTo = dateToValid
+    ? dateToValid < DATA_MIN_DATE
+      ? DATA_MIN_DATE
+      : dateToValid > DATA_MAX_DATE
+        ? DATA_MAX_DATE
+        : dateToValid
+    : undefined
   const offset = (page - 1) * PAGE_SIZE
 
   const { data: devicesData } = useDevicesQuery()
@@ -96,7 +112,7 @@ export function LocationsPage() {
           <DateRangePicker
             dateFrom={dateFrom}
             dateTo={dateTo}
-            minDate={new Date(2026, 0, 1)}
+            minDate={DATA_MIN_DATE}
             onRangeChange={(from, to) => {
               const params = new URLSearchParams(searchParams)
               if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
