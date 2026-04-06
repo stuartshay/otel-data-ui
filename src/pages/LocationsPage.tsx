@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { parseISO, format as formatDate } from 'date-fns'
+import { parseISO, isValid, format as formatDate } from 'date-fns'
 
 const PAGE_SIZE = 25
 
@@ -25,8 +25,12 @@ export function LocationsPage() {
   const deviceFilter = searchParams.get('device') || undefined
   const dateFromParam = searchParams.get('date_from')
   const dateToParam = searchParams.get('date_to')
-  const dateFrom = dateFromParam ? parseISO(dateFromParam) : undefined
-  const dateTo = dateToParam ? parseISO(dateToParam) : undefined
+  const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
+  const dateFrom =
+    dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
+  const dateToParsed = dateToParam ? parseISO(dateToParam) : undefined
+  const dateTo =
+    dateToParsed && isValid(dateToParsed) ? dateToParsed : undefined
   const offset = (page - 1) * PAGE_SIZE
 
   const { data: devicesData } = useDevicesQuery()
