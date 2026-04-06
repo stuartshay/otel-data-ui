@@ -21,6 +21,8 @@ interface DateRangePickerProps {
   dateFrom: Date | undefined
   dateTo: Date | undefined
   onRangeChange: (from: Date | undefined, to: Date | undefined) => void
+  minDate?: Date
+  maxDate?: Date
 }
 
 const presets = [
@@ -58,6 +60,8 @@ export function DateRangePicker({
   dateFrom,
   dateTo,
   onRangeChange,
+  minDate,
+  maxDate = new Date(),
 }: DateRangePickerProps) {
   const hasRange = dateFrom != null || dateTo != null
 
@@ -108,7 +112,19 @@ export function DateRangePicker({
                 size="sm"
                 onClick={() => {
                   const { from, to } = preset.getRange()
-                  onRangeChange(from, to)
+                  const minClampedFrom =
+                    minDate && from < minDate ? minDate : from
+                  const clampedFrom =
+                    maxDate && minClampedFrom > maxDate
+                      ? maxDate
+                      : minClampedFrom
+                  const minClampedTo = minDate && to < minDate ? minDate : to
+                  const clampedTo =
+                    maxDate && minClampedTo > maxDate ? maxDate : minClampedTo
+                  const normalizedTo =
+                    clampedTo < clampedFrom ? clampedFrom : clampedTo
+
+                  onRangeChange(clampedFrom, normalizedTo)
                 }}
               >
                 {preset.label}
@@ -120,7 +136,8 @@ export function DateRangePicker({
             selected={selected}
             onSelect={handleSelect}
             numberOfMonths={2}
-            toDate={new Date()}
+            fromDate={minDate}
+            toDate={maxDate}
             defaultMonth={dateFrom ?? subDays(new Date(), 30)}
           />
         </PopoverContent>
