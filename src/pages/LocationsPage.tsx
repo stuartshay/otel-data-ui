@@ -1,6 +1,7 @@
 import { useDevicesQuery, useLocationsQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { DateRangePicker } from '@/components/shared/DateRangePicker'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { parseISO, isValid, format as formatDate } from 'date-fns'
 
 const PAGE_SIZE = 25
 
@@ -21,6 +23,14 @@ export function LocationsPage() {
   const parsedPage = Number.parseInt(searchParams.get('page') ?? '', 10)
   const page = Math.max(1, Number.isNaN(parsedPage) ? 1 : parsedPage)
   const deviceFilter = searchParams.get('device') || undefined
+  const dateFromParam = searchParams.get('date_from')
+  const dateToParam = searchParams.get('date_to')
+  const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
+  const dateFrom =
+    dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
+  const dateToParsed = dateToParam ? parseISO(dateToParam) : undefined
+  const dateTo =
+    dateToParsed && isValid(dateToParsed) ? dateToParsed : undefined
   const offset = (page - 1) * PAGE_SIZE
 
   const { data: devicesData } = useDevicesQuery()
@@ -29,6 +39,8 @@ export function LocationsPage() {
       limit: PAGE_SIZE,
       offset,
       device_id: deviceFilter,
+      date_from: dateFromParam || undefined,
+      date_to: dateToParam || undefined,
       order: 'desc',
       sort: 'timestamp',
     },
@@ -51,11 +63,16 @@ export function LocationsPage() {
       </div>
 
       {/* Device filter */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           variant={!deviceFilter ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSearchParams({})}
+          onClick={() => {
+            const params = new URLSearchParams(searchParams)
+            params.delete('device')
+            params.delete('page')
+            setSearchParams(params)
+          }}
         >
           All
         </Button>
@@ -64,11 +81,32 @@ export function LocationsPage() {
             key={d.device_id}
             variant={deviceFilter === d.device_id ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setSearchParams({ device: d.device_id })}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams)
+              params.set('device', d.device_id)
+              params.delete('page')
+              setSearchParams(params)
+            }}
           >
             {d.device_id}
           </Button>
         ))}
+
+        <div className="ml-auto">
+          <DateRangePicker
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onRangeChange={(from, to) => {
+              const params = new URLSearchParams(searchParams)
+              if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
+              else params.delete('date_from')
+              if (to) params.set('date_to', formatDate(to, 'yyyy-MM-dd'))
+              else params.delete('date_to')
+              params.delete('page')
+              setSearchParams(params)
+            }}
+          />
+        </div>
       </div>
 
       {/* Table */}
