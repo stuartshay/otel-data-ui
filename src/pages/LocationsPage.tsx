@@ -96,6 +96,7 @@ export function LocationsPage() {
           <DateRangePicker
             dateFrom={dateFrom}
             dateTo={dateTo}
+            minDate={new Date(2026, 0, 1)}
             onRangeChange={(from, to) => {
               const params = new URLSearchParams(searchParams)
               if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
