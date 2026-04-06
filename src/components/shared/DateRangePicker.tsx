@@ -1,0 +1,123 @@
+import { format, subDays, startOfMonth, startOfDay, endOfDay } from 'date-fns'
+import { CalendarIcon, X } from 'lucide-react'
+import type { DateRange } from 'react-day-picker'
+
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+
+interface DateRangePickerProps {
+  dateFrom: Date | undefined
+  dateTo: Date | undefined
+  onRangeChange: (from: Date | undefined, to: Date | undefined) => void
+}
+
+const presets = [
+  {
+    label: 'Today',
+    getRange: () => ({
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date()),
+    }),
+  },
+  {
+    label: 'Last 7 days',
+    getRange: () => ({
+      from: startOfDay(subDays(new Date(), 6)),
+      to: endOfDay(new Date()),
+    }),
+  },
+  {
+    label: 'Last 30 days',
+    getRange: () => ({
+      from: startOfDay(subDays(new Date(), 29)),
+      to: endOfDay(new Date()),
+    }),
+  },
+  {
+    label: 'This month',
+    getRange: () => ({
+      from: startOfMonth(new Date()),
+      to: endOfDay(new Date()),
+    }),
+  },
+]
+
+export function DateRangePicker({
+  dateFrom,
+  dateTo,
+  onRangeChange,
+}: DateRangePickerProps) {
+  const hasRange = dateFrom != null || dateTo != null
+
+  const selected: DateRange | undefined =
+    dateFrom || dateTo ? { from: dateFrom, to: dateTo } : undefined
+
+  const handleSelect = (range: DateRange | undefined) => {
+    onRangeChange(range?.from, range?.to)
+  }
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onRangeChange(undefined, undefined)
+  }
+
+  const formatLabel = () => {
+    if (!dateFrom && !dateTo) return 'Select dates'
+    if (dateFrom && dateTo)
+      return `${format(dateFrom, 'MMM d, yyyy')} – ${format(dateTo, 'MMM d, yyyy')}`
+    if (dateFrom) return `${format(dateFrom, 'MMM d, yyyy')} – …`
+    return 'Select dates'
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          data-testid="date-range-trigger"
+          className={hasRange ? 'border-primary' : undefined}
+        >
+          <CalendarIcon className="h-4 w-4" />
+          {formatLabel()}
+          {hasRange && (
+            <X
+              className="h-3 w-3 ml-1 opacity-60 hover:opacity-100"
+              onClick={handleClear}
+            />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="flex gap-2 border-b p-2">
+          {presets.map((preset) => (
+            <Button
+              key={preset.label}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const { from, to } = preset.getRange()
+                onRangeChange(from, to)
+              }}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <Calendar
+          mode="range"
+          selected={selected}
+          onSelect={handleSelect}
+          numberOfMonths={2}
+          toDate={new Date()}
+          defaultMonth={dateFrom ?? subDays(new Date(), 30)}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}

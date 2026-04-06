@@ -31,6 +31,8 @@ describe('LocationsPage', () => {
           limit: number
           offset: number
           device_id?: string
+          date_from?: string
+          date_to?: string
           order: string
           sort: string
         }
@@ -87,6 +89,8 @@ describe('LocationsPage', () => {
         limit: 25,
         offset: 25,
         device_id: undefined,
+        date_from: undefined,
+        date_to: undefined,
         order: 'desc',
         sort: 'timestamp',
       },
@@ -118,6 +122,30 @@ describe('LocationsPage', () => {
         limit: 25,
         offset: 0,
         device_id: 'phone',
+        date_from: undefined,
+        date_to: undefined,
+        order: 'desc',
+        sort: 'timestamp',
+      },
+    })
+  })
+
+  it('passes date_from and date_to from URL params to the query', () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/locations?date_from=2026-03-01&date_to=2026-03-14']}
+      >
+        <LocationsPage />
+      </MemoryRouter>,
+    )
+
+    expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+      variables: {
+        limit: 25,
+        offset: 0,
+        device_id: undefined,
+        date_from: '2026-03-01',
+        date_to: '2026-03-14',
         order: 'desc',
         sort: 'timestamp',
       },
