@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { useLocationDetailQuery } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -9,6 +9,13 @@ import { ArrowLeft } from 'lucide-react'
 
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
+  const locationsListSearch = (
+    location.state as { locationsListSearch?: string } | null
+  )?.locationsListSearch
+  const backTo = locationsListSearch
+    ? `/locations?${locationsListSearch}`
+    : '/locations'
   const { data, loading, error, refetch } = useLocationDetailQuery({
     variables: { id: Number(id) },
     skip: !id,
@@ -52,7 +59,7 @@ export function LocationDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link to="/locations">
+          <Link to={backTo} data-testid="back-to-list">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
