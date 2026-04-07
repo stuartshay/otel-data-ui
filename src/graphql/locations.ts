@@ -95,3 +95,12 @@ export const LOCATION_COUNT_QUERY = gql`
     }
   }
 `
+
+export const LOCATION_DATE_RANGE_QUERY = gql`
+  query LocationDateRange {
+    locationDateRange {
+      min_date
+      max_date
+    }
+  }
+`

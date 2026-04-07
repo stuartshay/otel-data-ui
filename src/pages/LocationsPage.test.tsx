@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 const locationHooks = vi.hoisted(() => ({
   useDevicesQuery: vi.fn(),
   useLocationsQuery: vi.fn(),
+  useLocationDateRangeQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => locationHooks)
@@ -16,6 +17,16 @@ describe('LocationsPage', () => {
   beforeEach(() => {
     locationHooks.useDevicesQuery.mockReset()
     locationHooks.useLocationsQuery.mockReset()
+    locationHooks.useLocationDateRangeQuery.mockReset()
+
+    locationHooks.useLocationDateRangeQuery.mockReturnValue({
+      data: {
+        locationDateRange: {
+          min_date: '2025-12-27T00:00:00Z',
+          max_date: '2026-06-01T00:00:00Z',
+        },
+      },
+    })
 
     locationHooks.useDevicesQuery.mockReturnValue({
       data: {
@@ -209,6 +220,38 @@ describe('LocationsPage', () => {
     const cells = rows[2].querySelectorAll('td')
     const addressCell = cells[5]
     expect(addressCell.textContent).toBe('—')
+  })
+
+  it('clamps a URL date_from before the API min_date to the min bound', () => {
+    // min_date is 2025-12-27T00:00:00Z; date_from=2025-01-01 is before that
+    render(
+      <MemoryRouter initialEntries={['/locations?date_from=2025-01-01']}>
+        <LocationsPage />
+      </MemoryRouter>,
+    )
+
+    // The clamped dateFrom should appear in the DateRangePicker trigger,
+    // not the original 2025-01-01
+    const trigger = screen.getByTestId('date-range-trigger')
+    expect(trigger.textContent).not.toContain('Jan 1, 2025')
+    expect(trigger.textContent).toContain('Dec')
+    expect(trigger.textContent).toContain('2025')
+  })
+
+  it('clamps a URL date_to after the API max_date to the max bound', () => {
+    // max_date is 2026-06-01T00:00:00Z; date_to=2027-01-01 is after that
+    render(
+      <MemoryRouter
+        initialEntries={['/locations?date_from=2026-03-01&date_to=2027-01-01']}
+      >
+        <LocationsPage />
+      </MemoryRouter>,
+    )
+
+    // The clamped dateTo should appear in the DateRangePicker trigger,
+    // not the original 2027-01-01
+    const trigger = screen.getByTestId('date-range-trigger')
+    expect(trigger.textContent).not.toContain('2027')
   })
 
   it('sets a title attribute on the address cell for truncation tooltip', () => {

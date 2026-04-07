@@ -1,4 +1,8 @@
-import { useDevicesQuery, useLocationsQuery } from '@/__generated__/graphql'
+import {
+  useDevicesQuery,
+  useLocationsQuery,
+  useLocationDateRangeQuery,
+} from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { DateRangePicker } from '@/components/shared/DateRangePicker'
@@ -25,13 +29,18 @@ export function LocationsPage() {
   const deviceFilter = searchParams.get('device') || undefined
   const dateFromParam = searchParams.get('date_from')
   const dateToParam = searchParams.get('date_to')
-  const DATA_MIN_DATE = new Date(2026, 0, 1)
-  const DATA_MAX_DATE = new Date()
+  const { data: dateRangeData } = useLocationDateRangeQuery()
+  const DATA_MIN_DATE = dateRangeData?.locationDateRange?.min_date
+    ? new Date(dateRangeData.locationDateRange.min_date)
+    : undefined
+  const DATA_MAX_DATE = dateRangeData?.locationDateRange?.max_date
+    ? new Date(dateRangeData.locationDateRange.max_date)
+    : new Date()
   const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
   const dateFromValid =
     dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
   const dateFrom = dateFromValid
-    ? dateFromValid < DATA_MIN_DATE
+    ? DATA_MIN_DATE && dateFromValid < DATA_MIN_DATE
       ? DATA_MIN_DATE
       : dateFromValid > DATA_MAX_DATE
         ? DATA_MAX_DATE
@@ -41,7 +50,7 @@ export function LocationsPage() {
   const dateToValid =
     dateToParsed && isValid(dateToParsed) ? dateToParsed : undefined
   const dateTo = dateToValid
-    ? dateToValid < DATA_MIN_DATE
+    ? DATA_MIN_DATE && dateToValid < DATA_MIN_DATE
       ? DATA_MIN_DATE
       : dateToValid > DATA_MAX_DATE
         ? DATA_MAX_DATE
@@ -113,6 +122,7 @@ export function LocationsPage() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             minDate={DATA_MIN_DATE}
+            maxDate={DATA_MAX_DATE}
             onRangeChange={(from, to) => {
               const params = new URLSearchParams(searchParams)
               if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
