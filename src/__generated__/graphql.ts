@@ -356,6 +356,15 @@ export type LocationCount = {
   device_id?: Maybe<Scalars['String']['output']>;
 };
 
+/** Earliest and latest timestamps in the locations table. */
+export type LocationDateRange = {
+  __typename?: 'LocationDateRange';
+  /** Latest location timestamp (ISO 8601) */
+  max_date: Scalars['String']['output'];
+  /** Earliest location timestamp (ISO 8601) */
+  min_date: Scalars['String']['output'];
+};
+
 /** Full location detail including the original OwnTracks JSON payload. */
 export type LocationDetail = {
   __typename?: 'LocationDetail';
@@ -467,6 +476,8 @@ export type Query = {
   location?: Maybe<LocationDetail>;
   /** Get aggregate count of location records with optional filters. */
   locationCount: LocationCount;
+  /** Get the earliest and latest location timestamps. */
+  locationDateRange: LocationDateRange;
   /** Retrieve a paginated list of OwnTracks location records. */
   locations: LocationConnection;
   /** Find GPS points within a radius of a geographic coordinate. */
@@ -790,6 +801,11 @@ export type LocationCountQueryVariables = Exact<{
 
 
 export type LocationCountQuery = { __typename?: 'Query', locationCount: { __typename?: 'LocationCount', count: number, date?: string | null, device_id?: string | null } };
+
+export type LocationDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LocationDateRangeQuery = { __typename?: 'Query', locationDateRange: { __typename?: 'LocationDateRange', min_date: string, max_date: string } };
 
 export type ReferenceLocationsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1620,6 +1636,49 @@ export type LocationCountQueryHookResult = ReturnType<typeof useLocationCountQue
 export type LocationCountLazyQueryHookResult = ReturnType<typeof useLocationCountLazyQuery>;
 export type LocationCountSuspenseQueryHookResult = ReturnType<typeof useLocationCountSuspenseQuery>;
 export type LocationCountQueryResult = ApolloReactCommon.QueryResult<LocationCountQuery, LocationCountQueryVariables>;
+export const LocationDateRangeDocument = gql`
+    query LocationDateRange {
+  locationDateRange {
+    min_date
+    max_date
+  }
+}
+    `;
+
+/**
+ * __useLocationDateRangeQuery__
+ *
+ * To run a query within a React component, call `useLocationDateRangeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLocationDateRangeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLocationDateRangeQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useLocationDateRangeQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<LocationDateRangeQuery, LocationDateRangeQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<LocationDateRangeQuery, LocationDateRangeQueryVariables>(LocationDateRangeDocument, options);
+      }
+export function useLocationDateRangeLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<LocationDateRangeQuery, LocationDateRangeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<LocationDateRangeQuery, LocationDateRangeQueryVariables>(LocationDateRangeDocument, options);
+        }
+// @ts-ignore
+export function useLocationDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<LocationDateRangeQuery, LocationDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<LocationDateRangeQuery, LocationDateRangeQueryVariables>;
+export function useLocationDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<LocationDateRangeQuery, LocationDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<LocationDateRangeQuery | undefined, LocationDateRangeQueryVariables>;
+export function useLocationDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<LocationDateRangeQuery, LocationDateRangeQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<LocationDateRangeQuery, LocationDateRangeQueryVariables>(LocationDateRangeDocument, options);
+        }
+export type LocationDateRangeQueryHookResult = ReturnType<typeof useLocationDateRangeQuery>;
+export type LocationDateRangeLazyQueryHookResult = ReturnType<typeof useLocationDateRangeLazyQuery>;
+export type LocationDateRangeSuspenseQueryHookResult = ReturnType<typeof useLocationDateRangeSuspenseQuery>;
+export type LocationDateRangeQueryResult = ApolloReactCommon.QueryResult<LocationDateRangeQuery, LocationDateRangeQueryVariables>;
 export const ReferenceLocationsDocument = gql`
     query ReferenceLocations {
   referenceLocations {

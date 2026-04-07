@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 const locationHooks = vi.hoisted(() => ({
   useDevicesQuery: vi.fn(),
   useLocationsQuery: vi.fn(),
+  useLocationDateRangeQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => locationHooks)
@@ -16,6 +17,16 @@ describe('LocationsPage', () => {
   beforeEach(() => {
     locationHooks.useDevicesQuery.mockReset()
     locationHooks.useLocationsQuery.mockReset()
+    locationHooks.useLocationDateRangeQuery.mockReset()
+
+    locationHooks.useLocationDateRangeQuery.mockReturnValue({
+      data: {
+        locationDateRange: {
+          min_date: '2025-12-27T00:00:00Z',
+          max_date: '2026-06-01T00:00:00Z',
+        },
+      },
+    })
 
     locationHooks.useDevicesQuery.mockReturnValue({
       data: {
