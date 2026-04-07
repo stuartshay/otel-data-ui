@@ -222,6 +222,38 @@ describe('LocationsPage', () => {
     expect(addressCell.textContent).toBe('—')
   })
 
+  it('clamps a URL date_from before the API min_date to the min bound', () => {
+    // min_date is 2025-12-27T00:00:00Z; date_from=2025-01-01 is before that
+    render(
+      <MemoryRouter initialEntries={['/locations?date_from=2025-01-01']}>
+        <LocationsPage />
+      </MemoryRouter>,
+    )
+
+    // The clamped dateFrom should appear in the DateRangePicker trigger,
+    // not the original 2025-01-01
+    const trigger = screen.getByTestId('date-range-trigger')
+    expect(trigger.textContent).not.toContain('Jan 1, 2025')
+    expect(trigger.textContent).toContain('Dec')
+    expect(trigger.textContent).toContain('2025')
+  })
+
+  it('clamps a URL date_to after the API max_date to the max bound', () => {
+    // max_date is 2026-06-01T00:00:00Z; date_to=2027-01-01 is after that
+    render(
+      <MemoryRouter
+        initialEntries={['/locations?date_from=2026-03-01&date_to=2027-01-01']}
+      >
+        <LocationsPage />
+      </MemoryRouter>,
+    )
+
+    // The clamped dateTo should appear in the DateRangePicker trigger,
+    // not the original 2027-01-01
+    const trigger = screen.getByTestId('date-range-trigger')
+    expect(trigger.textContent).not.toContain('2027')
+  })
+
   it('sets a title attribute on the address cell for truncation tooltip', () => {
     locationHooks.useLocationsQuery.mockReturnValue({
       data: {

@@ -33,7 +33,9 @@ export function LocationsPage() {
   const DATA_MIN_DATE = dateRangeData?.locationDateRange?.min_date
     ? new Date(dateRangeData.locationDateRange.min_date)
     : undefined
-  const DATA_MAX_DATE = new Date()
+  const DATA_MAX_DATE = dateRangeData?.locationDateRange?.max_date
+    ? new Date(dateRangeData.locationDateRange.max_date)
+    : new Date()
   const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
   const dateFromValid =
     dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
@@ -120,6 +122,7 @@ export function LocationsPage() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             minDate={DATA_MIN_DATE}
+            maxDate={DATA_MAX_DATE}
             onRangeChange={(from, to) => {
               const params = new URLSearchParams(searchParams)
               if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
