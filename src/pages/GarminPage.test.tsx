@@ -49,7 +49,6 @@ describe('GarminPage', () => {
           sport?: string
           date_from?: string
           date_to?: string
-
           order: string
           sort: string
         }
@@ -107,8 +106,6 @@ describe('GarminPage', () => {
     expect(garminHooks.useGarminActivitiesQuery).toHaveBeenLastCalledWith({
       variables: {
         limit: 25,
-        date_from: undefined,
-        date_to: undefined,
         offset: 25,
         sport: 'cycling',
         date_from: undefined,
