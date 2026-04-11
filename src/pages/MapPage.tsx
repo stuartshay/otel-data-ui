@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import {
@@ -32,7 +32,15 @@ export function MapPage() {
     ? new Date(dateRangeData.locationDateRange.max_date)
     : new Date()
 
-  const dateFrom = format(selectedDate, 'yyyy-MM-dd')
+  // Clamp selectedDate into [dataMinDate, dataMaxDate] when date-range data loads
+  const clampedDate = useMemo(() => {
+    if (!dateRangeData) return selectedDate
+    if (dataMaxDate && selectedDate > dataMaxDate) return dataMaxDate
+    if (dataMinDate && selectedDate < dataMinDate) return dataMinDate
+    return selectedDate
+  }, [dateRangeData, selectedDate, dataMinDate, dataMaxDate])
+
+  const dateFrom = format(clampedDate, 'yyyy-MM-dd')
   const dateTo = dateFrom
 
   const { data, loading, error, refetch } = useUnifiedGpsQuery({
@@ -106,7 +114,7 @@ export function MapPage() {
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20] })
     }
-  }, [data, selectedDate])
+  }, [data, clampedDate])
 
   if (loading && !data) return <LoadingState message="Loading map data..." />
   if (error)
@@ -115,7 +123,7 @@ export function MapPage() {
   const total = data?.unifiedGps?.total ?? 0
   const displayed = data?.unifiedGps?.items?.length ?? 0
   const isToday =
-    format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+    format(clampedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
   return (
     <div className="space-y-4">
@@ -123,7 +131,7 @@ export function MapPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Unified Map</h1>
           <p className="text-muted-foreground">
-            {format(selectedDate, 'MMMM d, yyyy')}
+            {format(clampedDate, 'MMMM d, yyyy')}
             {isToday ? ' (Today)' : ''} &middot; {displayed.toLocaleString()} of{' '}
             {total.toLocaleString()} points
           </p>
@@ -145,13 +153,13 @@ export function MapPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
                 <CalendarIcon className="mr-1 h-4 w-4" />
-                {format(selectedDate, 'MMM d, yyyy')}
+                {format(clampedDate, 'MMM d, yyyy')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
                 mode="single"
-                selected={selectedDate}
+                selected={clampedDate}
                 onSelect={(date) => {
                   if (date) {
                     setSelectedDate(date)

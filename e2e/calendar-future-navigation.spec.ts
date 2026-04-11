@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
 import path from 'path'
 
 const SCREENSHOT_DIR = path.join('e2e', 'screenshots', 'calendar-future-nav')
+
+// Ensure the screenshot directory exists before any test writes to it
+fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 /**
  * Verifies that the calendar controls on Locations and Map pages
@@ -59,6 +63,12 @@ test.describe('Calendar future month navigation', () => {
     const nextMonthBtn = calendarContainer.getByRole('button', {
       name: /next/i,
     })
+
+    // Verify the next-month button exists and is visible before looping
+    await expect(
+      nextMonthBtn,
+      'Next-month navigation button must be visible in the calendar',
+    ).toBeVisible()
 
     let clickCount = 0
     const maxClicks = 24
@@ -144,6 +154,12 @@ test.describe('Calendar future month navigation', () => {
     const nextMonthBtn = calendarContainer.getByRole('button', {
       name: /next/i,
     })
+
+    // Verify the next-month button exists and is visible before looping
+    await expect(
+      nextMonthBtn,
+      'Next-month navigation button must be visible in the calendar',
+    ).toBeVisible()
 
     let clickCount = 0
     const maxClicks = 24
