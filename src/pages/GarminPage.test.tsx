@@ -47,6 +47,10 @@ describe('GarminPage', () => {
           limit: number
           offset: number
           sport?: string
+          date_from?: string
+          date_to?: string
+          date_from?: string
+          date_to?: string
           order: string
           sort: string
         }
@@ -104,8 +108,12 @@ describe('GarminPage', () => {
     expect(garminHooks.useGarminActivitiesQuery).toHaveBeenLastCalledWith({
       variables: {
         limit: 25,
+        date_from: undefined,
+        date_to: undefined,
         offset: 25,
         sport: 'cycling',
+        date_from: undefined,
+        date_to: undefined,
         order: 'desc',
         sort: 'start_time',
       },
@@ -132,6 +140,8 @@ describe('GarminPage', () => {
         limit: 25,
         offset: 0,
         sport: 'running',
+        date_from: undefined,
+        date_to: undefined,
         order: 'desc',
         sort: 'start_time',
       },

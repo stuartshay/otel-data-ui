@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
-import { parseISO, isValid, format as formatDate } from 'date-fns'
+import { parseDateRangeParams, toLocalDate } from '@/lib/date-range'
+import { format as formatDate } from 'date-fns'
 
 const PAGE_SIZE = 25
 
@@ -45,31 +46,20 @@ export function GarminPage() {
   const dateToParam = searchParams.get('date_to')
   const { data: dateRangeData } = useGarminDateRangeQuery()
   const DATA_MIN_DATE = dateRangeData?.garminDateRange?.min_date
-    ? new Date(dateRangeData.garminDateRange.min_date)
+    ? toLocalDate(dateRangeData.garminDateRange.min_date)
     : undefined
   const DATA_MAX_DATE = dateRangeData?.garminDateRange?.max_date
-    ? new Date(dateRangeData.garminDateRange.max_date)
+    ? toLocalDate(dateRangeData.garminDateRange.max_date)
     : new Date()
-  const dateFromParsed = dateFromParam ? parseISO(dateFromParam) : undefined
-  const dateFromValid =
-    dateFromParsed && isValid(dateFromParsed) ? dateFromParsed : undefined
-  const dateFrom = dateFromValid
-    ? DATA_MIN_DATE && dateFromValid < DATA_MIN_DATE
-      ? DATA_MIN_DATE
-      : dateFromValid > DATA_MAX_DATE
-        ? DATA_MAX_DATE
-        : dateFromValid
-    : undefined
-  const dateToParsed = dateToParam ? parseISO(dateToParam) : undefined
-  const dateToValid =
-    dateToParsed && isValid(dateToParsed) ? dateToParsed : undefined
-  const dateTo = dateToValid
-    ? DATA_MIN_DATE && dateToValid < DATA_MIN_DATE
-      ? DATA_MIN_DATE
-      : dateToValid > DATA_MAX_DATE
-        ? DATA_MAX_DATE
-        : dateToValid
-    : undefined
+  const {
+    dateFrom,
+    dateTo,
+    dateFromParam: dateFromStr,
+    dateToParam: dateToStr,
+  } = parseDateRangeParams(dateFromParam, dateToParam, {
+    minDate: DATA_MIN_DATE,
+    maxDate: DATA_MAX_DATE,
+  })
   const offset = (page - 1) * PAGE_SIZE
 
   const { data: sportsData } = useGarminSportsQuery()
@@ -78,8 +68,8 @@ export function GarminPage() {
       limit: PAGE_SIZE,
       offset,
       sport: sportFilter,
-      date_from: dateFromParam || undefined,
-      date_to: dateToParam || undefined,
+      date_from: dateFromStr,
+      date_to: dateToStr,
       order: 'desc',
       sort: 'start_time',
     },
