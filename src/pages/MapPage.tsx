@@ -166,7 +166,10 @@ export function MapPage() {
                     setCalendarOpen(false)
                   }
                 }}
-                disabled={{ after: dataMaxDate }}
+                disabled={[
+                  { after: dataMaxDate },
+                  ...(dataMinDate ? [{ before: dataMinDate }] : []),
+                ]}
                 fromDate={dataMinDate}
                 toDate={dataMaxDate}
                 startMonth={dataMinDate}

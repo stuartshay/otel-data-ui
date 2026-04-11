@@ -136,6 +136,10 @@ export function DateRangePicker({
             selected={selected}
             onSelect={handleSelect}
             numberOfMonths={2}
+            disabled={[
+              { after: maxDate },
+              ...(minDate ? [{ before: minDate }] : []),
+            ]}
             fromDate={minDate}
             toDate={maxDate}
             startMonth={minDate}
