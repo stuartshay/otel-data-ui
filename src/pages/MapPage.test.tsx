@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const FIXED_DATE = new Date('2026-04-03T12:00:00Z')
 
-const unifiedGpsHook = vi.hoisted(() => ({
+const graphqlHooks = vi.hoisted(() => ({
   useUnifiedGpsQuery: vi.fn(),
+  useLocationDateRangeQuery: vi.fn(),
 }))
 
 const leafletMocks = vi.hoisted(() => {
@@ -39,7 +40,7 @@ const leafletMocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('@/__generated__/graphql', () => unifiedGpsHook)
+vi.mock('@/__generated__/graphql', () => graphqlHooks)
 
 vi.mock('leaflet', () => ({
   default: {
@@ -57,7 +58,15 @@ describe('MapPage', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(FIXED_DATE)
-    unifiedGpsHook.useUnifiedGpsQuery.mockReset()
+    graphqlHooks.useUnifiedGpsQuery.mockReset()
+    graphqlHooks.useLocationDateRangeQuery.mockReturnValue({
+      data: {
+        locationDateRange: {
+          min_date: '2025-12-27T00:00:00Z',
+          max_date: '2026-06-01T00:00:00Z',
+        },
+      },
+    })
     leafletMocks.map.mockClear()
     leafletMocks.tileLayer.mockClear()
     leafletMocks.circleMarker.mockClear()
@@ -75,7 +84,7 @@ describe('MapPage', () => {
   })
 
   it('shows a loading state while map data loads', () => {
-    unifiedGpsHook.useUnifiedGpsQuery.mockReturnValue({
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
       data: undefined,
       loading: true,
       error: undefined,
@@ -90,7 +99,7 @@ describe('MapPage', () => {
   it('shows an error state and retries the query', async () => {
     const user = userEvent.setup()
     const refetch = vi.fn()
-    unifiedGpsHook.useUnifiedGpsQuery.mockReturnValue({
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
       data: undefined,
       loading: false,
       error: new Error('map failed'),
@@ -105,7 +114,7 @@ describe('MapPage', () => {
   })
 
   it('renders the point summary and creates Leaflet markers', () => {
-    unifiedGpsHook.useUnifiedGpsQuery.mockReturnValue({
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
       data: {
         unifiedGps: {
           total: 2,
@@ -141,7 +150,7 @@ describe('MapPage', () => {
     expect(
       screen.getByRole('button', { name: /Apr 3, 2026/ }),
     ).toBeInTheDocument()
-    expect(unifiedGpsHook.useUnifiedGpsQuery).toHaveBeenCalledWith({
+    expect(graphqlHooks.useUnifiedGpsQuery).toHaveBeenCalledWith({
       variables: {
         date_from: '2026-04-03',
         date_to: '2026-04-03',
@@ -155,5 +164,19 @@ describe('MapPage', () => {
     expect(leafletMocks.tileLayer).toHaveBeenCalledTimes(1)
     expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2)
     expect(leafletMocks.mapInstance.fitBounds).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls useLocationDateRangeQuery and provides bounds to Calendar', () => {
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: { unifiedGps: { total: 0, items: [] } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<MapPage />)
+
+    expect(graphqlHooks.useLocationDateRangeQuery).toHaveBeenCalled()
+    expect(screen.getByText('Unified Map')).toBeInTheDocument()
   })
 })
