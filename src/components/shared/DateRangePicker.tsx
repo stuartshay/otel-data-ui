@@ -138,6 +138,8 @@ export function DateRangePicker({
             numberOfMonths={2}
             fromDate={minDate}
             toDate={maxDate}
+            startMonth={minDate}
+            endMonth={maxDate}
             defaultMonth={dateFrom ?? subDays(new Date(), 30)}
           />
         </PopoverContent>

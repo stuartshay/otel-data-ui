@@ -161,6 +161,8 @@ export function MapPage() {
                 disabled={{ after: dataMaxDate }}
                 fromDate={dataMinDate}
                 toDate={dataMaxDate}
+                startMonth={dataMinDate}
+                endMonth={dataMaxDate}
               />
             </PopoverContent>
           </Popover>
