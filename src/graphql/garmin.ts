@@ -122,6 +122,15 @@ export const GARMIN_TRACK_POINTS_QUERY = gql`
   }
 `
 
+export const GARMIN_DATE_RANGE_QUERY = gql`
+  query GarminDateRange {
+    garminDateRange {
+      min_date
+      max_date
+    }
+  }
+`
+
 export const GARMIN_SPORTS_QUERY = gql`
   query GarminSports {
     garminSports {

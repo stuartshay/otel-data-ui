@@ -8,6 +8,7 @@ import { renderWithRouter } from '@/test/renderWithRouter'
 const garminHooks = vi.hoisted(() => ({
   useGarminActivitiesQuery: vi.fn(),
   useGarminSportsQuery: vi.fn(),
+  useGarminDateRangeQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => garminHooks)
@@ -18,6 +19,16 @@ describe('GarminPage', () => {
   beforeEach(() => {
     garminHooks.useGarminActivitiesQuery.mockReset()
     garminHooks.useGarminSportsQuery.mockReset()
+    garminHooks.useGarminDateRangeQuery.mockReset()
+
+    garminHooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: {
+          min_date: '2025-01-01T00:00:00Z',
+          max_date: '2026-06-01T00:00:00Z',
+        },
+      },
+    })
 
     garminHooks.useGarminSportsQuery.mockReturnValue({
       data: {

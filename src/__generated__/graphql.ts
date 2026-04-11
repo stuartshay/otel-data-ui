@@ -168,6 +168,15 @@ export type GarminChartPoint = {
   timestamp: Scalars['DateTime']['output'];
 };
 
+/** Earliest and latest timestamps in the Garmin activities table. */
+export type GarminDateRange = {
+  __typename?: 'GarminDateRange';
+  /** Latest Garmin activity timestamp (ISO 8601) */
+  max_date: Scalars['DateTime']['output'];
+  /** Earliest Garmin activity timestamp (ISO 8601) */
+  min_date: Scalars['DateTime']['output'];
+};
+
 /** Result payload returned when triggering an on-demand Garmin sync. */
 export type GarminSyncTriggerResult = {
   __typename?: 'GarminSyncTriggerResult';
@@ -360,9 +369,9 @@ export type LocationCount = {
 export type LocationDateRange = {
   __typename?: 'LocationDateRange';
   /** Latest location timestamp (ISO 8601) */
-  max_date: Scalars['String']['output'];
+  max_date: Scalars['DateTime']['output'];
   /** Earliest location timestamp (ISO 8601) */
-  min_date: Scalars['String']['output'];
+  min_date: Scalars['DateTime']['output'];
 };
 
 /** Full location detail including the original OwnTracks JSON payload. */
@@ -464,6 +473,8 @@ export type Query = {
   garminActivity?: Maybe<GarminActivity>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
   garminChartData: Array<GarminChartPoint>;
+  /** Get the earliest and latest Garmin activity timestamps. */
+  garminDateRange: GarminDateRange;
   /** List all distinct sport types with activity counts. */
   garminSports: Array<SportInfo>;
   /** Retrieve paginated GPS track points for a Garmin activity. */
@@ -725,6 +736,11 @@ export type GarminTrackPointsQueryVariables = Exact<{
 
 
 export type GarminTrackPointsQuery = { __typename?: 'Query', garminTrackPoints: { __typename?: 'GarminTrackPointConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'GarminTrackPoint', id: number, activity_id: string, latitude: number, longitude: number, timestamp: string, altitude?: number | null, distance_from_start_km?: number | null, speed_kmh?: number | null, heart_rate?: number | null, cadence?: number | null, temperature_c?: number | null, created_at?: string | null }> } };
+
+export type GarminDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GarminDateRangeQuery = { __typename?: 'Query', garminDateRange: { __typename?: 'GarminDateRange', min_date: string, max_date: string } };
 
 export type GarminSportsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1096,6 +1112,49 @@ export type GarminTrackPointsQueryHookResult = ReturnType<typeof useGarminTrackP
 export type GarminTrackPointsLazyQueryHookResult = ReturnType<typeof useGarminTrackPointsLazyQuery>;
 export type GarminTrackPointsSuspenseQueryHookResult = ReturnType<typeof useGarminTrackPointsSuspenseQuery>;
 export type GarminTrackPointsQueryResult = ApolloReactCommon.QueryResult<GarminTrackPointsQuery, GarminTrackPointsQueryVariables>;
+export const GarminDateRangeDocument = gql`
+    query GarminDateRange {
+  garminDateRange {
+    min_date
+    max_date
+  }
+}
+    `;
+
+/**
+ * __useGarminDateRangeQuery__
+ *
+ * To run a query within a React component, call `useGarminDateRangeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminDateRangeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminDateRangeQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGarminDateRangeQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GarminDateRangeQuery, GarminDateRangeQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminDateRangeQuery, GarminDateRangeQueryVariables>(GarminDateRangeDocument, options);
+      }
+export function useGarminDateRangeLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminDateRangeQuery, GarminDateRangeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminDateRangeQuery, GarminDateRangeQueryVariables>(GarminDateRangeDocument, options);
+        }
+// @ts-ignore
+export function useGarminDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminDateRangeQuery, GarminDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminDateRangeQuery, GarminDateRangeQueryVariables>;
+export function useGarminDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminDateRangeQuery, GarminDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminDateRangeQuery | undefined, GarminDateRangeQueryVariables>;
+export function useGarminDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminDateRangeQuery, GarminDateRangeQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminDateRangeQuery, GarminDateRangeQueryVariables>(GarminDateRangeDocument, options);
+        }
+export type GarminDateRangeQueryHookResult = ReturnType<typeof useGarminDateRangeQuery>;
+export type GarminDateRangeLazyQueryHookResult = ReturnType<typeof useGarminDateRangeLazyQuery>;
+export type GarminDateRangeSuspenseQueryHookResult = ReturnType<typeof useGarminDateRangeSuspenseQuery>;
+export type GarminDateRangeQueryResult = ApolloReactCommon.QueryResult<GarminDateRangeQuery, GarminDateRangeQueryVariables>;
 export const GarminSportsDocument = gql`
     query GarminSports {
   garminSports {
