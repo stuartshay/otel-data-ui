@@ -16,21 +16,23 @@ test.describe('Location Date Range Bounds', () => {
       timeout: 30_000,
     })
 
-    // Fetch the GraphQL query directly from the loaded page context
-    const dateRangeResponse = await page.evaluate(async () => {
-      const res = await fetch(
+    // Read the runtime GraphQL URL from the page, but execute the request
+    // in Playwright's Node context so it is not subject to browser CORS.
+    const graphqlUrl = await page.evaluate(
+      () =>
         (window as { __ENV__?: { GRAPHQL_URL?: string } }).__ENV__
           ?.GRAPHQL_URL ?? 'https://gateway.lab.informationcart.com',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `query { locationDateRange { min_date max_date } }`,
-          }),
-        },
-      )
-      return res.json()
+    )
+
+    const dateRangeApiResponse = await page.request.post(graphqlUrl, {
+      headers: { 'Content-Type': 'application/json' },
+      data: {
+        query: `query { locationDateRange { min_date max_date } }`,
+      },
     })
+    expect(dateRangeApiResponse.ok()).toBeTruthy()
+
+    const dateRangeResponse = await dateRangeApiResponse.json()
 
     // Verify the response contains valid date fields
     expect(dateRangeResponse.data).toBeDefined()
@@ -89,9 +91,20 @@ test.describe('Location Date Range Bounds', () => {
   test('out-of-range date_from URL param is clamped to API min_date', async ({
     page,
   }) => {
-    // Fetch the actual min_date from the gateway API directly
-    const gatewayUrl = 'https://gateway.lab.informationcart.com'
-    const res = await page.request.post(gatewayUrl, {
+    // Navigate first to load the app, then read the runtime GraphQL URL
+    // so the test follows the environment configuration.
+    await page.goto('/locations', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('date-range-trigger')).toBeVisible({
+      timeout: 30_000,
+    })
+
+    const graphqlUrl = await page.evaluate(
+      () =>
+        (window as { __ENV__?: { GRAPHQL_URL?: string } }).__ENV__
+          ?.GRAPHQL_URL ?? 'https://gateway.lab.informationcart.com',
+    )
+
+    const res = await page.request.post(graphqlUrl, {
       data: {
         query: `query { locationDateRange { min_date max_date } }`,
       },

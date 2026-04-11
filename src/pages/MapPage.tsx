@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
-import { useUnifiedGpsQuery } from '@/__generated__/graphql'
+import {
+  useUnifiedGpsQuery,
+  useLocationDateRangeQuery,
+} from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +23,14 @@ export function MapPage() {
   const mapInstanceRef = useRef<L.Map | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
+
+  const { data: dateRangeData } = useLocationDateRangeQuery()
+  const dataMinDate = dateRangeData?.locationDateRange?.min_date
+    ? new Date(dateRangeData.locationDateRange.min_date)
+    : undefined
+  const dataMaxDate = dateRangeData?.locationDateRange?.max_date
+    ? new Date(dateRangeData.locationDateRange.max_date)
+    : new Date()
 
   const dateFrom = format(selectedDate, 'yyyy-MM-dd')
   const dateTo = dateFrom
@@ -122,7 +133,10 @@ export function MapPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSelectedDate(new Date())}
+              onClick={() => {
+                const today = new Date()
+                setSelectedDate(today > dataMaxDate ? dataMaxDate : today)
+              }}
             >
               Today
             </Button>
@@ -144,7 +158,9 @@ export function MapPage() {
                     setCalendarOpen(false)
                   }
                 }}
-                disabled={{ after: new Date() }}
+                disabled={{ after: dataMaxDate }}
+                fromDate={dataMinDate}
+                toDate={dataMaxDate}
               />
             </PopoverContent>
           </Popover>
