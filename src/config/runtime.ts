@@ -26,7 +26,9 @@ export function getConfig<K extends keyof RuntimeConfig>(
 ): string {
   if (typeof window !== 'undefined' && window.__ENV__) {
     const value = window.__ENV__[key]
-    if (value !== undefined && value !== null) return value
+    if (value !== undefined && value !== null) {
+      if (value !== '' || fallback !== undefined) return value
+    }
   }
 
   const envKey = `VITE_${key}`

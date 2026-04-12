@@ -55,8 +55,13 @@ export function GarminActivityHeatmap() {
       ? format(new Date(), 'yyyy-MM-dd')
       : format(endDate, 'yyyy-MM-dd')
 
+  const daySpan =
+    Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    ) + 1
+
   const { data, loading, error } = useDailySummaryQuery({
-    variables: { date_from: dateFrom, date_to: dateTo, limit: 365 },
+    variables: { date_from: dateFrom, date_to: dateTo, limit: daySpan * 5 },
   })
 
   const heatmapValues = useMemo<HeatmapValue[]>(() => {
