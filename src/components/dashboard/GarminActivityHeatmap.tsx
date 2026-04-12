@@ -16,6 +16,8 @@ import 'react-calendar-heatmap/dist/styles.css'
 
 const OLDEST_YEAR = 2006
 const CURRENT_YEAR = new Date().getFullYear()
+/** Maximum number of daily summaries to request — matches the API's hard limit (le=365). */
+const MAX_DAILY_SUMMARY_LIMIT = 365
 const YEAR_OPTIONS = Array.from(
   { length: CURRENT_YEAR - OLDEST_YEAR + 1 },
   (_, i) => CURRENT_YEAR - i,
@@ -56,7 +58,11 @@ export function GarminActivityHeatmap() {
       : format(endDate, 'yyyy-MM-dd')
 
   const { data, loading, error } = useDailySummaryQuery({
-    variables: { date_from: dateFrom, date_to: dateTo, limit: 365 },
+    variables: {
+      date_from: dateFrom,
+      date_to: dateTo,
+      limit: MAX_DAILY_SUMMARY_LIMIT,
+    },
   })
 
   const heatmapValues = useMemo<HeatmapValue[]>(() => {
