@@ -7,6 +7,7 @@ const dashboardHooks = vi.hoisted(() => ({
   useLocationCountQuery: vi.fn(),
   useDevicesQuery: vi.fn(),
   useGarminSportsQuery: vi.fn(),
+  useDailySummaryQuery: vi.fn(),
   useTriggerGarminSyncMutation: vi
     .fn()
     .mockReturnValue([vi.fn(), { loading: false }]),
@@ -33,6 +34,10 @@ describe('DashboardPage', () => {
       vi.fn(),
       { loading: false },
     ])
+    dashboardHooks.useDailySummaryQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+    })
   })
 
   it('shows a loading state when all dashboard queries are loading', () => {

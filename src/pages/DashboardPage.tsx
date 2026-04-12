@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/shared/ErrorState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GarminSyncCard } from '@/components/dashboard/GarminSyncCard'
+import { GarminActivityHeatmap } from '@/components/dashboard/GarminActivityHeatmap'
 
 export function DashboardPage() {
   const { data: healthData, loading: healthLoading } = useHealthQuery()
@@ -127,6 +128,8 @@ export function DashboardPage() {
 
         <GarminSyncCard />
       </div>
+
+      <GarminActivityHeatmap />
     </div>
   )
 }
