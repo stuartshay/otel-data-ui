@@ -25,12 +25,20 @@ export function MapPage() {
   const [calendarOpen, setCalendarOpen] = useState(false)
 
   const { data: dateRangeData } = useLocationDateRangeQuery()
-  const dataMinDate = dateRangeData?.locationDateRange?.min_date
-    ? new Date(dateRangeData.locationDateRange.min_date)
-    : undefined
-  const dataMaxDate = dateRangeData?.locationDateRange?.max_date
-    ? new Date(dateRangeData.locationDateRange.max_date)
-    : new Date()
+  const dataMinDate = useMemo(
+    () =>
+      dateRangeData?.locationDateRange?.min_date
+        ? new Date(dateRangeData.locationDateRange.min_date)
+        : undefined,
+    [dateRangeData],
+  )
+  const dataMaxDate = useMemo(
+    () =>
+      dateRangeData?.locationDateRange?.max_date
+        ? new Date(dateRangeData.locationDateRange.max_date)
+        : new Date(),
+    [dateRangeData],
+  )
 
   // Clamp selectedDate into [dataMinDate, dataMaxDate] when date-range data loads
   const clampedDate = useMemo(() => {

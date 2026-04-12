@@ -98,7 +98,7 @@ export function GarminActivityHeatmap() {
             value={String(selectedYear)}
             onValueChange={(v) => setSelectedYear(Number(v))}
           >
-            <SelectTrigger className="h-7 w-[80px] text-xs">
+            <SelectTrigger className="h-7 w-20 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

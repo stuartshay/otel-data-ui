@@ -23,7 +23,13 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'warn',
       'react-refresh/only-export-components': [
         'warn',
-        { allowExportNames: ['badgeVariants', 'buttonVariants'] },
+        {
+          allowExportNames: [
+            'badgeVariants',
+            'buttonVariants',
+            'tabsListVariants',
+          ],
+        },
       ],
     },
   },
