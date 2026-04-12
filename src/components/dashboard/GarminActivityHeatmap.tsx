@@ -47,18 +47,14 @@ function getTitleForValue(value: HeatmapCallbackValue): string {
 export function GarminActivityHeatmap() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR)
 
-  const startDate = new Date(
-    selectedYear - 1,
-    new Date().getMonth(),
-    new Date().getDate(),
-  )
+  const startDate = new Date(selectedYear, 0, 1)
   const endDate =
     selectedYear === CURRENT_YEAR ? new Date() : new Date(selectedYear, 11, 31)
   const dateFrom = format(startDate, 'yyyy-MM-dd')
   const dateTo = format(endDate, 'yyyy-MM-dd')
 
-  const { data, loading } = useDailySummaryQuery({
-    variables: { date_from: dateFrom, date_to: dateTo, limit: 366 },
+  const { data, loading, error } = useDailySummaryQuery({
+    variables: { date_from: dateFrom, date_to: dateTo },
   })
 
   const heatmapValues = useMemo<HeatmapValue[]>(() => {
@@ -78,7 +74,7 @@ export function GarminActivityHeatmap() {
   const activeDays = heatmapValues.filter((v) => v.count > 0).length
 
   return (
-    <Card>
+    <Card data-testid="garmin-heatmap-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-4 w-4" />
@@ -112,6 +108,12 @@ export function GarminActivityHeatmap() {
           <div className="flex h-32 items-center justify-center">
             <p className="text-sm text-muted-foreground">
               Loading activity data...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex h-32 items-center justify-center">
+            <p className="text-sm text-destructive">
+              Failed to load activity data
             </p>
           </div>
         ) : (

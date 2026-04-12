@@ -75,11 +75,8 @@ test.describe('Dashboard Activity Heatmap', () => {
     await expect(page.getByText('Less')).toBeVisible({ timeout: 15_000 })
 
     // The year dropdown should be visible with the current year
-    const trigger = page
-      .locator('.garmin-heatmap')
-      .locator('..')
-      .locator('..')
-      .getByRole('combobox')
+    const heatmapCard = page.locator('[data-testid="garmin-heatmap-card"]')
+    const trigger = heatmapCard.getByRole('combobox')
     await expect(trigger).toBeVisible()
     await expect(trigger).toHaveText(String(new Date().getFullYear()))
 
