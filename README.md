@@ -5,7 +5,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-stuartshay%2Fotel--data--ui-blue?logo=docker)](https://hub.docker.com/repository/docker/stuartshay/otel-data-ui)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg?logo=renovatebot)](https://renovatebot.com)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg?logo=renovatebot)](https://developer.mend.io/github/stuartshay/otel-data-ui)
 
 React frontend consuming the [otel-data-gateway](https://github.com/stuartshay/otel-data-gateway)
 GraphQL BFF for location and activity data visualization.
