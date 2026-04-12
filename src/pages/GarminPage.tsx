@@ -1,11 +1,13 @@
 import {
   useGarminActivitiesQuery,
   useGarminSportsQuery,
+  useGarminDateRangeQuery,
 } from '@/__generated__/graphql'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { DateRangePicker } from '@/components/shared/DateRangePicker'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -18,6 +20,8 @@ import {
 } from '@/components/ui/table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
+import { parseDateRangeParams, toLocalDate } from '@/lib/date-range'
+import { format as formatDate } from 'date-fns'
 
 const PAGE_SIZE = 25
 
@@ -38,6 +42,24 @@ export function GarminPage() {
     setNRCustomAttribute('garmin.flow', true)
   }, [])
   const sportFilter = searchParams.get('sport') || undefined
+  const dateFromParam = searchParams.get('date_from')
+  const dateToParam = searchParams.get('date_to')
+  const { data: dateRangeData } = useGarminDateRangeQuery()
+  const DATA_MIN_DATE = dateRangeData?.garminDateRange?.min_date
+    ? toLocalDate(dateRangeData.garminDateRange.min_date)
+    : undefined
+  const DATA_MAX_DATE = dateRangeData?.garminDateRange?.max_date
+    ? toLocalDate(dateRangeData.garminDateRange.max_date)
+    : new Date()
+  const {
+    dateFrom,
+    dateTo,
+    dateFromParam: dateFromStr,
+    dateToParam: dateToStr,
+  } = parseDateRangeParams(dateFromParam, dateToParam, {
+    minDate: DATA_MIN_DATE,
+    maxDate: DATA_MAX_DATE,
+  })
   const offset = (page - 1) * PAGE_SIZE
 
   const { data: sportsData } = useGarminSportsQuery()
@@ -46,6 +68,8 @@ export function GarminPage() {
       limit: PAGE_SIZE,
       offset,
       sport: sportFilter,
+      date_from: dateFromStr,
+      date_to: dateToStr,
       order: 'desc',
       sort: 'start_time',
     },
@@ -68,11 +92,16 @@ export function GarminPage() {
       </div>
 
       {/* Sport filter */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           variant={!sportFilter ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSearchParams({})}
+          onClick={() => {
+            const params = new URLSearchParams(searchParams)
+            params.delete('sport')
+            params.delete('page')
+            setSearchParams(params)
+          }}
         >
           All
         </Button>
@@ -82,7 +111,12 @@ export function GarminPage() {
               key={s.sport}
               variant={sportFilter === s.sport ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSearchParams({ sport: s.sport })}
+              onClick={() => {
+                const params = new URLSearchParams(searchParams)
+                params.set('sport', s.sport)
+                params.delete('page')
+                setSearchParams(params)
+              }}
             >
               <span className="capitalize">{s.sport}</span>
               <Badge variant="secondary" className="ml-1">
@@ -91,6 +125,24 @@ export function GarminPage() {
             </Button>
           ),
         )}
+
+        <div className="ml-auto">
+          <DateRangePicker
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            minDate={DATA_MIN_DATE}
+            maxDate={DATA_MAX_DATE}
+            onRangeChange={(from, to) => {
+              const params = new URLSearchParams(searchParams)
+              if (from) params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
+              else params.delete('date_from')
+              if (to) params.set('date_to', formatDate(to, 'yyyy-MM-dd'))
+              else params.delete('date_to')
+              params.delete('page')
+              setSearchParams(params)
+            }}
+          />
+        </div>
       </div>
 
       {/* Table */}
