@@ -135,6 +135,14 @@
 }
 
 /* Garmin Activity Heatmap */
+.garmin-heatmap {
+  overflow-x: auto;
+}
+
+.garmin-heatmap .react-calendar-heatmap {
+  min-width: 680px;
+}
+
 .garmin-heatmap .react-calendar-heatmap text {
   font-size: 8px;
   fill: oklch(0.556 0 0);

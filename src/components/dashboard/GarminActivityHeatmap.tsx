@@ -48,13 +48,15 @@ export function GarminActivityHeatmap() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR)
 
   const startDate = new Date(selectedYear, 0, 1)
-  const endDate =
-    selectedYear === CURRENT_YEAR ? new Date() : new Date(selectedYear, 11, 31)
+  const endDate = new Date(selectedYear, 11, 31)
   const dateFrom = format(startDate, 'yyyy-MM-dd')
-  const dateTo = format(endDate, 'yyyy-MM-dd')
+  const dateTo =
+    selectedYear === CURRENT_YEAR
+      ? format(new Date(), 'yyyy-MM-dd')
+      : format(endDate, 'yyyy-MM-dd')
 
   const { data, loading, error } = useDailySummaryQuery({
-    variables: { date_from: dateFrom, date_to: dateTo },
+    variables: { date_from: dateFrom, date_to: dateTo, limit: 365 },
   })
 
   const heatmapValues = useMemo<HeatmapValue[]>(() => {
