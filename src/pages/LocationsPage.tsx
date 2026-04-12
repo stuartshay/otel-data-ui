@@ -165,7 +165,7 @@ export function LocationsPage() {
                   {loc.accuracy != null ? `${loc.accuracy.toFixed(0)}m` : '—'}
                 </TableCell>
                 <TableCell
-                  className="max-w-[200px] truncate text-xs"
+                  className="max-w-50 truncate text-xs"
                   title={loc.display_address ?? undefined}
                 >
                   {loc.display_address ?? '—'}

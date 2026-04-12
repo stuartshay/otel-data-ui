@@ -85,7 +85,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --max-warnings 0",
       "prettier --write"
     ],
     "*.{ts,tsx,js,md,yml,yaml,sh,html}": [
