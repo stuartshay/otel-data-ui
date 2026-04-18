@@ -79,10 +79,17 @@ export function MapPage() {
     // leaves the map blank until a resize/navigation forces a redraw.
     // Force a size recalculation once layout is stable and whenever the
     // container resizes.
-    const invalidate = () => map.invalidateSize()
-    const rafId = requestAnimationFrame(() => {
-      // Double rAF ensures layout/styles have been applied before measuring.
-      requestAnimationFrame(invalidate)
+    let disposed = false
+    const invalidate = () => {
+      if (disposed) return
+      map.invalidateSize()
+    }
+    // Double rAF ensures layout/styles have been applied before measuring.
+    // Track both handles so cleanup can cancel either callback if the
+    // component unmounts between the two frames.
+    let innerRafId = 0
+    const outerRafId = requestAnimationFrame(() => {
+      innerRafId = requestAnimationFrame(invalidate)
     })
 
     let resizeObserver: ResizeObserver | undefined
@@ -92,7 +99,9 @@ export function MapPage() {
     }
 
     return () => {
-      cancelAnimationFrame(rafId)
+      disposed = true
+      cancelAnimationFrame(outerRafId)
+      cancelAnimationFrame(innerRafId)
       resizeObserver?.disconnect()
       map.remove()
       mapInstanceRef.current = null

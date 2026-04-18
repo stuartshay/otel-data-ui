@@ -65,7 +65,7 @@ test.describe('Unified Map first-load rendering', () => {
       .getByText(/[\d,]+ of [\d,]+ points/)
       .textContent()
     const displayed = parseInt(
-      displayedText?.match(/^([\d,]+) of/)?.[1].replace(/,/g, '') ?? '0',
+      displayedText?.match(/^([\d,]+) of/)?.[1]?.replace(/,/g, '') ?? '0',
       10,
     )
 
