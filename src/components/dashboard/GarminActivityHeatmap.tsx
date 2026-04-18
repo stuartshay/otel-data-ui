@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { GarminDayActivitiesDialog } from './GarminDayActivitiesDialog'
 
 import 'react-calendar-heatmap/dist/styles.css'
 
@@ -48,6 +49,8 @@ function getTitleForValue(value: HeatmapCallbackValue): string {
 
 export function GarminActivityHeatmap() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const startDate = new Date(selectedYear, 0, 1)
   const endDate = new Date(selectedYear, 11, 31)
@@ -134,6 +137,11 @@ export function GarminActivityHeatmap() {
               titleForValue={getTitleForValue}
               showWeekdayLabels
               gutterSize={2}
+              onClick={(value: HeatmapCallbackValue) => {
+                if (!value || !value.date || !value.count) return
+                setSelectedDate(value.date)
+                setDialogOpen(true)
+              }}
             />
             <div className="mt-2 flex items-center justify-end gap-1 text-xs text-muted-foreground">
               <span>Less</span>
@@ -147,6 +155,11 @@ export function GarminActivityHeatmap() {
           </div>
         )}
       </CardContent>
+      <GarminDayActivitiesDialog
+        date={selectedDate}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </Card>
   )
 }
