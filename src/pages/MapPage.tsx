@@ -65,17 +65,36 @@ export function MapPage() {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
 
-    mapInstanceRef.current = L.map(mapRef.current).setView(
-      [40.736, -74.039],
-      12,
-    )
+    const container = mapRef.current
+    const map = L.map(container).setView([40.736, -74.039], 12)
+    mapInstanceRef.current = map
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(mapInstanceRef.current)
+    }).addTo(map)
+
+    // Leaflet computes tile layout from the container's size at init time.
+    // On the first visit the container may not yet have its final dimensions
+    // (parent layout still settling after the LoadingState unmount), which
+    // leaves the map blank until a resize/navigation forces a redraw.
+    // Force a size recalculation once layout is stable and whenever the
+    // container resizes.
+    const invalidate = () => map.invalidateSize()
+    const rafId = requestAnimationFrame(() => {
+      // Double rAF ensures layout/styles have been applied before measuring.
+      requestAnimationFrame(invalidate)
+    })
+
+    let resizeObserver: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(invalidate)
+      resizeObserver.observe(container)
+    }
 
     return () => {
-      mapInstanceRef.current?.remove()
+      cancelAnimationFrame(rafId)
+      resizeObserver?.disconnect()
+      map.remove()
       mapInstanceRef.current = null
     }
   }, [])
@@ -120,6 +139,9 @@ export function MapPage() {
     })
 
     if (bounds.isValid()) {
+      // Ensure the map has up-to-date container dimensions before fitting,
+      // otherwise the first fitBounds after mount can compute the wrong zoom.
+      map.invalidateSize()
       map.fitBounds(bounds, { padding: [20, 20] })
     }
   }, [data, clampedDate])

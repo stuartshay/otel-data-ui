@@ -21,6 +21,7 @@ const leafletMocks = vi.hoisted(() => {
     removeLayer: vi.fn(),
     fitBounds: vi.fn(),
     remove: vi.fn(),
+    invalidateSize: vi.fn(),
   }
 
   mapInstance.setView.mockReturnValue(mapInstance)
@@ -76,6 +77,7 @@ describe('MapPage', () => {
     leafletMocks.mapInstance.removeLayer.mockClear()
     leafletMocks.mapInstance.fitBounds.mockClear()
     leafletMocks.mapInstance.remove.mockClear()
+    leafletMocks.mapInstance.invalidateSize.mockClear()
     leafletMocks.mapInstance.eachLayer.mockImplementation(() => {})
   })
 
