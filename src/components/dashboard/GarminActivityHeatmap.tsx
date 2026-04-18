@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import CalendarHeatmap from 'react-calendar-heatmap'
 import { format } from 'date-fns'
 import { Activity } from 'lucide-react'
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { GarminDayActivitiesDialog } from './GarminDayActivitiesDialog'
+import { GarminDayActivitiesPopover } from './GarminDayActivitiesPopover'
 
 import 'react-calendar-heatmap/dist/styles.css'
 
@@ -50,7 +50,11 @@ function getTitleForValue(value: HeatmapCallbackValue): string {
 export function GarminActivityHeatmap() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [anchorPos, setAnchorPos] = useState<{ x: number; y: number } | null>(
+    null,
+  )
+  const pendingAnchor = useRef<{ x: number; y: number } | null>(null)
 
   const startDate = new Date(selectedYear, 0, 1)
   const endDate = new Date(selectedYear, 11, 31)
@@ -128,7 +132,19 @@ export function GarminActivityHeatmap() {
             </p>
           </div>
         ) : (
-          <div className="garmin-heatmap">
+          <div
+            className="garmin-heatmap"
+            onClickCapture={(e) => {
+              const target = e.target as Element
+              if (target.tagName?.toLowerCase() === 'rect') {
+                const rect = target.getBoundingClientRect()
+                pendingAnchor.current = {
+                  x: rect.left + rect.width / 2,
+                  y: rect.top + rect.height / 2,
+                }
+              }
+            }}
+          >
             <CalendarHeatmap
               startDate={startDate}
               endDate={endDate}
@@ -139,8 +155,9 @@ export function GarminActivityHeatmap() {
               gutterSize={2}
               onClick={(value: HeatmapCallbackValue) => {
                 if (!value || !value.date || !value.count) return
+                setAnchorPos(pendingAnchor.current)
                 setSelectedDate(value.date)
-                setDialogOpen(true)
+                setPopoverOpen(true)
               }}
             />
             <div className="mt-2 flex items-center justify-end gap-1 text-xs text-muted-foreground">
@@ -155,10 +172,11 @@ export function GarminActivityHeatmap() {
           </div>
         )}
       </CardContent>
-      <GarminDayActivitiesDialog
+      <GarminDayActivitiesPopover
         date={selectedDate}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={popoverOpen}
+        onOpenChange={setPopoverOpen}
+        anchorPos={anchorPos}
       />
     </Card>
   )

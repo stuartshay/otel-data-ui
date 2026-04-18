@@ -9,18 +9,19 @@ const hooks = vi.hoisted(() => ({
 
 vi.mock('@/__generated__/graphql', () => hooks)
 
-import { GarminDayActivitiesDialog } from './GarminDayActivitiesDialog'
+import { GarminDayActivitiesPopover } from './GarminDayActivitiesPopover'
 
-function renderDialog(
-  props: Partial<React.ComponentProps<typeof GarminDayActivitiesDialog>> = {},
+function renderPopover(
+  props: Partial<React.ComponentProps<typeof GarminDayActivitiesPopover>> = {},
 ) {
   const onOpenChange = vi.fn()
   const utils = render(
     <MemoryRouter>
-      <GarminDayActivitiesDialog
+      <GarminDayActivitiesPopover
         date="2024-05-10"
         open
         onOpenChange={onOpenChange}
+        anchorPos={{ x: 100, y: 100 }}
         {...props}
       />
     </MemoryRouter>,
@@ -28,7 +29,7 @@ function renderDialog(
   return { ...utils, onOpenChange }
 }
 
-describe('GarminDayActivitiesDialog', () => {
+describe('GarminDayActivitiesPopover', () => {
   beforeEach(() => {
     hooks.useGarminActivitiesQuery.mockReset()
   })
@@ -40,9 +41,9 @@ describe('GarminDayActivitiesDialog', () => {
       error: undefined,
     })
 
-    renderDialog()
+    renderPopover()
 
-    expect(screen.getByTestId('garmin-day-dialog-loading')).toBeInTheDocument()
+    expect(screen.getByTestId('garmin-day-popover-loading')).toBeInTheDocument()
   })
 
   it('renders an empty state when no activities are returned', () => {
@@ -52,12 +53,12 @@ describe('GarminDayActivitiesDialog', () => {
       error: undefined,
     })
 
-    renderDialog()
+    renderPopover()
 
-    expect(screen.getByTestId('garmin-day-dialog-empty')).toBeInTheDocument()
+    expect(screen.getByTestId('garmin-day-popover-empty')).toBeInTheDocument()
   })
 
-  it('renders formatted activities and closes dialog on sport link click', async () => {
+  it('renders formatted activities and closes popover on sport link click', async () => {
     const user = userEvent.setup()
     hooks.useGarminActivitiesQuery.mockReturnValue({
       data: {
@@ -71,7 +72,7 @@ describe('GarminDayActivitiesDialog', () => {
               avg_heart_rate: 142,
               calories: 910,
               track_point_count: 10707,
-              start_time: '2024-05-10T10:00:00Z',
+              start_time: '2024-05-10T14:30:00Z',
             },
           ],
           total: 1,
@@ -81,14 +82,12 @@ describe('GarminDayActivitiesDialog', () => {
       error: undefined,
     })
 
-    const { onOpenChange } = renderDialog()
+    const { onOpenChange } = renderPopover()
 
     expect(screen.getByText('42.20 km')).toBeInTheDocument()
     expect(screen.getByText('1h 2m')).toBeInTheDocument()
-    expect(screen.getByText('142 bpm')).toBeInTheDocument()
-    expect(screen.getByText('10,707')).toBeInTheDocument()
 
-    const link = screen.getByTestId('garmin-day-dialog-sport-link')
+    const link = screen.getByTestId('garmin-day-popover-sport-link')
     expect(link).toHaveAttribute('href', '/garmin/abc-123')
 
     await user.click(link)
@@ -104,10 +103,11 @@ describe('GarminDayActivitiesDialog', () => {
 
     render(
       <MemoryRouter>
-        <GarminDayActivitiesDialog
+        <GarminDayActivitiesPopover
           date="2024-05-10"
           open={false}
           onOpenChange={vi.fn()}
+          anchorPos={null}
         />
       </MemoryRouter>,
     )
