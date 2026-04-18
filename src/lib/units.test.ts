@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   celsiusToFahrenheit,
   formatDuration,
+  formatDurationShort,
   formatPace,
   kmhToMph,
   kmToMi,
@@ -20,6 +21,13 @@ describe('units helpers', () => {
     expect(formatDuration(null)).toBe('—')
     expect(formatDuration(65)).toBe('1:05')
     expect(formatDuration(3661)).toBe('1:01:01')
+  })
+
+  it('formats short-form durations for compact UI', () => {
+    expect(formatDurationShort(null)).toBe('—')
+    expect(formatDurationShort(undefined)).toBe('—')
+    expect(formatDurationShort(65)).toBe('1m 5s')
+    expect(formatDurationShort(3725)).toBe('1h 2m')
   })
 
   it('formats pace and handles invalid values', () => {

@@ -21,18 +21,10 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 import { parseDateRangeParams, toLocalDate } from '@/lib/date-range'
+import { formatDurationShort } from '@/lib/units'
 import { format as formatDate } from 'date-fns'
 
 const PAGE_SIZE = 25
-
-function formatDuration(seconds: number | null | undefined): string {
-  if (seconds == null) return '—'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}h ${m}m`
-  return `${m}m ${s}s`
-}
 
 export function GarminPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -176,7 +168,7 @@ export function GarminPage() {
                     ? `${a.distance_km.toFixed(2)} km`
                     : '—'}
                 </TableCell>
-                <TableCell>{formatDuration(a.duration_seconds)}</TableCell>
+                <TableCell>{formatDurationShort(a.duration_seconds)}</TableCell>
                 <TableCell>
                   {a.avg_heart_rate != null ? `${a.avg_heart_rate} bpm` : '—'}
                 </TableCell>
