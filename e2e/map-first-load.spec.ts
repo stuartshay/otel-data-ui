@@ -19,6 +19,13 @@ test.describe('Unified Map first-load rendering', () => {
     const heading = page.getByRole('heading', { name: 'Unified Map' })
     await heading.waitFor({ timeout: 15_000 })
 
+    // Wait for the GraphQL query to resolve — the map div is only mounted
+    // after the loading state unmounts, so the leaflet container cannot
+    // exist until the point-count summary renders.
+    await expect(page.getByText(/[\d,]+ of [\d,]+ points/)).toBeVisible({
+      timeout: 20_000,
+    })
+
     const mapContainer = page.getByTestId('unified-map-container')
     await expect(mapContainer).toBeVisible()
 
@@ -28,13 +35,15 @@ test.describe('Unified Map first-load rendering', () => {
     expect(box!.width).toBeGreaterThan(100)
     expect(box!.height).toBeGreaterThan(100)
 
-    // Leaflet injects a .leaflet-container once the map is initialized.
-    const leafletContainer = mapContainer.locator('.leaflet-container')
-    await expect(leafletContainer).toBeVisible({ timeout: 10_000 })
+    // Leaflet adds the .leaflet-container class to the container element itself
+    // (the div we passed to L.map()), not as a descendant.
+    await expect(mapContainer).toHaveClass(/leaflet-container/, {
+      timeout: 20_000,
+    })
 
     // Tile images must be loaded inside the tile pane. This is what was
     // missing on first load before the invalidateSize() fix.
-    const tileImages = leafletContainer.locator(
+    const tileImages = mapContainer.locator(
       '.leaflet-tile-pane img.leaflet-tile',
     )
     await expect(tileImages.first()).toBeVisible({ timeout: 15_000 })
@@ -43,7 +52,7 @@ test.describe('Unified Map first-load rendering', () => {
 
     // At least one tile should be fully loaded (class "leaflet-tile-loaded").
     await expect(
-      leafletContainer
+      mapContainer
         .locator('.leaflet-tile-pane img.leaflet-tile-loaded')
         .first(),
     ).toBeVisible({ timeout: 20_000 })

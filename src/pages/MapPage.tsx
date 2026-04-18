@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import {
@@ -19,8 +19,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 export function MapPage() {
-  const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
 
@@ -62,10 +62,22 @@ export function MapPage() {
     },
   })
 
-  useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return
+  // Callback ref initializes Leaflet as soon as the map div is attached to the
+  // DOM. Using a callback ref (instead of useEffect + useRef) is critical:
+  // MapPage returns <LoadingState /> on the first render while data is
+  // fetching, so a mount-time useEffect with [] deps would fire once with a
+  // null ref and never re-run when the real <div> finally mounts — leaving
+  // the map permanently uninitialized on first load.
+  const mapContainerRef = useCallback((container: HTMLDivElement | null) => {
+    // Tear down any previous instance (StrictMode double-mount, or ref
+    // detach on unmount).
+    if (cleanupRef.current) {
+      cleanupRef.current()
+      cleanupRef.current = null
+    }
 
-    const container = mapRef.current
+    if (!container) return
+
     const map = L.map(container).setView([40.736, -74.039], 12)
     mapInstanceRef.current = map
 
@@ -74,19 +86,14 @@ export function MapPage() {
     }).addTo(map)
 
     // Leaflet computes tile layout from the container's size at init time.
-    // On the first visit the container may not yet have its final dimensions
-    // (parent layout still settling after the LoadingState unmount), which
-    // leaves the map blank until a resize/navigation forces a redraw.
     // Force a size recalculation once layout is stable and whenever the
-    // container resizes.
+    // container resizes, so tiles render on first paint.
     let disposed = false
     const invalidate = () => {
       if (disposed) return
       map.invalidateSize()
     }
     // Double rAF ensures layout/styles have been applied before measuring.
-    // Track both handles so cleanup can cancel either callback if the
-    // component unmounts between the two frames.
     let innerRafId = 0
     const outerRafId = requestAnimationFrame(() => {
       innerRafId = requestAnimationFrame(invalidate)
@@ -98,13 +105,23 @@ export function MapPage() {
       resizeObserver.observe(container)
     }
 
-    return () => {
+    cleanupRef.current = () => {
       disposed = true
       cancelAnimationFrame(outerRafId)
       cancelAnimationFrame(innerRafId)
       resizeObserver?.disconnect()
       map.remove()
       mapInstanceRef.current = null
+    }
+  }, [])
+
+  // Ensure the map is cleaned up if MapPage itself unmounts.
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current()
+        cleanupRef.current = null
+      }
     }
   }, [])
 
@@ -222,7 +239,7 @@ export function MapPage() {
       </div>
 
       <div
-        ref={mapRef}
+        ref={mapContainerRef}
         data-testid="unified-map-container"
         className="relative z-0 h-[calc(100vh-14rem)] w-full rounded-lg border"
       />
