@@ -4,21 +4,13 @@ import { format } from 'date-fns'
 
 import { useGarminActivitiesQuery } from '@/__generated__/graphql'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { formatDurationShort } from '@/lib/units'
 
 interface GarminDayActivitiesPopoverProps {
   date: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   anchorPos: { x: number; y: number } | null
-}
-
-function formatDuration(seconds: number | null | undefined): string {
-  if (seconds == null) return '—'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}h ${m}m`
-  return `${m}m ${s}s`
 }
 
 export function GarminDayActivitiesPopover({
@@ -140,7 +132,7 @@ export function GarminDayActivitiesPopover({
                         : '—'}
                     </td>
                     <td className="px-3 py-1 text-right tabular-nums">
-                      {formatDuration(a.duration_seconds)}
+                      {formatDurationShort(a.duration_seconds)}
                     </td>
                   </tr>
                 ))}

@@ -27,6 +27,17 @@ export function formatDuration(seconds: number | null): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+export function formatDurationShort(
+  seconds: number | null | undefined,
+): string {
+  if (seconds == null) return '—'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m ${s}s`
+}
+
 export function formatPace(avgSpeedKmh: number | null): string {
   if (avgSpeedKmh == null || avgSpeedKmh === 0) return '—'
   const minsPerMi = 60 / kmhToMph(avgSpeedKmh)
