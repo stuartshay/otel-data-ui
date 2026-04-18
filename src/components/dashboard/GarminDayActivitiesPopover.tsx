@@ -64,13 +64,13 @@ export function GarminDayActivitiesPopover({
         align="center"
         side="top"
         sideOffset={8}
-        className="w-96 p-0"
+        className="w-72 p-0"
         data-testid="garmin-day-popover"
       >
-        <div className="border-b px-3 py-2">
-          <p className="text-sm font-semibold">{formattedDate}</p>
+        <div className="border-b px-3 py-1.5">
+          <p className="text-xs font-semibold">{formattedDate}</p>
           {!loading && !error && total > 0 && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               {total} {total === 1 ? 'activity' : 'activities'}
             </p>
           )}
@@ -106,17 +106,14 @@ export function GarminDayActivitiesPopover({
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-popover">
                 <tr className="border-b">
-                  <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">
+                  <th className="px-3 py-1 text-left font-medium text-muted-foreground">
                     Sport
                   </th>
-                  <th className="px-2 py-1.5 text-right font-medium text-muted-foreground">
+                  <th className="px-2 py-1 text-right font-medium text-muted-foreground">
                     Distance
                   </th>
-                  <th className="px-2 py-1.5 text-right font-medium text-muted-foreground">
+                  <th className="px-3 py-1 text-right font-medium text-muted-foreground">
                     Duration
-                  </th>
-                  <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">
-                    Date
                   </th>
                 </tr>
               </thead>
@@ -127,7 +124,7 @@ export function GarminDayActivitiesPopover({
                     className="border-b last:border-b-0 hover:bg-muted/50"
                     data-testid="garmin-day-popover-row"
                   >
-                    <td className="px-3 py-1.5">
+                    <td className="px-3 py-1">
                       <Link
                         to={`/garmin/${a.activity_id}`}
                         onClick={() => onOpenChange(false)}
@@ -137,21 +134,13 @@ export function GarminDayActivitiesPopover({
                         {a.sport}
                       </Link>
                     </td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">
+                    <td className="px-2 py-1 text-right tabular-nums">
                       {a.distance_km != null
                         ? `${a.distance_km.toFixed(2)} km`
                         : '—'}
                     </td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">
+                    <td className="px-3 py-1 text-right tabular-nums">
                       {formatDuration(a.duration_seconds)}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                      {a.start_time
-                        ? new Date(a.start_time).toLocaleTimeString([], {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })
-                        : '—'}
                     </td>
                   </tr>
                 ))}
