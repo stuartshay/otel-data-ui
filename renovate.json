@@ -10,7 +10,7 @@
   "packageRules": [
     {
       "description": "Disable Renovate for stuartshay packages (managed by update-types.yml)",
-      "matchPackagePatterns": ["^@stuartshay/"],
+      "matchPackageNames": ["/^@stuartshay//"],
       "enabled": false
     },
     {
@@ -21,25 +21,48 @@
       "automergeType": "pr"
     },
     {
-      "description": "Group React ecosystem",
+      "description": "Group React ecosystem (majors stay bundled with minors)",
       "matchPackageNames": [
         "react",
         "react-dom",
         "@types/react",
-        "@types/react-dom"
+        "@types/react-dom",
+        "react-router-dom",
+        "react-day-picker",
+        "react-calendar-heatmap",
+        "@types/react-calendar-heatmap"
       ],
       "groupName": "react",
-      "groupSlug": "react"
+      "groupSlug": "react",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Group Radix UI primitives",
+      "matchPackageNames": ["/^@radix-ui//", "radix-ui"],
+      "groupName": "radix-ui",
+      "groupSlug": "radix-ui",
+      "separateMajorMinor": false
     },
     {
       "description": "Group Tailwind CSS ecosystem",
       "matchPackageNames": [
         "tailwindcss",
         "@tailwindcss/vite",
-        "tailwind-merge"
+        "tailwind-merge",
+        "tw-animate-css",
+        "class-variance-authority",
+        "clsx"
       ],
       "groupName": "tailwindcss",
-      "groupSlug": "tailwindcss"
+      "groupSlug": "tailwindcss",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Group Vite build toolchain",
+      "matchPackageNames": ["vite", "@vitejs/plugin-react"],
+      "groupName": "vite-build",
+      "groupSlug": "vite-build",
+      "separateMajorMinor": false
     },
     {
       "description": "Group ESLint ecosystem",
@@ -48,47 +71,55 @@
         "@eslint/js",
         "typescript-eslint",
         "eslint-plugin-react-hooks",
-        "eslint-plugin-react-refresh"
+        "eslint-plugin-react-refresh",
+        "globals"
       ],
       "groupName": "eslint",
-      "groupSlug": "eslint"
+      "groupSlug": "eslint",
+      "separateMajorMinor": false
     },
     {
-      "description": "Group formatting tools",
+      "description": "Group formatting and linting tools",
       "matchPackageNames": [
         "prettier",
         "markdownlint-cli2",
         "husky",
         "lint-staged",
-        "cspell"
+        "cspell",
+        "shadcn"
       ],
       "groupName": "formatting-tools",
-      "groupSlug": "formatting-tools"
+      "groupSlug": "formatting-tools",
+      "separateMajorMinor": false
     },
     {
       "description": "Group Apollo GraphQL",
       "matchPackageNames": ["@apollo/client", "graphql"],
       "groupName": "apollo-graphql",
-      "groupSlug": "apollo-graphql"
+      "groupSlug": "apollo-graphql",
+      "separateMajorMinor": false
     },
     {
       "description": "Group Leaflet mapping",
       "matchPackageNames": ["leaflet", "react-leaflet", "@types/leaflet"],
       "groupName": "leaflet",
-      "groupSlug": "leaflet"
+      "groupSlug": "leaflet",
+      "separateMajorMinor": false
     },
     {
-      "description": "Group Vitest and testing tools",
+      "description": "Group testing tools (Vitest + Playwright + Testing Library)",
       "matchPackageNames": [
         "vitest",
         "@vitest/coverage-v8",
         "@testing-library/react",
         "@testing-library/jest-dom",
         "@testing-library/user-event",
-        "jsdom"
+        "jsdom",
+        "@playwright/test"
       ],
-      "groupName": "vitest-testing",
-      "groupSlug": "vitest-testing"
+      "groupName": "testing",
+      "groupSlug": "testing",
+      "separateMajorMinor": false
     },
     {
       "description": "Group GraphQL Codegen",
@@ -99,12 +130,44 @@
         "@graphql-codegen/typescript-react-apollo"
       ],
       "groupName": "graphql-codegen",
-      "groupSlug": "graphql-codegen"
+      "groupSlug": "graphql-codegen",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Group New Relic monitoring",
+      "matchPackageNames": ["/^@newrelic//"],
+      "groupName": "newrelic",
+      "groupSlug": "newrelic",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Group icon libraries",
+      "matchPackageNames": ["lucide-react"],
+      "groupName": "icons",
+      "groupSlug": "icons",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Group TypeScript compiler",
+      "matchPackageNames": ["typescript"],
+      "groupName": "typescript",
+      "groupSlug": "typescript",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Catch-all bundle for any remaining npm minor/patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm-minor-patch",
+      "groupSlug": "npm-minor-patch",
+      "priority": -1
     },
     {
       "description": "Docker base image updates",
       "matchManagers": ["dockerfile"],
       "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "docker",
+      "groupSlug": "docker",
       "automerge": true
     },
     {
