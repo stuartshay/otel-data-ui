@@ -22,6 +22,7 @@ export function Autocomplete() {
     const trimmedQuery = query.trim()
 
     if (trimmedQuery.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([])
       setLoading(false)
       return
