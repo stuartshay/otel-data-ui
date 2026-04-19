@@ -74,7 +74,7 @@
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.4.0",
-    "markdownlint-cli2": "^0.21.0",
+    "markdownlint-cli2": "^0.22.0",
     "prettier": "^3.8.1",
     "shadcn": "^4.1.0",
     "tailwindcss": "^4.2.1",
