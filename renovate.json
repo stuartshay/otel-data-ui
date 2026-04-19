@@ -21,6 +21,13 @@
       "automergeType": "pr"
     },
     {
+      "description": "Catch-all bundle for any remaining npm minor/patch updates (specific groups below override this via last-match-wins)",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm-minor-patch",
+      "groupSlug": "npm-minor-patch"
+    },
+    {
       "description": "Group React ecosystem (majors stay bundled with minors)",
       "matchPackageNames": [
         "react",
@@ -153,14 +160,6 @@
       "groupName": "typescript",
       "groupSlug": "typescript",
       "separateMajorMinor": false
-    },
-    {
-      "description": "Catch-all bundle for any remaining npm minor/patch updates",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "npm-minor-patch",
-      "groupSlug": "npm-minor-patch",
-      "priority": -1
     },
     {
       "description": "Docker base image updates",
