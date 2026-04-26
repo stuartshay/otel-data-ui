@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GarminSyncCard } from '@/components/dashboard/GarminSyncCard'
 import { GarminActivityHeatmap } from '@/components/dashboard/GarminActivityHeatmap'
+import { GarminActivityTotals } from '@/components/dashboard/GarminActivityTotals'
 
 export function DashboardPage() {
   const { data: healthData, loading: healthLoading } = useHealthQuery()
@@ -130,6 +131,8 @@ export function DashboardPage() {
       </div>
 
       <GarminActivityHeatmap />
+
+      <GarminActivityTotals />
     </div>
   )
 }
