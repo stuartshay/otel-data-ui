@@ -145,6 +145,23 @@ export type GarminActivityConnection = {
   total: Scalars['Int']['output'];
 };
 
+/** Aggregated Garmin activity totals for a single time bucket (week, month, or year). */
+export type GarminActivityTotal = {
+  __typename?: 'GarminActivityTotal';
+  /** Number of activities in the period */
+  activity_count: Scalars['Int']['output'];
+  /** Start date of the period bucket (DATE_TRUNC of week/month/year) */
+  period_start: Scalars['String']['output'];
+  /** Sum of elevation gain in meters */
+  total_ascent_m?: Maybe<Scalars['Int']['output']>;
+  /** Sum of calories burned */
+  total_calories?: Maybe<Scalars['Int']['output']>;
+  /** Sum of distance in kilometres */
+  total_distance_km?: Maybe<Scalars['Float']['output']>;
+  /** Sum of active duration in seconds (excludes pauses) */
+  total_duration_seconds?: Maybe<Scalars['Int']['output']>;
+};
+
 /** Lightweight track point optimised for time-series chart rendering. */
 export type GarminChartPoint = {
   __typename?: 'GarminChartPoint';
@@ -471,6 +488,8 @@ export type Query = {
   garminActivities: GarminActivityConnection;
   /** Retrieve a single Garmin activity by its ID. */
   garminActivity?: Maybe<GarminActivity>;
+  /** Aggregate Garmin activity totals grouped by week, month, or year. */
+  garminActivityTotals: Array<GarminActivityTotal>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
   garminChartData: Array<GarminChartPoint>;
   /** Get the earliest and latest Garmin activity timestamps. */
@@ -534,6 +553,14 @@ export type QueryGarminActivitiesArgs = {
 
 export type QueryGarminActivityArgs = {
   activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivityTotalsArgs = {
+  date_from?: InputMaybe<Scalars['String']['input']>;
+  date_to?: InputMaybe<Scalars['String']['input']>;
+  period: Scalars['String']['input'];
+  sport?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -746,6 +773,16 @@ export type GarminSportsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GarminSportsQuery = { __typename?: 'Query', garminSports: Array<{ __typename?: 'SportInfo', sport: string, activity_count: number }> };
+
+export type GarminActivityTotalsQueryVariables = Exact<{
+  period: Scalars['String']['input'];
+  date_from?: InputMaybe<Scalars['String']['input']>;
+  date_to?: InputMaybe<Scalars['String']['input']>;
+  sport?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GarminActivityTotalsQuery = { __typename?: 'Query', garminActivityTotals: Array<{ __typename?: 'GarminActivityTotal', period_start: string, activity_count: number, total_distance_km?: number | null, total_duration_seconds?: number | null, total_ascent_m?: number | null, total_calories?: number | null }> };
 
 export type GarminChartDataQueryVariables = Exact<{
   activity_id: Scalars['String']['input'];
@@ -1198,6 +1235,62 @@ export type GarminSportsQueryHookResult = ReturnType<typeof useGarminSportsQuery
 export type GarminSportsLazyQueryHookResult = ReturnType<typeof useGarminSportsLazyQuery>;
 export type GarminSportsSuspenseQueryHookResult = ReturnType<typeof useGarminSportsSuspenseQuery>;
 export type GarminSportsQueryResult = ApolloReactCommon.QueryResult<GarminSportsQuery, GarminSportsQueryVariables>;
+export const GarminActivityTotalsDocument = gql`
+    query GarminActivityTotals($period: String!, $date_from: String, $date_to: String, $sport: String) {
+  garminActivityTotals(
+    period: $period
+    date_from: $date_from
+    date_to: $date_to
+    sport: $sport
+  ) {
+    period_start
+    activity_count
+    total_distance_km
+    total_duration_seconds
+    total_ascent_m
+    total_calories
+  }
+}
+    `;
+
+/**
+ * __useGarminActivityTotalsQuery__
+ *
+ * To run a query within a React component, call `useGarminActivityTotalsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivityTotalsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivityTotalsQuery({
+ *   variables: {
+ *      period: // value for 'period'
+ *      date_from: // value for 'date_from'
+ *      date_to: // value for 'date_to'
+ *      sport: // value for 'sport'
+ *   },
+ * });
+ */
+export function useGarminActivityTotalsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables> & ({ variables: GarminActivityTotalsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>(GarminActivityTotalsDocument, options);
+      }
+export function useGarminActivityTotalsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>(GarminActivityTotalsDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivityTotalsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>;
+export function useGarminActivityTotalsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityTotalsQuery | undefined, GarminActivityTotalsQueryVariables>;
+export function useGarminActivityTotalsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>(GarminActivityTotalsDocument, options);
+        }
+export type GarminActivityTotalsQueryHookResult = ReturnType<typeof useGarminActivityTotalsQuery>;
+export type GarminActivityTotalsLazyQueryHookResult = ReturnType<typeof useGarminActivityTotalsLazyQuery>;
+export type GarminActivityTotalsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityTotalsSuspenseQuery>;
+export type GarminActivityTotalsQueryResult = ApolloReactCommon.QueryResult<GarminActivityTotalsQuery, GarminActivityTotalsQueryVariables>;
 export const GarminChartDataDocument = gql`
     query GarminChartData($activity_id: String!) {
   garminChartData(activity_id: $activity_id) {

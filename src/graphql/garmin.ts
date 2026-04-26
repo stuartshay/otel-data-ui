@@ -140,6 +140,29 @@ export const GARMIN_SPORTS_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_TOTALS_QUERY = gql`
+  query GarminActivityTotals(
+    $period: String!
+    $date_from: String
+    $date_to: String
+    $sport: String
+  ) {
+    garminActivityTotals(
+      period: $period
+      date_from: $date_from
+      date_to: $date_to
+      sport: $sport
+    ) {
+      period_start
+      activity_count
+      total_distance_km
+      total_duration_seconds
+      total_ascent_m
+      total_calories
+    }
+  }
+`
+
 export const GARMIN_CHART_DATA_QUERY = gql`
   query GarminChartData($activity_id: String!) {
     garminChartData(activity_id: $activity_id) {
