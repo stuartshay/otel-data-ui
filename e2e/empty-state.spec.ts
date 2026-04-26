@@ -1,21 +1,24 @@
 import { test, expect } from '@playwright/test'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
  * Captures PNG screenshots of the new "No data available" empty state on
- * the Garmin Activities and Locations pages by selecting a future date
- * range that is guaranteed to contain no records.
+ * the Garmin Activities and Locations pages by applying impossible filter
+ * values that are guaranteed to return no records without relying on
+ * future dates, which the pages clamp to the data's max date.
  */
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const SCREENSHOT_DIR = path.join(__dirname, 'screenshots', 'empty-state')
-// Far-future date range with no data.
-// Filters chosen to be guaranteed empty without relying on date clamping
-// (the pages clamp future dates to the data's max date).
+// Filter values chosen to be guaranteed empty.
+// This avoids depending on date parameters or future-date clamping behavior.
 const EMPTY_SPORT = '__no_such_sport__'
 const EMPTY_DEVICE = '__no_such_device__'
+
+fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 test.describe('Empty state screenshots', () => {
   test('Garmin Activities - empty state', async ({ page }) => {
