@@ -12,9 +12,58 @@ import {
 import { TrendingUp } from 'lucide-react'
 import { useGarminActivityTotalsQuery } from '@/__generated__/graphql'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { cn } from '@/lib/utils'
+
+interface SegmentOption<T extends string> {
+  value: T
+  label: string
+}
+
+interface SegmentedControlProps<T extends string> {
+  ariaLabel: string
+  value: T
+  onChange: (value: T) => void
+  options: SegmentOption<T>[]
+}
+
+function SegmentedControl<T extends string>({
+  ariaLabel,
+  value,
+  onChange,
+  options,
+}: SegmentedControlProps<T>) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className="inline-flex rounded-md border bg-muted p-0.5"
+    >
+      {options.map((opt) => {
+        const selected = opt.value === value
+        return (
+          <Button
+            key={opt.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            variant={selected ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'h-7 px-3 text-xs',
+              !selected && 'bg-transparent shadow-none',
+            )}
+          >
+            {opt.label}
+          </Button>
+        )
+      })}
+    </div>
+  )
+}
 
 type Period = 'week' | 'month' | 'year'
 type Metric = 'distance' | 'duration' | 'ascent' | 'calories'
@@ -130,8 +179,7 @@ export function GarminActivityTotals() {
     }))
   }, [data, period])
 
-  const metricConfig =
-    METRICS.find((m) => m.key === metric) ?? METRICS[0]
+  const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0]
 
   return (
     <Card>
@@ -141,28 +189,22 @@ export function GarminActivityTotals() {
           Activity Totals
         </CardTitle>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <Tabs
+          <SegmentedControl<Period>
+            ariaLabel="Aggregation period"
             value={period}
-            onValueChange={(v) => setPeriod(v as Period)}
-          >
-            <TabsList>
-              <TabsTrigger value="week">Weekly</TabsTrigger>
-              <TabsTrigger value="month">Monthly</TabsTrigger>
-              <TabsTrigger value="year">Yearly</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Tabs
+            onChange={setPeriod}
+            options={[
+              { value: 'week', label: 'Weekly' },
+              { value: 'month', label: 'Monthly' },
+              { value: 'year', label: 'Yearly' },
+            ]}
+          />
+          <SegmentedControl<Metric>
+            ariaLabel="Metric"
             value={metric}
-            onValueChange={(v) => setMetric(v as Metric)}
-          >
-            <TabsList>
-              {METRICS.map((m) => (
-                <TabsTrigger key={m.key} value={m.key}>
-                  {m.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+            onChange={setMetric}
+            options={METRICS.map((m) => ({ value: m.key, label: m.label }))}
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -181,10 +223,7 @@ export function GarminActivityTotals() {
                 data={chartData}
                 margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="stroke-muted"
-                />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 12 }}
@@ -204,7 +243,8 @@ export function GarminActivityTotals() {
                 />
                 <Tooltip
                   formatter={(value) => {
-                    const num = typeof value === 'number' ? value : Number(value)
+                    const num =
+                      typeof value === 'number' ? value : Number(value)
                     return [
                       `${num.toFixed(metricConfig.precision)} ${metricConfig.unit}`,
                       metricConfig.label,
