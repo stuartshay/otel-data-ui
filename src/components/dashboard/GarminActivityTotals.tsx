@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { format, parseISO, subWeeks } from 'date-fns'
+import { endOfMonth, format, parseISO, subWeeks } from 'date-fns'
 import {
   Bar,
   BarChart,
@@ -179,16 +179,11 @@ function getDateRange(period: Exclude<Period, 'month'>): {
   return {}
 }
 
-function toDateOnly(value?: string | null): string | undefined {
+function getYearFromDateString(value?: string | null): number | undefined {
   if (!value) return undefined
-
-  const parsed = parseISO(value)
-  if (!Number.isNaN(parsed.getTime())) {
-    return format(parsed, 'yyyy-MM-dd')
-  }
-
-  // Fallback for already-date-like strings that parseISO rejected.
-  return value.slice(0, 10)
+  const yearPrefix = value.slice(0, 4)
+  const year = Number(yearPrefix)
+  return Number.isFinite(year) ? year : undefined
 }
 
 function formatBucketLabel(period_start: string, period: Period): string {
@@ -216,13 +211,24 @@ export function GarminActivityTotals() {
   // Build query date range depending on period
   const range = useMemo(() => {
     if (period === 'month') {
+      const currentYear = new Date().getFullYear()
+      const minYear =
+        getYearFromDateString(dateRangeData?.garminDateRange?.min_date) ??
+        currentYear
+      const maxYear =
+        getYearFromDateString(dateRangeData?.garminDateRange?.max_date) ??
+        currentYear
+
       return {
-        date_from: toDateOnly(dateRangeData?.garminDateRange?.min_date),
-        date_to: toDateOnly(dateRangeData?.garminDateRange?.max_date),
+        date_from: format(new Date(minYear, selectedMonth, 1), 'yyyy-MM-dd'),
+        date_to: format(
+          endOfMonth(new Date(maxYear, selectedMonth, 1)),
+          'yyyy-MM-dd',
+        ),
       }
     }
     return getDateRange(period)
-  }, [period, dateRangeData])
+  }, [period, selectedMonth, dateRangeData])
 
   const { data, loading, error, refetch } = useGarminActivityTotalsQuery({
     variables: {
