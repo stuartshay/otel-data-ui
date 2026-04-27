@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const hooks = vi.hoisted(() => ({
   useGarminActivityTotalsQuery: vi.fn(),
+  useGarminDateRangeQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => hooks)
@@ -24,6 +25,12 @@ import { GarminActivityTotals } from './GarminActivityTotals'
 describe('GarminActivityTotals', () => {
   beforeEach(() => {
     hooks.useGarminActivityTotalsQuery.mockReset()
+    hooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: { min_date: '2010-01-01', max_date: '2026-12-31' },
+      },
+      loading: false,
+    })
   })
 
   it('renders a loading state while totals are loading', () => {
@@ -96,7 +103,11 @@ describe('GarminActivityTotals', () => {
     // Default: month period, distance metric
     expect(hooks.useGarminActivityTotalsQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        variables: expect.objectContaining({ period: 'month' }),
+        variables: expect.objectContaining({
+          period: 'month',
+          date_from: '2010-01-01',
+          date_to: '2026-12-31',
+        }),
       }),
     )
 
