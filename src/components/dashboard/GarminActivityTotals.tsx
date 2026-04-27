@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { format, subMonths, subWeeks, parseISO } from 'date-fns'
+import { endOfMonth, format, parseISO, subWeeks } from 'date-fns'
 import {
   Bar,
   BarChart,
@@ -10,9 +10,19 @@ import {
   YAxis,
 } from 'recharts'
 import { TrendingUp } from 'lucide-react'
-import { useGarminActivityTotalsQuery } from '@/__generated__/graphql'
+import {
+  useGarminActivityTotalsQuery,
+  useGarminDateRangeQuery,
+} from '@/__generated__/graphql'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { cn } from '@/lib/utils'
@@ -67,6 +77,36 @@ function SegmentedControl<T extends string>({
 
 type Period = 'week' | 'month' | 'year'
 type Metric = 'distance' | 'duration' | 'ascent' | 'calories'
+
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
+const MONTH_FULL_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
 
 interface MetricConfig {
   key: Metric
@@ -126,7 +166,7 @@ interface ChartBucket {
   total_calories: number
 }
 
-function getDateRange(period: Period): {
+function getDateRange(period: Exclude<Period, 'month'>): {
   date_from?: string
   date_to?: string
 } {
@@ -135,18 +175,22 @@ function getDateRange(period: Period): {
   if (period === 'week') {
     return { date_from: format(subWeeks(today, 12), 'yyyy-MM-dd'), date_to }
   }
-  if (period === 'month') {
-    return { date_from: format(subMonths(today, 12), 'yyyy-MM-dd'), date_to }
-  }
   // 'year' — let the API return all available history
   return {}
+}
+
+function getYearFromDateString(value?: string | null): number | undefined {
+  if (!value) return undefined
+  const yearPrefix = value.slice(0, 4)
+  const year = Number(yearPrefix)
+  return Number.isFinite(year) ? year : undefined
 }
 
 function formatBucketLabel(period_start: string, period: Period): string {
   try {
     const date = parseISO(period_start)
     if (period === 'year') return format(date, 'yyyy')
-    if (period === 'month') return format(date, "MMM ''yy")
+    if (period === 'month') return format(date, 'yyyy')
     return format(date, 'MMM d')
   } catch {
     return period_start
@@ -156,8 +200,36 @@ function formatBucketLabel(period_start: string, period: Period): string {
 export function GarminActivityTotals() {
   const [period, setPeriod] = useState<Period>('month')
   const [metric, setMetric] = useState<Metric>('distance')
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth(),
+  )
 
-  const range = getDateRange(period)
+  // Fetch Garmin date range so monthly mode can request full history,
+  // then filter to one selected month across all years on the client.
+  const { data: dateRangeData } = useGarminDateRangeQuery()
+
+  // Build query date range depending on period
+  const range = useMemo(() => {
+    if (period === 'month') {
+      const currentYear = new Date().getFullYear()
+      const minYear =
+        getYearFromDateString(dateRangeData?.garminDateRange?.min_date) ??
+        currentYear
+      const maxYear =
+        getYearFromDateString(dateRangeData?.garminDateRange?.max_date) ??
+        currentYear
+
+      return {
+        date_from: format(new Date(minYear, selectedMonth, 1), 'yyyy-MM-dd'),
+        date_to: format(
+          endOfMonth(new Date(maxYear, selectedMonth, 1)),
+          'yyyy-MM-dd',
+        ),
+      }
+    }
+    return getDateRange(period)
+  }, [period, selectedMonth, dateRangeData])
+
   const { data, loading, error, refetch } = useGarminActivityTotalsQuery({
     variables: {
       period,
@@ -168,7 +240,7 @@ export function GarminActivityTotals() {
 
   const chartData = useMemo<ChartBucket[]>(() => {
     const totals = data?.garminActivityTotals ?? []
-    return totals.map((t) => ({
+    const mapped = totals.map((t) => ({
       period_start: t.period_start,
       label: formatBucketLabel(t.period_start, period),
       activity_count: t.activity_count,
@@ -177,28 +249,93 @@ export function GarminActivityTotals() {
       total_ascent_m: t.total_ascent_m ?? 0,
       total_calories: t.total_calories ?? 0,
     }))
-  }, [data, period])
+
+    if (period !== 'month') {
+      return mapped
+    }
+
+    const byYear = new Map<string, ChartBucket>()
+
+    for (const bucket of mapped) {
+      const bucketDate = parseISO(bucket.period_start)
+      if (Number.isNaN(bucketDate.getTime())) {
+        continue
+      }
+
+      if (bucketDate.getMonth() !== selectedMonth) {
+        continue
+      }
+
+      const year = format(bucketDate, 'yyyy')
+      const existing = byYear.get(year)
+
+      if (!existing) {
+        byYear.set(year, { ...bucket, label: year })
+        continue
+      }
+
+      byYear.set(year, {
+        ...existing,
+        activity_count: existing.activity_count + bucket.activity_count,
+        distance_km: existing.distance_km + bucket.distance_km,
+        duration_hours: existing.duration_hours + bucket.duration_hours,
+        total_ascent_m: existing.total_ascent_m + bucket.total_ascent_m,
+        total_calories: existing.total_calories + bucket.total_calories,
+      })
+    }
+
+    return Array.from(byYear.values()).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    )
+  }, [data, period, selectedMonth])
 
   const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0]
 
   return (
-    <Card>
+    <Card data-testid="activity-totals-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" />
           Activity Totals
+          {period === 'month' && (
+            <span className="text-sm font-normal text-muted-foreground">
+              — {MONTH_FULL_NAMES[selectedMonth]} by year
+            </span>
+          )}
         </CardTitle>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <SegmentedControl<Period>
-            ariaLabel="Aggregation period"
-            value={period}
-            onChange={setPeriod}
-            options={[
-              { value: 'week', label: 'Weekly' },
-              { value: 'month', label: 'Monthly' },
-              { value: 'year', label: 'Yearly' },
-            ]}
-          />
+          <div className="flex items-center gap-2">
+            <SegmentedControl<Period>
+              ariaLabel="Aggregation period"
+              value={period}
+              onChange={setPeriod}
+              options={[
+                { value: 'week', label: 'Weekly' },
+                { value: 'month', label: 'Monthly' },
+                { value: 'year', label: 'Yearly' },
+              ]}
+            />
+            {period === 'month' && (
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(v) => setSelectedMonth(Number(v))}
+              >
+                <SelectTrigger
+                  className="h-7 w-24 text-xs"
+                  aria-label="Select month"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_LABELS.map((label, index) => (
+                    <SelectItem key={index} value={String(index)}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <SegmentedControl<Metric>
             ariaLabel="Metric"
             value={metric}

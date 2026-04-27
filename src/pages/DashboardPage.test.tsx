@@ -10,6 +10,7 @@ const dashboardHooks = vi.hoisted(() => ({
   useDailySummaryQuery: vi.fn(),
   useGarminActivitiesQuery: vi.fn(),
   useGarminActivityTotalsQuery: vi.fn(),
+  useGarminDateRangeQuery: vi.fn(),
   useTriggerGarminSyncMutation: vi
     .fn()
     .mockReturnValue([vi.fn(), { loading: false }]),
@@ -48,6 +49,12 @@ describe('DashboardPage', () => {
       data: undefined,
       loading: false,
       refetch: vi.fn(),
+    })
+    dashboardHooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: { min_date: '2010-01-01', max_date: '2026-12-31' },
+      },
+      loading: false,
     })
   })
 
