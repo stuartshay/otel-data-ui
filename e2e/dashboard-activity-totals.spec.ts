@@ -87,7 +87,9 @@ test.describe('Dashboard Activity Totals', () => {
     })
   })
 
-  test('weekly tab does not show month selector', async ({ page }) => {
+  test('weekly tab shows pagination pill and hides month selector', async ({
+    page,
+  }) => {
     const prefix = `activity-totals-${test.info().project.name}`
 
     const card = page.locator('[data-testid="activity-totals-card"]')
@@ -105,12 +107,39 @@ test.describe('Dashboard Activity Totals', () => {
       card.getByRole('combobox', { name: /select month/i }),
     ).not.toBeVisible()
 
-    // Card screenshot with weekly mode active
+    // Week range pill and Prev/Next buttons should be visible
+    const pill = card.getByTestId('week-range-pill')
+    await expect(pill).toBeVisible()
+    const initialPillText = (await pill.textContent())?.trim() ?? ''
+    expect(initialPillText).toMatch(/\w{3} \d+ – \w{3} \d+/)
+    await expect(
+      card.getByRole('button', { name: /previous week/i }),
+    ).toBeVisible()
+    await expect(card.getByRole('button', { name: /next week/i })).toBeVisible()
+
+    // Subtitle should reflect "by year" suffix
+    await expect(card.getByText(/by year/i)).toBeVisible()
+
     await card.screenshot({
-      path: path.join(
-        SCREENSHOT_DIR,
-        `${prefix}-04-weekly-no-month-select.png`,
-      ),
+      path: path.join(SCREENSHOT_DIR, `${prefix}-04-weekly-default.png`),
+    })
+
+    // Click Previous week — pill text should change
+    await card.getByRole('button', { name: /previous week/i }).click()
+    await expect(pill).not.toHaveText(initialPillText)
+    const prevPillText = (await pill.textContent())?.trim() ?? ''
+
+    await card.screenshot({
+      path: path.join(SCREENSHOT_DIR, `${prefix}-05-weekly-prev.png`),
+    })
+
+    // Click Next week — should return to original window
+    await card.getByRole('button', { name: /next week/i }).click()
+    await expect(pill).toHaveText(initialPillText)
+    expect(prevPillText).not.toBe(initialPillText)
+
+    await card.screenshot({
+      path: path.join(SCREENSHOT_DIR, `${prefix}-06-weekly-next.png`),
     })
   })
 
@@ -136,7 +165,7 @@ test.describe('Dashboard Activity Totals', () => {
     await card.screenshot({
       path: path.join(
         SCREENSHOT_DIR,
-        `${prefix}-05-yearly-no-month-select.png`,
+        `${prefix}-07-yearly-no-month-select.png`,
       ),
     })
   })
@@ -158,7 +187,7 @@ test.describe('Dashboard Activity Totals', () => {
     await card.screenshot({
       path: path.join(
         SCREENSHOT_DIR,
-        `${prefix}-06-monthly-metric-duration.png`,
+        `${prefix}-08-monthly-metric-duration.png`,
       ),
     })
   })

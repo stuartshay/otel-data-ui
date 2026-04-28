@@ -18,6 +18,12 @@ const dashboardHooks = vi.hoisted(() => ({
 
 vi.mock('@/__generated__/graphql', () => dashboardHooks)
 
+vi.mock('@apollo/client/react', () => ({
+  useApolloClient: vi.fn().mockReturnValue({
+    query: vi.fn().mockResolvedValue({ data: { garminActivityTotals: [] } }),
+  }),
+}))
+
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn().mockReturnValue({
     isAuthenticated: false,
