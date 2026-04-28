@@ -360,7 +360,7 @@ export function GarminActivityTotals() {
       total_calories: t.total_calories ?? 0,
     }))
 
-    if (period !== 'month') {
+    if (period !== 'month' && period !== 'year') {
       return mapped
     }
 
@@ -371,13 +371,16 @@ export function GarminActivityTotals() {
     }
 
     // Seed every year in the known Garmin range with a zero bucket so the
-    // chart shows a continuous x-axis even when some years have no activity
-    // for the selected month.
+    // chart shows a continuous x-axis even when some years have no activity.
     const byYear = new Map<string, ChartBucket>()
     for (const year of yearList) {
       const yearStr = String(year)
+      const periodStart =
+        period === 'month'
+          ? `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+          : `${yearStr}-01-01`
       byYear.set(yearStr, {
-        period_start: `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`,
+        period_start: periodStart,
         label: yearStr,
         activity_count: 0,
         distance_km: 0,
@@ -393,7 +396,7 @@ export function GarminActivityTotals() {
         continue
       }
 
-      if (bucketDate.getMonth() !== selectedMonth) {
+      if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
         continue
       }
 
