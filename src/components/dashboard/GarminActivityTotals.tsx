@@ -364,7 +364,28 @@ export function GarminActivityTotals() {
       return mapped
     }
 
+    // Preserve the "no Garmin data" empty state — if the API returned no
+    // buckets at all, render nothing rather than zero-filled bars.
+    if (mapped.length === 0) {
+      return []
+    }
+
+    // Seed every year in the known Garmin range with a zero bucket so the
+    // chart shows a continuous x-axis even when some years have no activity
+    // for the selected month.
     const byYear = new Map<string, ChartBucket>()
+    for (const year of yearList) {
+      const yearStr = String(year)
+      byYear.set(yearStr, {
+        period_start: `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`,
+        label: yearStr,
+        activity_count: 0,
+        distance_km: 0,
+        duration_hours: 0,
+        total_ascent_m: 0,
+        total_calories: 0,
+      })
+    }
 
     for (const bucket of mapped) {
       const bucketDate = parseISO(bucket.period_start)
@@ -397,7 +418,7 @@ export function GarminActivityTotals() {
     return Array.from(byYear.values()).sort((a, b) =>
       a.label.localeCompare(b.label),
     )
-  }, [data, period, selectedMonth, weeklyByYear])
+  }, [data, period, selectedMonth, weeklyByYear, yearList])
 
   const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0]
 

@@ -242,7 +242,8 @@ describe('GarminActivityTotals', () => {
       format(new Date(2026, selectedMonth + 1, 0), 'yyyy-MM-dd'),
     )
 
-    // Chart data is aggregated by year for selected month only.
+    // Chart data is aggregated by year for selected month only, with all
+    // years in the Garmin date range zero-filled so the x-axis is continuous.
     expect(latestBarChartData).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -261,7 +262,18 @@ describe('GarminActivityTotals', () => {
         }),
       ]),
     )
-    expect(latestBarChartData).toHaveLength(2)
+    // 2010..2026 inclusive = 17 years.
+    expect(latestBarChartData).toHaveLength(17)
+    // Years without activity should appear as zero buckets.
+    expect(latestBarChartData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: '2011',
+          activity_count: 0,
+          distance_km: 0,
+        }),
+      ]),
+    )
   })
 
   it('weekly mode renders default 7-day window pill and projects per year', async () => {
