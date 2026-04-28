@@ -120,6 +120,11 @@ test.describe('Dashboard Activity Totals', () => {
     // Subtitle should reflect "by year" suffix
     await expect(card.getByText(/by year/i)).toBeVisible()
 
+    // Wait for chart to finish loading before screenshot
+    await expect(card.getByText(/loading activity totals/i)).toBeHidden({
+      timeout: 15_000,
+    })
+
     await card.screenshot({
       path: path.join(SCREENSHOT_DIR, `${prefix}-04-weekly-default.png`),
     })
@@ -128,6 +133,9 @@ test.describe('Dashboard Activity Totals', () => {
     await card.getByRole('button', { name: /previous week/i }).click()
     await expect(pill).not.toHaveText(initialPillText)
     const prevPillText = (await pill.textContent())?.trim() ?? ''
+    await expect(card.getByText(/loading activity totals/i)).toBeHidden({
+      timeout: 15_000,
+    })
 
     await card.screenshot({
       path: path.join(SCREENSHOT_DIR, `${prefix}-05-weekly-prev.png`),
@@ -137,6 +145,9 @@ test.describe('Dashboard Activity Totals', () => {
     await card.getByRole('button', { name: /next week/i }).click()
     await expect(pill).toHaveText(initialPillText)
     expect(prevPillText).not.toBe(initialPillText)
+    await expect(card.getByText(/loading activity totals/i)).toBeHidden({
+      timeout: 15_000,
+    })
 
     await card.screenshot({
       path: path.join(SCREENSHOT_DIR, `${prefix}-06-weekly-next.png`),
