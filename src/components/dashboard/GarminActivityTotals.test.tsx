@@ -1,7 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { format, subDays } from 'date-fns'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Freeze the system clock so weekly-mode tests that derive labels and query
+// variables from `new Date()` are deterministic regardless of when CI runs.
+const FROZEN_NOW = new Date('2026-04-15T12:00:00Z')
 
 let latestBarChartData: Array<Record<string, unknown>> = []
 
@@ -47,6 +51,11 @@ import { GarminActivityTotals } from './GarminActivityTotals'
 
 describe('GarminActivityTotals', () => {
   beforeEach(() => {
+    vi.useFakeTimers({
+      now: FROZEN_NOW,
+      shouldAdvanceTime: true,
+      toFake: ['Date'],
+    })
     latestBarChartData = []
     hooks.useGarminActivityTotalsQuery.mockReset()
     hooks.useGarminDateRangeQuery.mockReset()
@@ -62,6 +71,10 @@ describe('GarminActivityTotals', () => {
       data: { garminActivityTotals: [] },
     })
     apolloMocks.useApolloClient.mockReturnValue({ query: apolloMocks.query })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders a loading state while totals are loading', () => {

@@ -276,15 +276,27 @@ export function GarminActivityTotals() {
 
     const baseEndYear = weekEnd.getFullYear()
 
+    // Project a date into a target year by preserving month/day and clamping
+    // invalid dates (e.g. Feb 29 in a non-leap year) to the last valid day of
+    // that month. Avoids the silent date-shift produced by Date#setFullYear.
+    const projectToYear = (source: Date, targetYear: number): Date => {
+      const month = source.getMonth()
+      const day = source.getDate()
+      // Day 0 of next month yields the last day of the current month.
+      const lastDay = new Date(targetYear, month + 1, 0).getDate()
+      return new Date(targetYear, month, Math.min(day, lastDay))
+    }
+
     const run = async () => {
       setWeeklyLoading(true)
       setWeeklyError(null)
-      const promises = yearList.map(async (year) => {
-        const offset = year - baseEndYear
-        const ws = new Date(weekStart)
-        ws.setFullYear(weekStart.getFullYear() + offset)
-        const we = new Date(weekEnd)
-        we.setFullYear(weekEnd.getFullYear() + offset)
+
+      const fetchYear = async (year: number): Promise<ChartBucket> => {
+        const ws = projectToYear(
+          weekStart,
+          weekStart.getFullYear() + (year - baseEndYear),
+        )
+        const we = projectToYear(weekEnd, year)
         const result = await apolloClient.query<
           GarminActivityTotalsQuery,
           GarminActivityTotalsQueryVariables
@@ -298,7 +310,7 @@ export function GarminActivityTotals() {
           fetchPolicy: 'cache-first',
         })
         const buckets = result.data?.garminActivityTotals ?? []
-        const summed: ChartBucket = buckets.reduce<ChartBucket>(
+        return buckets.reduce<ChartBucket>(
           (acc, b) => ({
             period_start: acc.period_start,
             label: String(year),
@@ -319,11 +331,23 @@ export function GarminActivityTotals() {
             total_calories: 0,
           },
         )
-        return summed
-      })
+      }
 
+      // Limit concurrency so dashboards with long Garmin history don't fan
+      // out N parallel requests on every Prev/Next click. Apollo's cache-first
+      // policy means subsequent renders short-circuit; the limit only affects
+      // initial loads of unseen windows.
+      const CONCURRENCY = 4
+      const results: ChartBucket[] = new Array(yearList.length)
       try {
-        const results = await Promise.all(promises)
+        for (let i = 0; i < yearList.length; i += CONCURRENCY) {
+          if (cancelled) return
+          const batch = yearList.slice(i, i + CONCURRENCY)
+          const batchResults = await Promise.all(batch.map(fetchYear))
+          batchResults.forEach((b, j) => {
+            results[i + j] = b
+          })
+        }
         if (cancelled) return
         setWeeklyByYear(results.sort((a, b) => a.label.localeCompare(b.label)))
         setWeeklyLoading(false)
