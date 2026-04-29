@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { endOfMonth, format, parseISO, subWeeks } from 'date-fns'
+import { useEffect, useMemo, useState } from 'react'
+import { addDays, endOfMonth, format, parseISO, subDays } from 'date-fns'
 import {
   Bar,
   BarChart,
@@ -9,8 +9,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { TrendingUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react'
+import { useApolloClient } from '@apollo/client/react'
 import {
+  GarminActivityTotalsDocument,
+  type GarminActivityTotalsQuery,
+  type GarminActivityTotalsQueryVariables,
   useGarminActivityTotalsQuery,
   useGarminDateRangeQuery,
 } from '@/__generated__/graphql'
@@ -166,16 +170,12 @@ interface ChartBucket {
   total_calories: number
 }
 
-function getDateRange(period: Exclude<Period, 'month'>): {
+function getDateRange(period: 'year'): {
   date_from?: string
   date_to?: string
 } {
-  const today = new Date()
-  const date_to = format(today, 'yyyy-MM-dd')
-  if (period === 'week') {
-    return { date_from: format(subWeeks(today, 12), 'yyyy-MM-dd'), date_to }
-  }
   // 'year' — let the API return all available history
+  void period
   return {}
 }
 
@@ -203,6 +203,17 @@ export function GarminActivityTotals() {
   const [selectedMonth, setSelectedMonth] = useState<number>(
     new Date().getMonth(),
   )
+  // Anchor date for the trailing 7-day window in weekly mode. Defaults to
+  // today; Prev/Next pages by 7 days. Future dates are allowed.
+  const [weekEnd, setWeekEnd] = useState<Date>(() => new Date())
+  const weekStart = useMemo(() => subDays(weekEnd, 6), [weekEnd])
+
+  // Per-year aggregated totals for weekly mode (one entry per year, summed
+  // across the projected 7-day window for that year).
+  const [weeklyByYear, setWeeklyByYear] = useState<ChartBucket[]>([])
+  const [weeklyLoading, setWeeklyLoading] = useState(false)
+  const [weeklyError, setWeeklyError] = useState<Error | null>(null)
+  const apolloClient = useApolloClient()
 
   // Fetch Garmin date range so monthly mode can request full history,
   // then filter to one selected month across all years on the client.
@@ -227,7 +238,11 @@ export function GarminActivityTotals() {
         ),
       }
     }
-    return getDateRange(period)
+    if (period === 'year') {
+      return getDateRange('year')
+    }
+    // 'week' uses a separate per-year fetch path; no main-query range.
+    return {}
   }, [period, selectedMonth, dateRangeData])
 
   const { data, loading, error, refetch } = useGarminActivityTotalsQuery({
@@ -236,9 +251,128 @@ export function GarminActivityTotals() {
       date_from: range.date_from,
       date_to: range.date_to,
     },
+    skip: period === 'week',
   })
 
+  // Year list spanning known Garmin history.
+  const yearList = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    const minYear =
+      getYearFromDateString(dateRangeData?.garminDateRange?.min_date) ??
+      currentYear
+    const maxYear = Math.max(currentYear, weekEnd.getFullYear())
+    const years: number[] = []
+    for (let y = minYear; y <= maxYear; y += 1) years.push(y)
+    return years
+  }, [dateRangeData, weekEnd])
+
+  // Weekly mode: fire one query per year for the projected 7-day window.
+  // Sum returned weekly buckets per year (the API filters by date_from/date_to
+  // before grouping, so summing all rows yields the correct window total even
+  // when DATE_TRUNC('week', ...) splits the window across two ISO weeks).
+  useEffect(() => {
+    if (period !== 'week') return
+    let cancelled = false
+
+    const baseEndYear = weekEnd.getFullYear()
+
+    // Project a date into a target year by preserving month/day and clamping
+    // invalid dates (e.g. Feb 29 in a non-leap year) to the last valid day of
+    // that month. Avoids the silent date-shift produced by Date#setFullYear.
+    const projectToYear = (source: Date, targetYear: number): Date => {
+      const month = source.getMonth()
+      const day = source.getDate()
+      // Day 0 of next month yields the last day of the current month.
+      const lastDay = new Date(targetYear, month + 1, 0).getDate()
+      return new Date(targetYear, month, Math.min(day, lastDay))
+    }
+
+    const run = async () => {
+      setWeeklyLoading(true)
+      setWeeklyError(null)
+
+      const fetchYear = async (year: number): Promise<ChartBucket> => {
+        const ws = projectToYear(
+          weekStart,
+          weekStart.getFullYear() + (year - baseEndYear),
+        )
+        const we = projectToYear(weekEnd, year)
+        const result = await apolloClient.query<
+          GarminActivityTotalsQuery,
+          GarminActivityTotalsQueryVariables
+        >({
+          query: GarminActivityTotalsDocument,
+          variables: {
+            period: 'week',
+            date_from: format(ws, 'yyyy-MM-dd'),
+            date_to: format(we, 'yyyy-MM-dd'),
+          },
+          fetchPolicy: 'cache-first',
+        })
+        const buckets = result.data?.garminActivityTotals ?? []
+        return buckets.reduce<ChartBucket>(
+          (acc, b) => ({
+            period_start: acc.period_start,
+            label: String(year),
+            activity_count: acc.activity_count + b.activity_count,
+            distance_km: acc.distance_km + (b.total_distance_km ?? 0),
+            duration_hours:
+              acc.duration_hours + (b.total_duration_seconds ?? 0) / 3600,
+            total_ascent_m: acc.total_ascent_m + (b.total_ascent_m ?? 0),
+            total_calories: acc.total_calories + (b.total_calories ?? 0),
+          }),
+          {
+            period_start: format(ws, 'yyyy-MM-dd'),
+            label: String(year),
+            activity_count: 0,
+            distance_km: 0,
+            duration_hours: 0,
+            total_ascent_m: 0,
+            total_calories: 0,
+          },
+        )
+      }
+
+      // Limit concurrency so dashboards with long Garmin history don't fan
+      // out N parallel requests on every Prev/Next click. Apollo's cache-first
+      // policy means subsequent renders short-circuit; the limit only affects
+      // initial loads of unseen windows.
+      const CONCURRENCY = 4
+      const results: ChartBucket[] = new Array(yearList.length)
+      try {
+        for (let i = 0; i < yearList.length; i += CONCURRENCY) {
+          if (cancelled) return
+          const batch = yearList.slice(i, i + CONCURRENCY)
+          const batchResults = await Promise.all(batch.map(fetchYear))
+          batchResults.forEach((b, j) => {
+            results[i + j] = b
+          })
+        }
+        if (cancelled) return
+        setWeeklyByYear(results.sort((a, b) => a.label.localeCompare(b.label)))
+        setWeeklyLoading(false)
+      } catch (err) {
+        if (cancelled) return
+        setWeeklyError(
+          err instanceof Error
+            ? err
+            : new Error('Failed to load weekly totals'),
+        )
+        setWeeklyLoading(false)
+      }
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [period, weekStart, weekEnd, yearList, apolloClient])
+
   const chartData = useMemo<ChartBucket[]>(() => {
+    if (period === 'week') {
+      return weeklyByYear
+    }
     const totals = data?.garminActivityTotals ?? []
     const mapped = totals.map((t) => ({
       period_start: t.period_start,
@@ -250,11 +384,35 @@ export function GarminActivityTotals() {
       total_calories: t.total_calories ?? 0,
     }))
 
-    if (period !== 'month') {
+    if (period !== 'month' && period !== 'year') {
       return mapped
     }
 
+    // Preserve the "no Garmin data" empty state — if the API returned no
+    // buckets at all, render nothing rather than zero-filled bars.
+    if (mapped.length === 0) {
+      return []
+    }
+
+    // Seed every year in the known Garmin range with a zero bucket so the
+    // chart shows a continuous x-axis even when some years have no activity.
     const byYear = new Map<string, ChartBucket>()
+    for (const year of yearList) {
+      const yearStr = String(year)
+      const periodStart =
+        period === 'month'
+          ? `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+          : `${yearStr}-01-01`
+      byYear.set(yearStr, {
+        period_start: periodStart,
+        label: yearStr,
+        activity_count: 0,
+        distance_km: 0,
+        duration_hours: 0,
+        total_ascent_m: 0,
+        total_calories: 0,
+      })
+    }
 
     for (const bucket of mapped) {
       const bucketDate = parseISO(bucket.period_start)
@@ -262,7 +420,7 @@ export function GarminActivityTotals() {
         continue
       }
 
-      if (bucketDate.getMonth() !== selectedMonth) {
+      if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
         continue
       }
 
@@ -287,9 +445,25 @@ export function GarminActivityTotals() {
     return Array.from(byYear.values()).sort((a, b) =>
       a.label.localeCompare(b.label),
     )
-  }, [data, period, selectedMonth])
+  }, [data, period, selectedMonth, weeklyByYear, yearList])
 
   const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0]
+
+  const weekRangeLabel = useMemo(
+    () => `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d')}`,
+    [weekStart, weekEnd],
+  )
+
+  const isLoading = period === 'week' ? weeklyLoading : loading
+  const activeError = period === 'week' ? weeklyError : error
+  const handleRetry = () => {
+    if (period === 'week') {
+      // Re-trigger the effect by bumping weekEnd reference identity.
+      setWeekEnd(new Date(weekEnd))
+    } else {
+      void refetch()
+    }
+  }
 
   return (
     <Card data-testid="activity-totals-card">
@@ -302,9 +476,14 @@ export function GarminActivityTotals() {
               — {MONTH_FULL_NAMES[selectedMonth]} by year
             </span>
           )}
+          {period === 'week' && (
+            <span className="text-sm font-normal text-muted-foreground">
+              — {weekRangeLabel} by year
+            </span>
+          )}
         </CardTitle>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl<Period>
               ariaLabel="Aggregation period"
               value={period}
@@ -335,6 +514,40 @@ export function GarminActivityTotals() {
                 </SelectContent>
               </Select>
             )}
+            {period === 'week' && (
+              <div
+                className="inline-flex items-center gap-1"
+                aria-label="Week range navigation"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2"
+                  aria-label="Previous week"
+                  onClick={() => setWeekEnd((d) => subDays(d, 7))}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span
+                  data-testid="week-range-pill"
+                  aria-live="polite"
+                  className="inline-flex h-7 items-center rounded-md border bg-muted px-3 text-xs font-medium tabular-nums"
+                >
+                  {weekRangeLabel}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2"
+                  aria-label="Next week"
+                  onClick={() => setWeekEnd((d) => addDays(d, 7))}
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
           <SegmentedControl<Metric>
             ariaLabel="Metric"
@@ -345,10 +558,10 @@ export function GarminActivityTotals() {
         </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {isLoading ? (
           <LoadingState message="Loading activity totals..." />
-        ) : error ? (
-          <ErrorState message={error.message} onRetry={() => refetch()} />
+        ) : activeError ? (
+          <ErrorState message={activeError.message} onRetry={handleRetry} />
         ) : chartData.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             No activities found for this period.

@@ -1,16 +1,29 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { format } from 'date-fns'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { format, subDays } from 'date-fns'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Freeze the system clock so weekly-mode tests that derive labels and query
+// variables from `new Date()` are deterministic regardless of when CI runs.
+const FROZEN_NOW = new Date('2026-04-15T12:00:00Z')
 
 let latestBarChartData: Array<Record<string, unknown>> = []
 
 const hooks = vi.hoisted(() => ({
   useGarminActivityTotalsQuery: vi.fn(),
   useGarminDateRangeQuery: vi.fn(),
+  GarminActivityTotalsDocument: { kind: 'Document' },
+}))
+
+const apolloMocks = vi.hoisted(() => ({
+  useApolloClient: vi.fn(),
+  query: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => hooks)
+vi.mock('@apollo/client/react', () => ({
+  useApolloClient: apolloMocks.useApolloClient,
+}))
 
 // Keep Recharts mocked/lightweight and expose BarChart data for assertions.
 vi.mock('recharts', () => ({
@@ -38,6 +51,11 @@ import { GarminActivityTotals } from './GarminActivityTotals'
 
 describe('GarminActivityTotals', () => {
   beforeEach(() => {
+    vi.useFakeTimers({
+      now: FROZEN_NOW,
+      shouldAdvanceTime: true,
+      toFake: ['Date'],
+    })
     latestBarChartData = []
     hooks.useGarminActivityTotalsQuery.mockReset()
     hooks.useGarminDateRangeQuery.mockReset()
@@ -47,6 +65,16 @@ describe('GarminActivityTotals', () => {
       },
       loading: false,
     })
+    apolloMocks.useApolloClient.mockReset()
+    apolloMocks.query.mockReset()
+    apolloMocks.query.mockResolvedValue({
+      data: { garminActivityTotals: [] },
+    })
+    apolloMocks.useApolloClient.mockReturnValue({ query: apolloMocks.query })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders a loading state while totals are loading', () => {
@@ -130,10 +158,25 @@ describe('GarminActivityTotals', () => {
       }),
     )
 
-    // Switch to weekly
+    // Switch to weekly: main hook is skipped; per-year imperative queries fire.
     await user.click(screen.getByRole('radio', { name: 'Weekly' }))
-    const lastCall = hooks.useGarminActivityTotalsQuery.mock.calls.at(-1)?.[0]
-    expect(lastCall?.variables?.period).toBe('week')
+    await waitFor(() => {
+      expect(apolloMocks.query).toHaveBeenCalled()
+    })
+    const lastApolloCall = apolloMocks.query.mock.calls.at(-1)?.[0]
+    expect(lastApolloCall?.variables?.period).toBe('week')
+    // Default window: today minus 6 days … today, projected per year.
+    const today = new Date()
+    const start = subDays(today, 6)
+    // Most recent year query should target the current-year window.
+    const currentYearCalls = apolloMocks.query.mock.calls.filter((c) => {
+      const v = c[0]?.variables
+      return v?.date_to === format(today, 'yyyy-MM-dd')
+    })
+    expect(currentYearCalls.length).toBeGreaterThan(0)
+    expect(currentYearCalls[0][0].variables.date_from).toBe(
+      format(start, 'yyyy-MM-dd'),
+    )
 
     // Switch metric to Calories — radio should reflect it
     await user.click(screen.getByRole('radio', { name: 'Calories' }))
@@ -212,7 +255,8 @@ describe('GarminActivityTotals', () => {
       format(new Date(2026, selectedMonth + 1, 0), 'yyyy-MM-dd'),
     )
 
-    // Chart data is aggregated by year for selected month only.
+    // Chart data is aggregated by year for selected month only, with all
+    // years in the Garmin date range zero-filled so the x-axis is continuous.
     expect(latestBarChartData).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -231,6 +275,157 @@ describe('GarminActivityTotals', () => {
         }),
       ]),
     )
-    expect(latestBarChartData).toHaveLength(2)
+    // 2010..2026 inclusive = 17 years.
+    expect(latestBarChartData).toHaveLength(17)
+    // Years without activity should appear as zero buckets.
+    expect(latestBarChartData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: '2011',
+          activity_count: 0,
+          distance_km: 0,
+        }),
+      ]),
+    )
+  })
+
+  it('weekly mode renders default 7-day window pill and projects per year', async () => {
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    // Each year-query returns one bucket with year-derived totals.
+    apolloMocks.query.mockImplementation(({ variables }) => {
+      const year = Number(variables.date_to.slice(0, 4))
+      return Promise.resolve({
+        data: {
+          garminActivityTotals: [
+            {
+              period_start: variables.date_from,
+              activity_count: 1,
+              total_distance_km: year - 2000,
+              total_duration_seconds: 3600,
+              total_ascent_m: 10,
+              total_calories: 100,
+            },
+          ],
+        },
+      })
+    })
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    // Pill renders the current 7-day window.
+    const today = new Date()
+    const start = subDays(today, 6)
+    const expectedLabel = `${format(start, 'MMM d')} – ${format(today, 'MMM d')}`
+    await waitFor(() => {
+      expect(screen.getByTestId('week-range-pill')).toHaveTextContent(
+        expectedLabel,
+      )
+    })
+
+    // One query per year from min_date (2010) to weekEnd year.
+    const expectedYears = today.getFullYear() - 2010 + 1
+    await waitFor(() => {
+      expect(apolloMocks.query).toHaveBeenCalledTimes(expectedYears)
+    })
+
+    // Chart data has one bar per year, distance increasing with year.
+    await waitFor(() => {
+      expect(latestBarChartData.length).toBe(expectedYears)
+    })
+    expect(latestBarChartData[0]).toEqual(
+      expect.objectContaining({ label: '2010', distance_km: 10 }),
+    )
+    expect(latestBarChartData.at(-1)).toEqual(
+      expect.objectContaining({ label: String(today.getFullYear()) }),
+    )
+  })
+
+  it('weekly mode pages backward and forward by 7 days', async () => {
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    const today = new Date()
+    const initialStart = subDays(today, 6)
+    await waitFor(() => {
+      expect(screen.getByTestId('week-range-pill')).toHaveTextContent(
+        `${format(initialStart, 'MMM d')} – ${format(today, 'MMM d')}`,
+      )
+    })
+
+    // Prev shifts window back 7 days.
+    apolloMocks.query.mockClear()
+    await user.click(screen.getByRole('button', { name: /previous week/i }))
+    const prevEnd = subDays(today, 7)
+    const prevStart = subDays(prevEnd, 6)
+    await waitFor(() => {
+      expect(screen.getByTestId('week-range-pill')).toHaveTextContent(
+        `${format(prevStart, 'MMM d')} – ${format(prevEnd, 'MMM d')}`,
+      )
+    })
+
+    // Next shifts back to original window.
+    await user.click(screen.getByRole('button', { name: /next week/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId('week-range-pill')).toHaveTextContent(
+        `${format(initialStart, 'MMM d')} – ${format(today, 'MMM d')}`,
+      )
+    })
+  })
+
+  it('weekly mode hides month selector and shows pagination only in week mode', async () => {
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: { garminActivityTotals: [] },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    // Default is monthly: month selector visible, pagination not rendered.
+    expect(
+      screen.getByRole('combobox', { name: /select month/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /previous week/i }),
+    ).not.toBeInTheDocument()
+
+    // Switch to weekly: pagination appears, month selector disappears.
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /previous week/i }),
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByRole('combobox', { name: /select month/i }),
+    ).not.toBeInTheDocument()
+
+    // Switch back to monthly: pagination disappears, month selector returns.
+    await user.click(screen.getByRole('radio', { name: 'Monthly' }))
+    expect(
+      screen.queryByRole('button', { name: /previous week/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', { name: /select month/i }),
+    ).toBeInTheDocument()
   })
 })
