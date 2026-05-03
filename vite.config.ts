@@ -13,10 +13,23 @@ export default defineConfig(({ command }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          leaflet: ['leaflet', 'react-leaflet'],
-          apollo: ['@apollo/client', 'graphql'],
-          recharts: ['recharts'],
+        // Vite 8 uses Rolldown; the object form of `manualChunks` was removed.
+        // Use Rolldown's `advancedChunks.groups` to keep the same chunking.
+        advancedChunks: {
+          groups: [
+            {
+              name: 'leaflet',
+              test: /[\\/]node_modules[\\/](leaflet|react-leaflet)[\\/]/,
+            },
+            {
+              name: 'apollo',
+              test: /[\\/]node_modules[\\/](@apollo\/client|graphql)[\\/]/,
+            },
+            {
+              name: 'recharts',
+              test: /[\\/]node_modules[\\/]recharts[\\/]/,
+            },
+          ],
         },
       },
     },
