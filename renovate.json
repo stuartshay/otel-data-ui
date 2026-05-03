@@ -21,6 +21,38 @@
       "automergeType": "pr"
     },
     {
+      "description": "Auto-merge minor updates for dev-only tooling (no runtime impact)",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor"],
+      "matchPackageNames": [
+        "vitest",
+        "@vitest/coverage-v8",
+        "@testing-library/react",
+        "@testing-library/jest-dom",
+        "@testing-library/user-event",
+        "jsdom",
+        "@playwright/test",
+        "eslint",
+        "@eslint/js",
+        "typescript-eslint",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh",
+        "globals",
+        "prettier",
+        "markdownlint-cli2",
+        "husky",
+        "lint-staged",
+        "cspell",
+        "shadcn",
+        "@graphql-codegen/cli",
+        "@graphql-codegen/typescript",
+        "@graphql-codegen/typescript-operations",
+        "@graphql-codegen/typescript-react-apollo"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
       "description": "Catch-all bundle for any remaining npm minor/patch updates (specific groups below override this via last-match-wins)",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
