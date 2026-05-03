@@ -49,17 +49,18 @@ flowchart LR
 
 ## Routes
 
-| Path                  | Page                | Description                                            |
-| --------------------- | ------------------- | ------------------------------------------------------ |
-| `/`                   | Dashboard           | Overview stats, device list, sport breakdown           |
-| `/locations`          | Locations           | OwnTracks GPS points with pagination and device filter |
-| `/locations/:id`      | Location Detail     | Single location with all fields                        |
-| `/garmin`             | Garmin Activities   | Activity table with sport filter                       |
-| `/garmin/:activityId` | Garmin Detail       | Stats, elevation/speed charts, track map               |
-| `/map`                | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
-| `/daily-summary`      | Daily Summary       | Combined daily activity table                          |
-| `/references`         | Reference Locations | Saved location cards                                   |
-| `/spatial`            | Spatial Tools       | Nearby point search and distance calculator            |
+| Path                   | Page                | Description                                            |
+| ---------------------- | ------------------- | ------------------------------------------------------ |
+| `/`                    | Dashboard           | Overview stats, device list, sport breakdown           |
+| `/locations`           | Locations           | OwnTracks GPS points with pagination and device filter |
+| `/locations/:id`       | Location Detail     | Single location with all fields                        |
+| `/garmin`              | Garmin Activities   | Activity table with sport filter                       |
+| `/garmin/:activityId`  | Garmin Detail       | Stats, elevation/speed charts, track map               |
+| `/map`                 | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
+| `/daily-summary`       | Daily Summary       | Combined daily activity table                          |
+| `/daily-summary/:date` | Daily Summary Day   | Day-level GPS point list with map                      |
+| `/references`          | Reference Locations | Saved location cards                                   |
+| `/spatial`             | Spatial Tools       | Nearby point search and distance calculator            |
 
 ## Quick Start
 

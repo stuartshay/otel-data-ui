@@ -12,9 +12,9 @@ vi.mock('@/__generated__/graphql', () => dailySummaryHooks)
 
 import { DailySummaryPage } from './DailySummaryPage'
 
-function renderPage() {
+function renderPage(route = '/daily-summary') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <DailySummaryPage />
     </MemoryRouter>,
   )
@@ -65,27 +65,10 @@ describe('DailySummaryPage', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('renders summary rows with formatted values', () => {
+  it('renders summary rows with formatted values and date detail links', () => {
     dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
       data: {
-        dailySummary: {
-          total: 1,
-          limit: 25,
-          offset: 0,
-          items: [
-            {
-              activity_date: '2026-03-14',
-              owntracks_device: 'phone',
-              owntracks_points: 1234,
-              min_battery: 80,
-              max_battery: 95,
-              garmin_sport: 'running',
-              total_distance_km: 12.345,
-              avg_heart_rate: 148,
-              total_calories: 640,
-            },
-          ],
-        },
+        dailySummary: buildDailySummaryConnection(),
       },
       loading: false,
       error: undefined,
@@ -95,12 +78,19 @@ describe('DailySummaryPage', () => {
     renderPage()
 
     expect(screen.getByText('Daily Summary')).toBeInTheDocument()
+    expect(
+      screen.getByText('50 days of combined OwnTracks + Garmin activity'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'View points for 2026-03-14' }),
+    ).toHaveAttribute('href', '/daily-summary/2026-03-14')
     expect(screen.getByText('phone')).toBeInTheDocument()
     expect(screen.getByText('1,234')).toBeInTheDocument()
     expect(screen.getByText('80–95%')).toBeInTheDocument()
     expect(screen.getByText('12.35 km')).toBeInTheDocument()
     expect(screen.getByText('148 bpm')).toBeInTheDocument()
     expect(screen.getByText('640')).toBeInTheDocument()
+    expect(screen.getByText('Showing 1–25 of 50')).toBeInTheDocument()
   })
 
   it('updates pagination offsets as the user moves between pages', async () => {
@@ -115,34 +105,16 @@ describe('DailySummaryPage', () => {
           date_from?: string
           date_to?: string
         }
-      }) => {
-        const offset = variables.offset ?? 0
-        return {
-          data: {
-            dailySummary: {
-              total: 50,
-              limit: variables.limit,
-              offset,
-              items: [
-                {
-                  activity_date: `2026-03-${String((offset % 28) + 1).padStart(2, '0')}`,
-                  owntracks_device: 'phone',
-                  owntracks_points: 100,
-                  min_battery: 70,
-                  max_battery: 90,
-                  garmin_sport: 'running',
-                  total_distance_km: 5,
-                  avg_heart_rate: 140,
-                  total_calories: 300,
-                },
-              ],
-            },
-          },
-          loading: false,
-          error: undefined,
-          refetch: vi.fn(),
-        }
-      },
+      }) => ({
+        data: {
+          dailySummary: buildDailySummaryConnection({
+            offset: variables.offset ?? 0,
+          }),
+        },
+        loading: false,
+        error: undefined,
+        refetch: vi.fn(),
+      }),
     )
 
     renderPage()
@@ -156,10 +128,10 @@ describe('DailySummaryPage', () => {
     )
     expect(dailySummaryHooks.useDailySummaryQuery).toHaveBeenLastCalledWith({
       variables: {
-        limit: 25,
-        offset: 25,
         date_from: undefined,
         date_to: undefined,
+        limit: 25,
+        offset: 25,
       },
     })
 
@@ -168,6 +140,28 @@ describe('DailySummaryPage', () => {
     await waitFor(() =>
       expect(screen.getByText('Showing 1–25 of 50')).toBeInTheDocument(),
     )
+  })
+
+  it('passes date_from and date_to from URL params to the query', () => {
+    dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
+      data: {
+        dailySummary: buildDailySummaryConnection(),
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage('/daily-summary?date_from=2026-03-01&date_to=2026-03-14')
+
+    expect(dailySummaryHooks.useDailySummaryQuery).toHaveBeenLastCalledWith({
+      variables: {
+        date_from: '2026-03-01',
+        date_to: '2026-03-14',
+        limit: 25,
+        offset: 0,
+      },
+    })
   })
 
   it('shows an empty state with a reset action when filters yield no results', async () => {
@@ -181,18 +175,31 @@ describe('DailySummaryPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter
-        initialEntries={[
-          '/daily-summary?date_from=2026-01-01&date_to=2026-01-02',
-        ]}
-      >
-        <DailySummaryPage />
-      </MemoryRouter>,
-    )
+    renderPage('/daily-summary?date_from=2026-01-01&date_to=2026-01-02')
 
     expect(screen.getByText('No data available')).toBeInTheDocument()
     const reset = screen.getByRole('button', { name: /Clear filters/i })
     await user.click(reset)
   })
 })
+
+function buildDailySummaryConnection({ offset = 0 } = {}) {
+  return {
+    items: [
+      {
+        activity_date: offset === 0 ? '2026-03-14' : '2026-02-18',
+        owntracks_device: 'phone',
+        owntracks_points: 1234,
+        min_battery: 80,
+        max_battery: 95,
+        garmin_sport: 'running',
+        total_distance_km: 12.345,
+        avg_heart_rate: 148,
+        total_calories: 640,
+      },
+    ],
+    total: 50,
+    limit: 25,
+    offset,
+  }
+}

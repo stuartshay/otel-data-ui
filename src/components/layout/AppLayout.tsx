@@ -94,22 +94,28 @@ export function AppLayout() {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                location.pathname === to
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-sidebar-foreground/70',
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          ))}
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const isActive =
+              location.pathname === to ||
+              (to !== '/' && location.pathname.startsWith(`${to}/`))
+
+            return (
+              <Link
+                key={to}
+                to={to}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/70',
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="border-t p-3">
