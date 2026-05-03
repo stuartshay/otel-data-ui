@@ -508,6 +508,50 @@ like other services. Do not pipe through `python3 -m json.tool` or `jq`.
 | HTML loads      | `curl .../`                                      | `<!DOCTYPE html>`      |
 | No restarts     | `kubectl get pods`                               | RESTARTS = 0           |
 | Argo CD synced  | `argocd app get apps --core`                     | Synced, Healthy        |
+| Heatmap renders | See "Dashboard Heatmap Smoke Test" below         | No GraphQL error       |
+
+### Dashboard Heatmap Smoke Test (Required)
+
+The Dashboard's Garmin Activity heatmap is the most common victim of GraphQL
+schema drift between this UI and `otel-data-gateway` (the `dailySummary` query
+shape changed from a bare array to a `DailySummaryConnection` with an `items`
+field). After every deploy, run these two checks before declaring success:
+
+```bash
+# 1) Verify the gateway returns the Connection shape with items.
+curl -sk -X POST https://gateway.lab.informationcart.com \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"query{ dailySummary(date_from:\"2026-01-01\",date_to:\"2026-12-31\",limit:5){ total items{ activity_date garmin_activities } } }"}' \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); \
+    assert 'errors' not in d, d; \
+    assert 'items' in d['data']['dailySummary'], d; \
+    print('gateway dailySummary OK, total=', d['data']['dailySummary']['total'])"
+
+# 2) Verify the deployed UI's bundle queries the new Connection shape
+#    (the `items` selection set must be present in the shipped JS).
+curl -sk https://data-ui.lab.informationcart.com/ \
+  | grep -oE 'assets/index-[^"]+\.js' | head -1 \
+  | xargs -I{} curl -sk "https://data-ui.lab.informationcart.com/{}" \
+  | grep -q 'dailySummary[^}]*items' && echo "UI bundle queries items[] OK" \
+  || { echo "UI bundle is MISSING items selection — heatmap will fail"; exit 1; }
+```
+
+If either check fails, the heatmap will render
+`Failed to load activity data` on `/` (Dashboard). Roll back or rebuild the UI
+against the current gateway schema before closing the deployment issue.
+
+For deeper validation, run the regression suite locally against the live URL:
+
+```bash
+cd /home/ubuntu/git/otel-data-ui
+PLAYWRIGHT_BASE_URL=https://data-ui.lab.informationcart.com \
+  npx playwright test e2e/dashboard-activity-heatmap.spec.ts --project=chromium
+```
+
+The unit test
+`src/components/dashboard/GarminActivityHeatmap.test.tsx` runs in CI on every
+PR and is the primary guard against this regression — if it fails, do **not**
+merge or deploy.
 
 ## Rollback Procedure
 
