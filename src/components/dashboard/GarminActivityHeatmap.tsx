@@ -73,7 +73,7 @@ export function GarminActivityHeatmap() {
   })
 
   const heatmapValues = useMemo<HeatmapValue[]>(() => {
-    const summaries = data?.dailySummary ?? []
+    const summaries = data?.dailySummary?.items ?? []
     const dateMap = new Map<string, number>()
 
     for (const entry of summaries) {

@@ -51,6 +51,28 @@ export type DailyActivitySummary = {
   total_duration_seconds?: Maybe<Scalars['Float']['output']>;
 };
 
+/** Paginated list of daily activity summaries. */
+export type DailySummaryConnection = {
+  __typename?: 'DailySummaryConnection';
+  /** List of daily activity summary items in the current page */
+  items: Array<DailyActivitySummary>;
+  /** Maximum number of items per page */
+  limit: Scalars['Int']['output'];
+  /** Number of items skipped from the start */
+  offset: Scalars['Int']['output'];
+  /** Total number of items matching the query */
+  total: Scalars['Int']['output'];
+};
+
+/** Earliest and latest activity dates available in the daily activity summary view. */
+export type DailySummaryDateRange = {
+  __typename?: 'DailySummaryDateRange';
+  /** Latest activity date with daily summary data (YYYY-MM-DD) */
+  max_date: Scalars['String']['output'];
+  /** Earliest activity date with daily summary data (YYYY-MM-DD) */
+  min_date: Scalars['String']['output'];
+};
+
 /** Distinct OwnTracks device identifier. */
 export type DeviceInfo = {
   __typename?: 'DeviceInfo';
@@ -481,7 +503,9 @@ export type Query = {
   /** Calculate the geodesic distance between two geographic points. */
   calculateDistance: DistanceResult;
   /** Retrieve daily activity summaries combining OwnTracks and Garmin data. */
-  dailySummary: Array<DailyActivitySummary>;
+  dailySummary: DailySummaryConnection;
+  /** Get the earliest and latest activity dates available in the daily activity summary view. */
+  dailySummaryDateRange: DailySummaryDateRange;
   /** List all distinct OwnTracks device identifiers. */
   devices: Array<DeviceInfo>;
   /** Retrieve a paginated list of Garmin activities. */
@@ -537,6 +561,7 @@ export type QueryDailySummaryArgs = {
   date_from?: InputMaybe<Scalars['String']['input']>;
   date_to?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -920,10 +945,16 @@ export type DailySummaryQueryVariables = Exact<{
   date_from?: InputMaybe<Scalars['String']['input']>;
   date_to?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 
-export type DailySummaryQuery = { __typename?: 'Query', dailySummary: Array<{ __typename?: 'DailyActivitySummary', activity_date?: string | null, owntracks_device?: string | null, owntracks_points?: number | null, min_battery?: number | null, max_battery?: number | null, avg_accuracy?: number | null, garmin_sport?: string | null, garmin_activities?: number | null, total_distance_km?: number | null, total_duration_seconds?: number | null, avg_heart_rate?: number | null, total_calories?: number | null }> };
+export type DailySummaryQuery = { __typename?: 'Query', dailySummary: { __typename?: 'DailySummaryConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'DailyActivitySummary', activity_date?: string | null, owntracks_device?: string | null, owntracks_points?: number | null, min_battery?: number | null, max_battery?: number | null, avg_accuracy?: number | null, garmin_sport?: string | null, garmin_activities?: number | null, total_distance_km?: number | null, total_duration_seconds?: number | null, avg_heart_rate?: number | null, total_calories?: number | null }> } };
+
+export type DailySummaryDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DailySummaryDateRangeQuery = { __typename?: 'Query', dailySummaryDateRange: { __typename?: 'DailySummaryDateRange', min_date: string, max_date: string } };
 
 
 export const GarminActivitiesDocument = gql`
@@ -2172,20 +2203,30 @@ export type UnifiedGpsLazyQueryHookResult = ReturnType<typeof useUnifiedGpsLazyQ
 export type UnifiedGpsSuspenseQueryHookResult = ReturnType<typeof useUnifiedGpsSuspenseQuery>;
 export type UnifiedGpsQueryResult = ApolloReactCommon.QueryResult<UnifiedGpsQuery, UnifiedGpsQueryVariables>;
 export const DailySummaryDocument = gql`
-    query DailySummary($date_from: String, $date_to: String, $limit: Int) {
-  dailySummary(date_from: $date_from, date_to: $date_to, limit: $limit) {
-    activity_date
-    owntracks_device
-    owntracks_points
-    min_battery
-    max_battery
-    avg_accuracy
-    garmin_sport
-    garmin_activities
-    total_distance_km
-    total_duration_seconds
-    avg_heart_rate
-    total_calories
+    query DailySummary($date_from: String, $date_to: String, $limit: Int, $offset: Int) {
+  dailySummary(
+    date_from: $date_from
+    date_to: $date_to
+    limit: $limit
+    offset: $offset
+  ) {
+    items {
+      activity_date
+      owntracks_device
+      owntracks_points
+      min_battery
+      max_battery
+      avg_accuracy
+      garmin_sport
+      garmin_activities
+      total_distance_km
+      total_duration_seconds
+      avg_heart_rate
+      total_calories
+    }
+    total
+    limit
+    offset
   }
 }
     `;
@@ -2205,6 +2246,7 @@ export const DailySummaryDocument = gql`
  *      date_from: // value for 'date_from'
  *      date_to: // value for 'date_to'
  *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -2227,3 +2269,46 @@ export type DailySummaryQueryHookResult = ReturnType<typeof useDailySummaryQuery
 export type DailySummaryLazyQueryHookResult = ReturnType<typeof useDailySummaryLazyQuery>;
 export type DailySummarySuspenseQueryHookResult = ReturnType<typeof useDailySummarySuspenseQuery>;
 export type DailySummaryQueryResult = ApolloReactCommon.QueryResult<DailySummaryQuery, DailySummaryQueryVariables>;
+export const DailySummaryDateRangeDocument = gql`
+    query DailySummaryDateRange {
+  dailySummaryDateRange {
+    min_date
+    max_date
+  }
+}
+    `;
+
+/**
+ * __useDailySummaryDateRangeQuery__
+ *
+ * To run a query within a React component, call `useDailySummaryDateRangeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDailySummaryDateRangeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDailySummaryDateRangeQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDailySummaryDateRangeQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>(DailySummaryDateRangeDocument, options);
+      }
+export function useDailySummaryDateRangeLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>(DailySummaryDateRangeDocument, options);
+        }
+// @ts-ignore
+export function useDailySummaryDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>;
+export function useDailySummaryDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<DailySummaryDateRangeQuery | undefined, DailySummaryDateRangeQueryVariables>;
+export function useDailySummaryDateRangeSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>(DailySummaryDateRangeDocument, options);
+        }
+export type DailySummaryDateRangeQueryHookResult = ReturnType<typeof useDailySummaryDateRangeQuery>;
+export type DailySummaryDateRangeLazyQueryHookResult = ReturnType<typeof useDailySummaryDateRangeLazyQuery>;
+export type DailySummaryDateRangeSuspenseQueryHookResult = ReturnType<typeof useDailySummaryDateRangeSuspenseQuery>;
+export type DailySummaryDateRangeQueryResult = ApolloReactCommon.QueryResult<DailySummaryDateRangeQuery, DailySummaryDateRangeQueryVariables>;
