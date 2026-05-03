@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
 
-const SCREENSHOT_DIR = 'e2e/screenshots/daily-summary'
+const SCREENSHOT_DIR = path.join('e2e', 'screenshots', 'daily-summary')
+
+fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 test.describe('Daily Summary Pagination & Calendar Filter', () => {
   test.setTimeout(60_000)
@@ -21,7 +25,7 @@ test.describe('Daily Summary Pagination & Calendar Filter', () => {
     })
 
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/default-state.png`,
+      path: path.join(SCREENSHOT_DIR, 'default-state.png'),
       fullPage: true,
     })
   })
@@ -41,7 +45,7 @@ test.describe('Daily Summary Pagination & Calendar Filter', () => {
       })
 
       await page.screenshot({
-        path: `${SCREENSHOT_DIR}/pagination-next.png`,
+        path: path.join(SCREENSHOT_DIR, 'pagination-next.png'),
         fullPage: true,
       })
 
@@ -74,7 +78,7 @@ test.describe('Daily Summary Pagination & Calendar Filter', () => {
     await expect(page).not.toHaveURL(/[?&]page=2/)
 
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/date-range-change.png`,
+      path: path.join(SCREENSHOT_DIR, 'date-range-change.png'),
       fullPage: true,
     })
 
