@@ -281,7 +281,11 @@ test.describe('Dashboard Daily Summary detail map', () => {
     await page.getByRole('button', { name: 'All' }).click()
 
     await expect(page).not.toHaveURL(/[?&]source=owntracks/)
-    await expect(page.getByText(/GPS points$/)).toBeVisible({
+    // Header text (no filter) ends with "GPS points" optionally followed by
+    // the per-source counts summary "(OwnTracks: N, Garmin: M)".
+    await expect(
+      page.getByText(/GPS points(\s*\(OwnTracks: [\d,]+, Garmin: [\d,]+\))?$/),
+    ).toBeVisible({
       timeout: 30_000,
     })
   })
