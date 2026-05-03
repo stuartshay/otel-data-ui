@@ -39,6 +39,10 @@ describe('AppLayout', () => {
         <Route element={<AppLayout />}>
           <Route path="/" element={<div>Dashboard content</div>} />
           <Route path="/garmin" element={<div>Garmin content</div>} />
+          <Route
+            path="/daily-summary/:date"
+            element={<div>Daily summary detail content</div>}
+          />
         </Route>
       </Routes>,
       { route },
@@ -95,5 +99,13 @@ describe('AppLayout', () => {
     await user.click(screen.getByTitle('Theme: dark'))
 
     expect(setTheme).toHaveBeenCalledWith('system')
+  })
+
+  it('keeps the daily summary nav item active on day detail pages', () => {
+    renderLayout('/daily-summary/2026-03-14')
+
+    expect(screen.getByRole('link', { name: /Daily Summary/i })).toHaveClass(
+      'bg-sidebar-accent',
+    )
   })
 })

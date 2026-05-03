@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import {
@@ -7,6 +7,7 @@ import {
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { UnifiedGpsMap } from '@/components/shared/UnifiedGpsMap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -15,12 +16,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 
 export function MapPage() {
-  const mapInstanceRef = useRef<L.Map | null>(null)
-  const cleanupRef = useRef<(() => void) | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
 
@@ -62,122 +59,13 @@ export function MapPage() {
     },
   })
 
-  // Callback ref initializes Leaflet as soon as the map div is attached to the
-  // DOM. Using a callback ref (instead of useEffect + useRef) is critical:
-  // MapPage returns <LoadingState /> on the first render while data is
-  // fetching, so a mount-time useEffect with [] deps would fire once with a
-  // null ref and never re-run when the real <div> finally mounts — leaving
-  // the map permanently uninitialized on first load.
-  const mapContainerRef = useCallback((container: HTMLDivElement | null) => {
-    // Tear down any previous instance (StrictMode double-mount, or ref
-    // detach on unmount).
-    if (cleanupRef.current) {
-      cleanupRef.current()
-      cleanupRef.current = null
-    }
-
-    if (!container) return
-
-    const map = L.map(container).setView([40.736, -74.039], 12)
-    mapInstanceRef.current = map
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map)
-
-    // Leaflet computes tile layout from the container's size at init time.
-    // Force a size recalculation once layout is stable and whenever the
-    // container resizes, so tiles render on first paint.
-    let disposed = false
-    const invalidate = () => {
-      if (disposed) return
-      map.invalidateSize()
-    }
-    // Double rAF ensures layout/styles have been applied before measuring.
-    let innerRafId = 0
-    const outerRafId = requestAnimationFrame(() => {
-      innerRafId = requestAnimationFrame(invalidate)
-    })
-
-    let resizeObserver: ResizeObserver | undefined
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(invalidate)
-      resizeObserver.observe(container)
-    }
-
-    cleanupRef.current = () => {
-      disposed = true
-      cancelAnimationFrame(outerRafId)
-      cancelAnimationFrame(innerRafId)
-      resizeObserver?.disconnect()
-      map.remove()
-      mapInstanceRef.current = null
-    }
-  }, [])
-
-  // Ensure the map is cleaned up if MapPage itself unmounts.
-  useEffect(() => {
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current()
-        cleanupRef.current = null
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    const map = mapInstanceRef.current
-    if (!map) return
-
-    // Clear existing markers when date changes or data refreshes
-    map.eachLayer((layer) => {
-      if (layer instanceof L.CircleMarker) {
-        map.removeLayer(layer)
-      }
-    })
-
-    if (!data?.unifiedGps?.items) return
-
-    const points = data.unifiedGps.items ?? []
-
-    if (points.length === 0) return
-
-    const bounds = L.latLngBounds([])
-
-    points.forEach((pt) => {
-      const color = pt.source === 'owntracks' ? '#3b82f6' : '#ef4444'
-      const marker = L.circleMarker([pt.latitude, pt.longitude], {
-        radius: 3,
-        fillColor: color,
-        color: color,
-        fillOpacity: 0.6,
-        weight: 1,
-      })
-
-      marker.bindPopup(
-        `<strong>${pt.source}</strong><br/>` +
-          `${pt.identifier}<br/>` +
-          `${new Date(pt.timestamp).toLocaleString()}`,
-      )
-
-      marker.addTo(map)
-      bounds.extend([pt.latitude, pt.longitude])
-    })
-
-    if (bounds.isValid()) {
-      // Ensure the map has up-to-date container dimensions before fitting,
-      // otherwise the first fitBounds after mount can compute the wrong zoom.
-      map.invalidateSize()
-      map.fitBounds(bounds, { padding: [20, 20] })
-    }
-  }, [data, clampedDate])
-
   if (loading && !data) return <LoadingState message="Loading map data..." />
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />
 
   const total = data?.unifiedGps?.total ?? 0
-  const displayed = data?.unifiedGps?.items?.length ?? 0
+  const points = data?.unifiedGps?.items ?? []
+  const displayed = points.length
   const isToday =
     format(clampedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
@@ -238,11 +126,7 @@ export function MapPage() {
         </div>
       </div>
 
-      <div
-        ref={mapContainerRef}
-        data-testid="unified-map-container"
-        className="relative z-0 h-[calc(100vh-14rem)] w-full rounded-lg border"
-      />
+      <UnifiedGpsMap points={points} />
     </div>
   )
 }

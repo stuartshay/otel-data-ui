@@ -49,17 +49,46 @@ flowchart LR
 
 ## Routes
 
-| Path                  | Page                | Description                                            |
-| --------------------- | ------------------- | ------------------------------------------------------ |
-| `/`                   | Dashboard           | Overview stats, device list, sport breakdown           |
-| `/locations`          | Locations           | OwnTracks GPS points with pagination and device filter |
-| `/locations/:id`      | Location Detail     | Single location with all fields                        |
-| `/garmin`             | Garmin Activities   | Activity table with sport filter                       |
-| `/garmin/:activityId` | Garmin Detail       | Stats, elevation/speed charts, track map               |
-| `/map`                | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
-| `/daily-summary`      | Daily Summary       | Combined daily activity table                          |
-| `/references`         | Reference Locations | Saved location cards                                   |
-| `/spatial`            | Spatial Tools       | Nearby point search and distance calculator            |
+| Path                   | Page                | Description                                            |
+| ---------------------- | ------------------- | ------------------------------------------------------ |
+| `/`                    | Dashboard           | Overview stats, device list, sport breakdown           |
+| `/locations`           | Locations           | OwnTracks GPS points with pagination and device filter |
+| `/locations/:id`       | Location Detail     | Single location with all fields                        |
+| `/garmin`              | Garmin Activities   | Activity table with sport filter                       |
+| `/garmin/:activityId`  | Garmin Detail       | Stats, elevation/speed charts, track map               |
+| `/map`                 | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
+| `/daily-summary`       | Daily Summary       | Combined daily activity table                          |
+| `/daily-summary/:date` | Daily Summary Day   | Day-level GPS point list with map                      |
+| `/references`          | Reference Locations | Saved location cards                                   |
+| `/spatial`             | Spatial Tools       | Nearby point search and distance calculator            |
+
+### Daily Summary Day detail (`/daily-summary/:date`)
+
+The day-detail page combines per-day stats, a paginated GPS-point table, and a
+Leaflet map of all points for the selected date. Its state is fully driven by
+URL search params so views are shareable.
+
+| Param    | Values                                           | Default  | Description                                      |
+| -------- | ------------------------------------------------ | -------- | ------------------------------------------------ |
+| `page`   | `1..ceil(total/100)`                             | `1`      | 1-based page for the point table (page size 100) |
+| `source` | `owntracks` \| `garmin`                          | unset    | Restrict points (and map) to a single source     |
+| `order`  | `asc` \| `desc`                                  | `asc`    | Sort points by timestamp                         |
+| `color`  | `source` \| `speed` \| `heart_rate` \| `battery` | `source` | Map marker color metric                          |
+| `track`  | `1`                                              | unset    | Draw a per-source polyline connecting points     |
+
+Additional interactions:
+
+- **Previous Day / Next Day** buttons navigate day-by-day and are clamped to
+  the available `dailySummaryDateRange`.
+- **Alt+Left / Alt+Right** keyboard shortcuts trigger Previous/Next Day.
+- Out-of-range `?page=` values auto-clamp to the last page (no empty state).
+- Clicking a table row pans the map, opens that marker's popup, and sets
+  `aria-current="true"` on the row.
+- **Export CSV / GeoJSON** downloads up to 10,000 points matching the current
+  filter set (source/date) using a separate lazy GraphQL query.
+
+Marker popups are built via DOM `textContent` (never `innerHTML`), so any
+identifier/source/timestamp text is rendered safely regardless of content.
 
 ## Quick Start
 

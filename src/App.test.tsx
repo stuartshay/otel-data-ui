@@ -59,6 +59,10 @@ vi.mock('@/pages/DailySummaryPage', () => ({
   DailySummaryPage: () => <div>Daily summary page</div>,
 }))
 
+vi.mock('@/pages/DailySummaryDetailPage', () => ({
+  DailySummaryDetailPage: () => <div>Daily summary detail page</div>,
+}))
+
 vi.mock('@/pages/ReferencesPage', () => ({
   ReferencesPage: () => <div>References page</div>,
 }))
@@ -94,5 +98,14 @@ describe('App routes', () => {
 
     expect(screen.getByText('Layout shell')).toBeInTheDocument()
     expect(screen.getByText('References page')).toBeInTheDocument()
+  })
+
+  it('renders the daily summary detail route inside the shared layout', () => {
+    window.history.replaceState({}, '', '/daily-summary/2026-03-14')
+
+    render(<App />)
+
+    expect(screen.getByText('Layout shell')).toBeInTheDocument()
+    expect(screen.getByText('Daily summary detail page')).toBeInTheDocument()
   })
 })

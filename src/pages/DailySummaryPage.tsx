@@ -1,13 +1,13 @@
 import {
-  useDailySummaryQuery,
   useDailySummaryDateRangeQuery,
+  useDailySummaryQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { DateRangePicker } from '@/components/shared/DateRangePicker'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -16,8 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
 import { parseDateRangeParams, toLocalDate } from '@/lib/date-range'
 import { format as formatDate } from 'date-fns'
 
@@ -37,7 +37,6 @@ export function DailySummaryPage() {
   const DATA_MAX_DATE = dateRangeData?.dailySummaryDateRange?.max_date
     ? toLocalDate(dateRangeData.dailySummaryDateRange.max_date)
     : new Date()
-
   const {
     dateFrom,
     dateTo,
@@ -51,10 +50,10 @@ export function DailySummaryPage() {
 
   const { data, loading, error, refetch } = useDailySummaryQuery({
     variables: {
-      limit: PAGE_SIZE,
-      offset,
       date_from: dateFromStr,
       date_to: dateToStr,
+      limit: PAGE_SIZE,
+      offset,
     },
   })
 
@@ -75,7 +74,6 @@ export function DailySummaryPage() {
         </p>
       </div>
 
-      {/* Filter controls */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="ml-auto">
           <DateRangePicker
@@ -96,7 +94,6 @@ export function DailySummaryPage() {
         </div>
       </div>
 
-      {/* Table */}
       {total === 0 ? (
         <div className="rounded-md border">
           <EmptyState
@@ -139,7 +136,17 @@ export function DailySummaryPage() {
                 {summaries.map((s, i) => (
                   <TableRow key={`${s.activity_date}-${i}`}>
                     <TableCell className="font-medium">
-                      {s.activity_date ?? '—'}
+                      {s.activity_date ? (
+                        <Link
+                          to={`/daily-summary/${s.activity_date}`}
+                          className="text-primary hover:underline"
+                          aria-label={`View points for ${s.activity_date}`}
+                        >
+                          {s.activity_date}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
                     </TableCell>
                     <TableCell>
                       {s.owntracks_device ? (
@@ -180,7 +187,6 @@ export function DailySummaryPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of{' '}

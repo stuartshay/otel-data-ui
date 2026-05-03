@@ -12,6 +12,7 @@ import { GarminPage } from '@/pages/GarminPage'
 import { GarminDetailPage } from '@/pages/GarminDetailPage'
 import { MapPage } from '@/pages/MapPage'
 import { DailySummaryPage } from '@/pages/DailySummaryPage'
+import { DailySummaryDetailPage } from '@/pages/DailySummaryDetailPage'
 import { ReferencesPage } from '@/pages/ReferencesPage'
 import { SpatialPage } from '@/pages/SpatialPage'
 import { GeocodingPage } from '@/pages/GeocodingPage'
@@ -37,6 +38,10 @@ export default function App() {
                 />
                 <Route path="map" element={<MapPage />} />
                 <Route path="daily-summary" element={<DailySummaryPage />} />
+                <Route
+                  path="daily-summary/:date"
+                  element={<DailySummaryDetailPage />}
+                />
                 <Route path="references" element={<ReferencesPage />} />
                 <Route path="spatial" element={<SpatialPage />} />
                 <Route path="geocoding" element={<GeocodingPage />} />

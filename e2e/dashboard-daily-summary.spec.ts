@@ -1,74 +1,199 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
-const SCREENSHOT_DIR = path.join('e2e', 'screenshots', 'daily-summary')
+const SCREENSHOT_DIR = path.join(
+  'e2e',
+  'screenshots',
+  'dashboard-daily-summary',
+)
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-test.describe('Daily Summary Pagination & Calendar Filter', () => {
-  test.setTimeout(60_000)
+function formatHeadingDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
-  test('default state shows summaries with pagination footer', async ({
+async function expectNoDailySummarySchemaError(page: Page) {
+  await expect(
+    page.getByText(
+      /Cannot query field "activity_date" on type "DailySummaryConnection"/,
+    ),
+  ).toHaveCount(0)
+  await expect(
+    page.getByText(
+      /Cannot query field "owntracks_device" on type "DailySummaryConnection"/,
+    ),
+  ).toHaveCount(0)
+}
+
+async function openSummaryDetailWithMinimumPoints(
+  page: Page,
+  minimumPoints: number,
+) {
+  await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
+
+  const rows = page.getByRole('main').locator('table tbody tr')
+  await expect(rows.first()).toBeVisible({ timeout: 30_000 })
+
+  const rowCount = await rows.count()
+  for (let index = 0; index < rowCount; index += 1) {
+    const row = rows.nth(index)
+    const pointsText = await row.locator('td').nth(2).innerText()
+    const points = Number.parseInt(pointsText.replace(/[^\d]/g, ''), 10)
+    if (Number.isNaN(points) || points < minimumPoints) continue
+
+    const dateLink = row.locator('a[href^="/daily-summary/"]').first()
+    const href = await dateLink.getAttribute('href')
+    if (!href) continue
+
+    await dateLink.click()
+    await expect(page).toHaveURL(new RegExp(`${href}$`))
+    return { href, points }
+  }
+
+  return null
+}
+
+test.describe('Dashboard Daily Summary detail map', () => {
+  test.setTimeout(90_000)
+
+  test('daily summary renders date links without GraphQL schema errors', async ({
     page,
   }) => {
     await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
 
-    await expect(page.getByText('Daily Summary')).toBeVisible({
-      timeout: 15_000,
-    })
+    const main = page.getByRole('main')
+    await expect(
+      main.getByRole('heading', { name: 'Daily Summary' }),
+    ).toBeVisible({ timeout: 30_000 })
     await expect(page.getByTestId('date-range-trigger')).toBeVisible({
       timeout: 30_000,
     })
-    await expect(page.getByText(/Showing \d+–\d+ of \d+/)).toBeVisible({
-      timeout: 30_000,
-    })
+    await expectNoDailySummarySchemaError(page)
+
+    const rows = main.locator('table tbody tr')
+    await expect(rows.first()).toBeVisible({ timeout: 30_000 })
+    expect(await rows.count()).toBeGreaterThan(0)
+
+    const firstDateLink = rows
+      .first()
+      .locator('a[href^="/daily-summary/"]')
+      .first()
+    await expect(firstDateLink).toBeVisible()
+
+    const href = await firstDateLink.getAttribute('href')
+    expect(href).toMatch(/^\/daily-summary\/\d{4}-\d{2}-\d{2}$/)
 
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, 'default-state.png'),
+      path: path.join(
+        SCREENSHOT_DIR,
+        `summary-${test.info().project.name}-01-list.png`,
+      ),
       fullPage: true,
     })
   })
 
-  test('pagination Next button updates URL and visible range', async ({
+  test('clicking a daily summary date opens the day point map', async ({
     page,
   }) => {
     await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
-    await expect(page.getByText(/Showing 1–/)).toBeVisible({ timeout: 30_000 })
 
-    const nextBtn = page.getByRole('button', { name: 'Next' })
-    if (await nextBtn.isEnabled()) {
-      await nextBtn.click()
-      await expect(page).toHaveURL(/[?&]page=2/)
-      await expect(page.getByText(/Showing 26–/)).toBeVisible({
-        timeout: 15_000,
-      })
+    const main = page.getByRole('main')
+    const firstDateLink = main
+      .locator('table tbody tr')
+      .first()
+      .locator('a[href^="/daily-summary/"]')
+      .first()
+    await expect(firstDateLink).toBeVisible({ timeout: 30_000 })
 
-      await page.screenshot({
-        path: path.join(SCREENSHOT_DIR, 'pagination-next.png'),
-        fullPage: true,
-      })
+    const href = await firstDateLink.getAttribute('href')
+    expect(href).not.toBeNull()
+    const selectedDate = href!.split('/').pop()!
 
-      const prevBtn = page.getByRole('button', { name: 'Prev' })
-      await prevBtn.click()
-      await expect(page.getByText(/Showing 1–/)).toBeVisible({
-        timeout: 15_000,
-      })
-    }
+    await firstDateLink.click()
+    await expect(page).toHaveURL(new RegExp(`${href}$`))
+    await expect(
+      page.getByRole('heading', { name: formatHeadingDate(selectedDate) }),
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(/[\d,]+ of [\d,]+ GPS points/)).toBeVisible({
+      timeout: 30_000,
+    })
+    await expectNoDailySummarySchemaError(page)
+
+    const mapContainer = page.getByTestId('daily-summary-map-container')
+    await expect(mapContainer).toBeVisible()
+    await expect(mapContainer).toHaveClass(/leaflet-container/, {
+      timeout: 20_000,
+    })
+    await expect(
+      mapContainer.locator('.leaflet-tile-pane img.leaflet-tile').first(),
+    ).toBeVisible({ timeout: 20_000 })
+
+    const pointRows = page.locator('table tbody tr')
+    await expect(pointRows.first()).toBeVisible({ timeout: 30_000 })
+    expect(await pointRows.count()).toBeGreaterThan(0)
+    await expect(pointRows.first().locator('td').first()).toContainText(
+      /owntracks|garmin/i,
+    )
+
+    await page.screenshot({
+      path: path.join(
+        SCREENSHOT_DIR,
+        `summary-${test.info().project.name}-02-detail.png`,
+      ),
+      fullPage: true,
+    })
   })
 
-  test('calendar preset updates URL and resets pagination to page 1', async ({
-    page,
-  }) => {
-    // Start on page 2 to verify the preset resets pagination
-    await page.goto('/daily-summary?page=2', { waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('date-range-trigger')).toBeVisible({
+  test('pagination updates the URL and result range', async ({ page }) => {
+    await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
+
+    await expect(page.getByText(/Showing 1–25 of [\d,]+/)).toBeVisible({
       timeout: 30_000,
     })
 
-    const trigger = page.getByTestId('date-range-trigger')
-    await trigger.click()
+    const nextButton = page.getByRole('button', { name: 'Next' })
+    await expect(nextButton).toBeEnabled()
+    await nextButton.click()
 
+    await expect(page).toHaveURL(/[?&]page=2/)
+    await expect(page.getByText(/Showing 26–/)).toBeVisible({
+      timeout: 30_000,
+    })
+
+    const prevButton = page.getByRole('button', { name: 'Prev' })
+    await expect(prevButton).toBeEnabled()
+    await prevButton.click()
+
+    await expect(page).not.toHaveURL(/[?&]page=2/)
+    await expect(page.getByText(/Showing 1–25 of [\d,]+/)).toBeVisible({
+      timeout: 30_000,
+    })
+  })
+
+  test('direct page URL opens the requested summary page', async ({ page }) => {
+    await page.goto('/daily-summary?page=2', { waitUntil: 'domcontentloaded' })
+
+    await expect(page).toHaveURL(/[?&]page=2/)
+    await expect(page.getByText(/Showing 26–/)).toBeVisible({
+      timeout: 30_000,
+    })
+    await expect(page.getByRole('button', { name: 'Prev' })).toBeEnabled()
+  })
+
+  test('date filter preset updates and clears URL params', async ({ page }) => {
+    await page.goto('/daily-summary?page=2', { waitUntil: 'domcontentloaded' })
+
+    const trigger = page.getByTestId('date-range-trigger')
+    await expect(trigger).toBeVisible({ timeout: 30_000 })
+    await expect(trigger).toHaveText(/Select dates/)
+
+    await trigger.click()
     const preset = page.getByRole('button', { name: 'Last 7 days' })
     await expect(preset).toBeVisible({ timeout: 5_000 })
     await preset.click({ force: true })
@@ -76,15 +201,16 @@ test.describe('Daily Summary Pagination & Calendar Filter', () => {
     await expect(page).toHaveURL(/[?&]date_from=/, { timeout: 10_000 })
     await expect(page).toHaveURL(/[?&]date_to=/)
     await expect(page).not.toHaveURL(/[?&]page=2/)
-
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, 'date-range-change.png'),
-      fullPage: true,
+    await expect(trigger).not.toHaveText(/Select dates/)
+    await expect(page.getByText(/Showing 1–/)).toBeVisible({
+      timeout: 30_000,
     })
 
-    const clearBtn = page.getByRole('button', { name: 'Clear date range' })
-    await clearBtn.click()
+    await page.getByRole('button', { name: 'Clear date range' }).click()
+
     await expect(page).not.toHaveURL(/[?&]date_from=/, { timeout: 5_000 })
+    await expect(page).not.toHaveURL(/[?&]date_to=/)
+    await expect(trigger).toHaveText(/Select dates/)
   })
 
   test('dailySummaryDateRange GraphQL query returns valid min/max dates', async ({
@@ -120,5 +246,58 @@ test.describe('Daily Summary Pagination & Calendar Filter', () => {
     expect(minDate.getTime()).not.toBeNaN()
     expect(maxDate.getTime()).not.toBeNaN()
     expect(minDate.getTime()).toBeLessThanOrEqual(maxDate.getTime())
+  })
+
+  test('detail page paginates and filters source-limited points', async ({
+    page,
+  }) => {
+    const detail = await openSummaryDetailWithMinimumPoints(page, 101)
+    test.skip(
+      detail == null,
+      'No daily summary row with enough GPS points to validate detail pagination.',
+    )
+
+    await expect(page.getByText(/Showing 1–100 of [\d,]+/)).toBeVisible({
+      timeout: 30_000,
+    })
+
+    const nextButton = page.getByRole('button', { name: 'Next page' })
+    await expect(nextButton).toBeEnabled()
+    await nextButton.click()
+
+    await expect(page).toHaveURL(/[?&]page=2/)
+    await expect(page.getByText(/Showing 101–/)).toBeVisible({
+      timeout: 30_000,
+    })
+
+    await page.getByRole('button', { name: 'OwnTracks' }).click()
+
+    await expect(page).toHaveURL(/[?&]source=owntracks/)
+    await expect(page).not.toHaveURL(/[?&]page=2/)
+    await expect(page.getByText(/GPS points from owntracks/)).toBeVisible({
+      timeout: 30_000,
+    })
+
+    await page.getByRole('button', { name: 'All' }).click()
+
+    await expect(page).not.toHaveURL(/[?&]source=owntracks/)
+    await expect(page.getByText(/GPS points$/)).toBeVisible({
+      timeout: 30_000,
+    })
+  })
+
+  test('direct navigation to an invalid summary date shows a handled error', async ({
+    page,
+  }) => {
+    await page.goto('/daily-summary/not-a-date', {
+      waitUntil: 'domcontentloaded',
+    })
+
+    await expect(
+      page.getByText('Select a valid daily summary date.'),
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page.getByRole('main').getByRole('link', { name: 'Daily Summary' }),
+    ).toBeVisible()
   })
 })
