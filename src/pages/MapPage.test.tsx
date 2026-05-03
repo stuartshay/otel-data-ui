@@ -13,6 +13,13 @@ const leafletMocks = vi.hoisted(() => {
   class CircleMarkerMock {
     bindPopup = vi.fn()
     addTo = vi.fn()
+    on = vi.fn()
+    openPopup = vi.fn()
+    getLatLng = vi.fn(() => ({ lat: 40.736, lng: -74.039 }))
+  }
+
+  class PolylineMock {
+    addTo = vi.fn()
   }
 
   const mapInstance = {
@@ -22,18 +29,21 @@ const leafletMocks = vi.hoisted(() => {
     fitBounds: vi.fn(),
     remove: vi.fn(),
     invalidateSize: vi.fn(),
+    getZoom: vi.fn(() => 12),
   }
 
   mapInstance.setView.mockReturnValue(mapInstance)
 
   return {
     CircleMarkerMock,
+    PolylineMock,
     mapInstance,
     map: vi.fn(() => mapInstance),
     tileLayer: vi.fn(() => ({
       addTo: vi.fn(),
     })),
     circleMarker: vi.fn(() => new CircleMarkerMock()),
+    polyline: vi.fn(() => new PolylineMock()),
     latLngBounds: vi.fn(() => ({
       extend: vi.fn(),
       isValid: vi.fn(() => true),
@@ -48,8 +58,10 @@ vi.mock('leaflet', () => ({
     map: leafletMocks.map,
     tileLayer: leafletMocks.tileLayer,
     circleMarker: leafletMocks.circleMarker,
+    polyline: leafletMocks.polyline,
     latLngBounds: leafletMocks.latLngBounds,
     CircleMarker: leafletMocks.CircleMarkerMock,
+    Polyline: leafletMocks.PolylineMock,
   },
 }))
 

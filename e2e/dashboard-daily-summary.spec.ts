@@ -261,7 +261,7 @@ test.describe('Dashboard Daily Summary detail map', () => {
       timeout: 30_000,
     })
 
-    const nextButton = page.getByRole('button', { name: 'Next' })
+    const nextButton = page.getByRole('button', { name: 'Next page' })
     await expect(nextButton).toBeEnabled()
     await nextButton.click()
 
