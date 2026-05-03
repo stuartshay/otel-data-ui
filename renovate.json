@@ -23,6 +23,7 @@
     {
       "description": "Auto-merge minor updates for dev-only tooling (no runtime impact)",
       "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor"],
       "matchPackageNames": [
         "vitest",
