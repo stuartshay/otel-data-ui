@@ -50,9 +50,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
-    "@graphql-codegen/cli": "^6.2.1",
-    "@graphql-codegen/typescript": "^5.0.9",
-    "@graphql-codegen/typescript-operations": "^5.0.9",
+    "@graphql-codegen/cli": "^7.0.0",
+    "@graphql-codegen/typescript": "^6.0.0",
+    "@graphql-codegen/typescript-operations": "^6.0.0",
     "@graphql-codegen/typescript-react-apollo": "^4.4.1",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
