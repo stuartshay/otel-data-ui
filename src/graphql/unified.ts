@@ -41,20 +41,44 @@ export const UNIFIED_GPS_QUERY = gql`
 `
 
 export const DAILY_SUMMARY_QUERY = gql`
-  query DailySummary($date_from: String, $date_to: String, $limit: Int) {
-    dailySummary(date_from: $date_from, date_to: $date_to, limit: $limit) {
-      activity_date
-      owntracks_device
-      owntracks_points
-      min_battery
-      max_battery
-      avg_accuracy
-      garmin_sport
-      garmin_activities
-      total_distance_km
-      total_duration_seconds
-      avg_heart_rate
-      total_calories
+  query DailySummary(
+    $date_from: String
+    $date_to: String
+    $limit: Int
+    $offset: Int
+  ) {
+    dailySummary(
+      date_from: $date_from
+      date_to: $date_to
+      limit: $limit
+      offset: $offset
+    ) {
+      items {
+        activity_date
+        owntracks_device
+        owntracks_points
+        min_battery
+        max_battery
+        avg_accuracy
+        garmin_sport
+        garmin_activities
+        total_distance_km
+        total_duration_seconds
+        avg_heart_rate
+        total_calories
+      }
+      total
+      limit
+      offset
+    }
+  }
+`
+
+export const DAILY_SUMMARY_DATE_RANGE_QUERY = gql`
+  query DailySummaryDateRange {
+    dailySummaryDateRange {
+      min_date
+      max_date
     }
   }
 `
