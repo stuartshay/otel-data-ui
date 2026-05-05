@@ -148,6 +148,18 @@
   fill: oklch(0.556 0 0);
 }
 
+/*
+ * react-calendar-heatmap pins the weekday-label <text> baseline to the
+ * bottom of each row (y = (dayIndex + 1) * SQUARE_SIZE + dayIndex *
+ * gutterSize), which — combined with our 8px font and the 2px row gutter —
+ * makes labels visually bleed into the row below (e.g. the "Mon" label
+ * appears to align with the Tuesday row). Nudge them up so each label is
+ * vertically centered on its own row.
+ */
+.garmin-heatmap .react-calendar-heatmap .react-calendar-heatmap-weekday-label {
+  transform: translateY(-3px);
+}
+
 .dark .garmin-heatmap .react-calendar-heatmap text {
   fill: oklch(0.708 0 0);
 }
