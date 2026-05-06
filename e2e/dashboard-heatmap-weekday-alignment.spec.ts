@@ -11,24 +11,40 @@ const SCREENSHOT_DIR = path.join(
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 /**
- * Regression test for the Garmin Activity heatmap weekday labels.
+ * Regression test for the Garmin Activity heatmap weekday rows.
  *
- * Bug: `react-calendar-heatmap` pins each weekday-label <text> baseline at
- * the BOTTOM of its row (`y = (dayIndex + 1) * SQUARE_SIZE + dayIndex *
- * gutterSize`). Combined with our 8px font and the 2px row gutter, that
- * made the "Mon" label's visible glyphs spill into the Tuesday row — so a
- * Monday rect (top row under the month labels) appeared to line up with
- * the "Mon" label one row below it.
+ * Library contract (`react-calendar-heatmap@1.10.0`,
+ * `getWeekdayLabelCoordinates`): every column is a vertical stack of 7 rects
+ * with `dayIndex 0 = Sunday` at the TOP and `dayIndex 6 = Saturday` at the
+ * bottom. Clicking the top rect of any full-week column must therefore open
+ * the day popover with a "Sun, ..." header.
  *
- * Fix: a CSS `translateY(-3px)` nudge on
- * `.react-calendar-heatmap-weekday-label` in `src/index.css` so each
- * weekday label sits vertically centered on its own row.
+ * Bug observed: clicking the top rect of a column opened the popover with a
+ * "Mon, ..." header instead of "Sun, ..." — meaning the rendered rows or the
+ * label nudge had pushed days out of sync.
  *
- * This test guards the fix by asserting the visible vertical center of
- * each rendered weekday label (`Mon`, `Wed`, `Fri`) lies within its row's
- * rect bounds (i.e. NOT drifting into the next row's bounds).
+ * These tests are DOM-anchored:
+ *   - row-index inside a column (the `react-calendar-heatmap` always renders
+ *     7 rects per full week, top-to-bottom = Sun..Sat),
+ *   - the date encoded in the rect's `<title>` (only emitted for cells with
+ *     activity, which are also the only cells that fire the popover), and
+ *   - the popover header text (`format(date, 'EEE, MMM d, yyyy')`).
+ *
+ * They do NOT rely on text bounding-box math — text bbox includes font
+ * descender padding and produces a misleading "drift" reading.
  */
-test.describe('Dashboard Heatmap Weekday Label Alignment', () => {
+
+interface RectInfo {
+  /** Date from `<title>` (`"YYYY-MM-DD"`) or empty string for cells with no activity. */
+  date: string
+  hasActivity: boolean
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+test.describe('Dashboard Heatmap Weekday Alignment', () => {
   test.setTimeout(90_000)
 
   test.beforeEach(async ({ page }) => {
@@ -39,68 +55,65 @@ test.describe('Dashboard Heatmap Weekday Label Alignment', () => {
     await expect(page.getByText('Less')).toBeVisible({ timeout: 30_000 })
   })
 
-  test('weekday labels align with their own row, not the row below', async ({
+  test('every clickable rect sits on the row matching its weekday', async ({
+    page,
+  }) => {
+    const columns = await fullWeekColumns(page)
+    expect(
+      columns.length,
+      'expected at least one full-week column with 7 rects',
+    ).toBeGreaterThan(0)
+
+    const mismatches: Array<{
+      date: string
+      rowIndex: number
+      weekday: number
+    }> = []
+    let checked = 0
+    for (const col of columns) {
+      for (let i = 0; i < col.length; i++) {
+        const r = col[i]
+        if (!r.date) continue
+        checked++
+        const wd = weekdayFromIsoDate(r.date)
+        if (wd !== i)
+          mismatches.push({ date: r.date, rowIndex: i, weekday: wd })
+      }
+    }
+
+    expect(
+      checked,
+      'expected at least one rect with a date in <title>',
+    ).toBeGreaterThan(0)
+    expect(
+      mismatches,
+      `rects whose row-index in the column does not match their weekday ` +
+        `(0=Sun..6=Sat): ${JSON.stringify(mismatches.slice(0, 10))}`,
+    ).toEqual([])
+  })
+
+  test('clicking the top rect of a column opens the Sunday popover', async ({
     page,
   }) => {
     const prefix = `heatmap-weekday-${test.info().project.name}`
 
-    // Grab the weekday label <text> elements (there are 3: Mon, Wed, Fri).
-    const labels = await page.$$eval(
-      '.garmin-heatmap text.react-calendar-heatmap-weekday-label',
-      (els) =>
-        els
-          .map((el) => {
-            const text = (el.textContent ?? '').trim()
-            const bounds = el.getBoundingClientRect()
-            return {
-              text,
-              top: bounds.top,
-              bottom: bounds.bottom,
-              center: bounds.top + bounds.height / 2,
-            }
-          })
-          .filter((l) => l.text.length > 0),
-    )
+    const sundayColumn = await findSundayClickableColumn(page)
+    if (!sundayColumn) {
+      test.info().annotations.push({
+        type: 'skip',
+        description:
+          'No full-week column has a Sunday with activity in the current ' +
+          'year — cannot validate the popover click path. The row-index ' +
+          'assertion above still guards the underlying weekday mapping.',
+      })
+      test.skip()
+      return
+    }
 
-    expect(labels.map((l) => l.text)).toEqual(['Mon', 'Wed', 'Fri'])
-
-    // Find a column with a full 7-row stack of rects so we can identify each
-    // weekday row by index (Sun=0, Mon=1, ..., Sat=6). We bucket rects by
-    // their x coordinate (rounded) and pick the first column that has 7
-    // vertically-sorted rects.
-    const sevenRowColumn = await page.$$eval(
-      '.garmin-heatmap svg rect',
-      (rects) => {
-        const byCol = new Map<
-          number,
-          Array<{ top: number; bottom: number; center: number }>
-        >()
-        for (const el of rects) {
-          const bounds = el.getBoundingClientRect()
-          const col = Math.round(bounds.left)
-          const row = {
-            top: bounds.top,
-            bottom: bounds.bottom,
-            center: bounds.top + bounds.height / 2,
-          }
-          const bucket = byCol.get(col)
-          if (bucket) {
-            bucket.push(row)
-          } else {
-            byCol.set(col, [row])
-          }
-        }
-        for (const rows of byCol.values()) {
-          if (rows.length === 7) {
-            return rows.sort((a, b) => a.top - b.top)
-          }
-        }
-        return null
-      },
-    )
+    const { columnRects, sundayRect } = sundayColumn
 
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, `${prefix}-01-heatmap.png`),
+      path: path.join(SCREENSHOT_DIR, `${prefix}-01-before-click.png`),
       fullPage: false,
       clip: await page
         .locator('[data-testid="garmin-heatmap-card"]')
@@ -108,56 +121,106 @@ test.describe('Dashboard Heatmap Weekday Label Alignment', () => {
         .then((b) => b ?? undefined),
     })
 
-    expect(
-      sevenRowColumn,
-      'expected a heatmap column with all 7 weekday rows',
-    ).not.toBeNull()
+    // Sanity: the rect we are about to click is genuinely a Sunday.
+    expect(weekdayFromIsoDate(sundayRect.date)).toBe(0)
+    // And it really is the top of its column.
+    expect(sundayRect.top).toBe(columnRects[0].top)
 
-    const rows = sevenRowColumn!
-    // Library: index 0 = Sunday, 1 = Monday, 2 = Tuesday, ..., 6 = Saturday.
-    const monRow = rows[1]
-    const wedRow = rows[3]
-    const friRow = rows[5]
-
-    const monLabel = labels.find((l) => l.text === 'Mon')!
-    const wedLabel = labels.find((l) => l.text === 'Wed')!
-    const friLabel = labels.find((l) => l.text === 'Fri')!
-
-    // Each label's visual center must fall within its own row's vertical
-    // bounds — i.e. not drift into the adjacent row. We add no slack:
-    // `top <= center <= bottom` is what "aligned" means visually.
-    expect(
-      monLabel.center,
-      `Mon label center (${monLabel.center}) must be within Monday row bounds ` +
-        `[${monRow.top}, ${monRow.bottom}]`,
-    ).toBeGreaterThanOrEqual(monRow.top)
-    expect(monLabel.center).toBeLessThanOrEqual(monRow.bottom)
-
-    expect(
-      wedLabel.center,
-      `Wed label center (${wedLabel.center}) must be within Wednesday row bounds ` +
-        `[${wedRow.top}, ${wedRow.bottom}]`,
-    ).toBeGreaterThanOrEqual(wedRow.top)
-    expect(wedLabel.center).toBeLessThanOrEqual(wedRow.bottom)
-
-    expect(
-      friLabel.center,
-      `Fri label center (${friLabel.center}) must be within Friday row bounds ` +
-        `[${friRow.top}, ${friRow.bottom}]`,
-    ).toBeGreaterThanOrEqual(friRow.top)
-    expect(friLabel.center).toBeLessThanOrEqual(friRow.bottom)
-
-    // Tighter check: the label center should be within 2px of the row center.
-    // This catches subtle drift that bounds-only checks might miss.
-    const ROW_CENTER_TOLERANCE_PX = 2
-    expect(Math.abs(monLabel.center - monRow.center)).toBeLessThanOrEqual(
-      ROW_CENTER_TOLERANCE_PX,
+    await page.mouse.click(
+      sundayRect.left + sundayRect.width / 2,
+      sundayRect.top + sundayRect.height / 2,
     )
-    expect(Math.abs(wedLabel.center - wedRow.center)).toBeLessThanOrEqual(
-      ROW_CENTER_TOLERANCE_PX,
-    )
-    expect(Math.abs(friLabel.center - friRow.center)).toBeLessThanOrEqual(
-      ROW_CENTER_TOLERANCE_PX,
-    )
+
+    const popover = page.getByTestId('garmin-day-popover')
+    await expect(popover).toBeVisible({ timeout: 10_000 })
+
+    // Popover header is `format(date, 'EEE, MMM d, yyyy')` — Sunday short
+    // form is "Sun".
+    const headerText = (await popover.locator('p').first().textContent()) ?? ''
+    expect(
+      headerText,
+      `popover header "${headerText}" must start with "Sun, " for ` +
+        `clicked date ${sundayRect.date}`,
+    ).toMatch(/^Sun,\s/)
+
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, `${prefix}-02-popover.png`),
+      fullPage: false,
+      clip: await page
+        .locator('[data-testid="garmin-heatmap-card"]')
+        .boundingBox()
+        .then((b) => b ?? undefined),
+    })
   })
 })
+
+/**
+ * Reads every rect in the heatmap and groups them into columns (buckets by
+ * rounded x). Returns only columns that have all 7 weekday rows, each
+ * sorted top-to-bottom.
+ */
+async function fullWeekColumns(
+  page: import('@playwright/test').Page,
+): Promise<RectInfo[][]> {
+  return page.$$eval('.garmin-heatmap svg rect', (rects) => {
+    const dateRe = /(\d{4}-\d{2}-\d{2})/
+    const activityRe = /color-scale-\d/
+    const byCol = new Map<
+      number,
+      Array<{
+        date: string
+        hasActivity: boolean
+        top: number
+        left: number
+        width: number
+        height: number
+      }>
+    >()
+    for (const el of rects) {
+      const titleEl = el.querySelector('title')
+      const titleText = (titleEl?.textContent ?? '').trim()
+      const m = dateRe.exec(titleText)
+      const bounds = el.getBoundingClientRect()
+      const col = Math.round(bounds.left)
+      const entry = {
+        date: m ? m[1] : '',
+        hasActivity: activityRe.test(el.getAttribute('class') ?? ''),
+        top: bounds.top,
+        left: bounds.left,
+        width: bounds.width,
+        height: bounds.height,
+      }
+      const bucket = byCol.get(col)
+      if (bucket) bucket.push(entry)
+      else byCol.set(col, [entry])
+    }
+    const out: typeof byCol extends Map<number, infer V> ? V[] : never[] = []
+    for (const rows of byCol.values()) {
+      if (rows.length === 7) out.push(rows.sort((a, b) => a.top - b.top))
+    }
+    return out
+  })
+}
+
+/**
+ * Finds the first full-week column whose top rect (Sunday) has a colored
+ * class — only those trigger the popover via the heatmap's `onClick`
+ * (`if (!value.count) return`).
+ */
+async function findSundayClickableColumn(
+  page: import('@playwright/test').Page,
+): Promise<{ columnRects: RectInfo[]; sundayRect: RectInfo } | null> {
+  const columns = await fullWeekColumns(page)
+  for (const col of columns) {
+    const top = col[0]
+    if (top.hasActivity && top.date) {
+      return { columnRects: col, sundayRect: top }
+    }
+  }
+  return null
+}
+
+/** Returns 0..6 for Sun..Sat using a UTC-anchored date to avoid TZ skew. */
+function weekdayFromIsoDate(iso: string): number {
+  return new Date(`${iso}T00:00:00Z`).getUTCDay()
+}

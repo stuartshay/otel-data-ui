@@ -19,15 +19,20 @@ vi.mock('@/__generated__/graphql', () => hooks)
 // react-calendar-heatmap renders an SVG that is heavy in JSDOM; replace it
 // with a lightweight stub that exposes the values prop for assertions so the
 // tests can verify what the component derived from the GraphQL response.
-let latestHeatmapValues: Array<{ date: string; count: number }> = []
+let latestHeatmapValues: Array<{ date: Date; dateStr: string; count: number }> =
+  []
 
 vi.mock('react-calendar-heatmap', () => ({
-  default: ({ values }: { values: Array<{ date: string; count: number }> }) => {
+  default: ({
+    values,
+  }: {
+    values: Array<{ date: Date; dateStr: string; count: number }>
+  }) => {
     latestHeatmapValues = values
     return (
       <svg data-testid="heatmap-stub">
         {values.map((v) => (
-          <rect key={v.date} data-date={v.date} data-count={v.count} />
+          <rect key={v.dateStr} data-date={v.dateStr} data-count={v.count} />
         ))}
       </svg>
     )
@@ -102,15 +107,26 @@ describe('GarminActivityHeatmap', () => {
     expect(screen.getByText(/3 activities over 2 days/i)).toBeInTheDocument()
 
     // The component must forward the parsed values into the heatmap with
-    // the correct shape. Days with null/0 activities are excluded.
+    // the correct shape. `date` is a local-midnight Date (avoids the
+    // `new Date('YYYY-MM-DD')` UTC-shift inside react-calendar-heatmap),
+    // and `dateStr` preserves the ISO string for popover/title use.
+    // Days with null/0 activities are excluded.
     expect(latestHeatmapValues).toEqual(
       expect.arrayContaining([
-        { date: '2026-04-15', count: 2 },
-        { date: '2026-04-16', count: 1 },
+        {
+          date: new Date(2026, 3, 15),
+          dateStr: '2026-04-15',
+          count: 2,
+        },
+        {
+          date: new Date(2026, 3, 16),
+          dateStr: '2026-04-16',
+          count: 1,
+        },
       ]),
     )
     expect(
-      latestHeatmapValues.find((v) => v.date === '2026-04-17'),
+      latestHeatmapValues.find((v) => v.dateStr === '2026-04-17'),
     ).toBeUndefined()
   })
 

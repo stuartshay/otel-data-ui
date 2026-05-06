@@ -25,11 +25,16 @@ const YEAR_OPTIONS = Array.from(
 )
 
 interface HeatmapValue {
-  date: string
+  /** Local-midnight Date — passed to the library so weekday positioning matches the calendar date. */
+  date: Date
+  /** ISO `YYYY-MM-DD` string for downstream consumers (titles, popover lookup). */
+  dateStr: string
   count: number
 }
 
-type HeatmapCallbackValue = { date: string; [key: string]: unknown } | undefined
+type HeatmapCallbackValue =
+  | { date: Date; dateStr?: string; count?: number; [key: string]: unknown }
+  | undefined
 
 function getColorClass(value: HeatmapCallbackValue): string {
   if (!value || !value.count) return 'color-empty'
@@ -41,10 +46,16 @@ function getColorClass(value: HeatmapCallbackValue): string {
 }
 
 function getTitleForValue(value: HeatmapCallbackValue): string {
-  if (!value || !value.date) return 'No activities'
+  if (!value || !value.dateStr) return 'No activities'
   const count = (value.count as number) ?? 0
-  if (count === 0) return `No activities on ${value.date}`
-  return `${count} ${count === 1 ? 'activity' : 'activities'} on ${value.date}`
+  if (count === 0) return `No activities on ${value.dateStr}`
+  return `${count} ${count === 1 ? 'activity' : 'activities'} on ${value.dateStr}`
+}
+
+/** Build a Date at local midnight from an ISO `YYYY-MM-DD` string (avoids UTC-shift). */
+function parseLocalDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 export function GarminActivityHeatmap() {
@@ -82,7 +93,11 @@ export function GarminActivityHeatmap() {
       dateMap.set(date, (dateMap.get(date) ?? 0) + entry.garmin_activities)
     }
 
-    return Array.from(dateMap, ([date, count]) => ({ date, count }))
+    return Array.from(dateMap, ([dateStr, count]) => ({
+      date: parseLocalDate(dateStr),
+      dateStr,
+      count,
+    }))
   }, [data])
 
   const totalActivities = heatmapValues.reduce((sum, v) => sum + v.count, 0)
@@ -154,9 +169,9 @@ export function GarminActivityHeatmap() {
               showWeekdayLabels
               gutterSize={2}
               onClick={(value: HeatmapCallbackValue) => {
-                if (!value || !value.date || !value.count) return
+                if (!value || !value.dateStr || !value.count) return
                 setAnchorPos(pendingAnchor.current)
-                setSelectedDate(value.date)
+                setSelectedDate(value.dateStr)
                 setPopoverOpen(true)
               }}
             />
