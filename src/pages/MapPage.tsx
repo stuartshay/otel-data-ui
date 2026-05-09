@@ -114,8 +114,6 @@ export function MapPage() {
                   { after: dataMaxDate },
                   ...(dataMinDate ? [{ before: dataMinDate }] : []),
                 ]}
-                fromDate={dataMinDate}
-                toDate={dataMaxDate}
                 startMonth={dataMinDate}
                 endMonth={dataMaxDate}
               />
