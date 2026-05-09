@@ -140,8 +140,6 @@ export function DateRangePicker({
               { after: maxDate },
               ...(minDate ? [{ before: minDate }] : []),
             ]}
-            fromDate={minDate}
-            toDate={maxDate}
             startMonth={minDate}
             endMonth={maxDate}
             defaultMonth={dateFrom ?? subDays(new Date(), 30)}
