@@ -10,9 +10,13 @@ FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 
+# HUSKY=0 disables the husky `prepare` script without touching dependency
+# lifecycle scripts (e.g. the esbuild postinstall that sets up its native binary).
+ENV HUSKY=0
+
 COPY package*.json ./
 
-RUN npm ci --ignore-scripts --prefer-offline --no-audit --fund=false
+RUN npm ci --prefer-offline --no-audit --fund=false
 
 COPY . .
 
