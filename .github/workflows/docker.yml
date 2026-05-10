@@ -77,20 +77,6 @@ jobs:
           fi
           echo "Version: ${VERSION}"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build React app
-        run: npm run build
-        env:
-          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
-
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -127,8 +113,10 @@ jobs:
           push: ${{ steps.push.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.ref_name }}
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}
+          provenance: true
+          sbom: true
           build-args: |
             APP_VERSION=${{ steps.version.outputs.version }}
 

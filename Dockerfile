@@ -1,21 +1,24 @@
 # =============================================================================
 # Stage 1: Build React application
+#
+# Pinned to $BUILDPLATFORM so multi-arch builds (linux/amd64,linux/arm64) run
+# `npm ci`/`vite build` natively on the runner instead of under QEMU. The
+# resulting dist/ is pure static assets and architecture-independent, so only
+# the final nginx stage needs to be cross-built.
 # =============================================================================
-FROM node:24-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 
-ENV HUSKY=0
-
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci --ignore-scripts --prefer-offline --no-audit --fund=false
 
 COPY . .
 
 ARG APP_VERSION=dev
 ENV VITE_APP_VERSION=${APP_VERSION}
-RUN npm pkg delete scripts.prepare && npm run build
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Serve with nginx
