@@ -29,18 +29,17 @@ export function ActivityHoverDetails({ point }: ActivityHoverDetailsProps) {
           <Field
             label="Elevation"
             value={
-              point.elevation != null
-                ? `${point.elevation.toFixed(1)} ft`
-                : '—'
+              point.elevation != null ? `${point.elevation.toFixed(1)} ft` : '—'
             }
           />
           <Field
             label="Speed"
-            value={
-              point.speed != null ? `${point.speed.toFixed(1)} mph` : '—'
-            }
+            value={point.speed != null ? `${point.speed.toFixed(1)} mph` : '—'}
           />
-          <Field label="Time" value={`${timeStr} (${point.time.toFixed(1)} min)`} />
+          <Field
+            label="Time"
+            value={`${timeStr} (${point.time.toFixed(1)} min)`}
+          />
           <Field
             label="Distance"
             value={

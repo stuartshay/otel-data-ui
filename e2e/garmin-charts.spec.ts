@@ -94,12 +94,13 @@ test.describe('Garmin Activity Charts', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
 
     // Both charts should render a synced cursor line (Recharts syncId).
-    await expect(
-      elevationCard.locator('.recharts-tooltip-cursor'),
-    ).toHaveCount(1, { timeout: 5_000 })
-    await expect(
-      speedCard.locator('.recharts-tooltip-cursor'),
-    ).toHaveCount(1, { timeout: 5_000 })
+    await expect(elevationCard.locator('.recharts-tooltip-cursor')).toHaveCount(
+      1,
+      { timeout: 5_000 },
+    )
+    await expect(speedCard.locator('.recharts-tooltip-cursor')).toHaveCount(1, {
+      timeout: 5_000,
+    })
 
     // Hover details panel should now show a numeric Elevation value
     // (replaces the placeholder text).
