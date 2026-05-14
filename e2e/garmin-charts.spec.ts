@@ -108,13 +108,22 @@ test.describe('Garmin Activity Charts', () => {
       timeout: 5_000,
     })
 
-    // Hover details panel should now show a numeric Elevation value
-    // (replaces the placeholder text).
+    // Hover details panel should now show the unified point metadata:
+    // elevation, speed, time, distance, and lat/lon — not the placeholder.
     await expect(details).not.toContainText('Hover the Elevation', {
       timeout: 5_000,
     })
+    await expect(details).toContainText('Elevation')
     await expect(details).toContainText('ft')
+    await expect(details).toContainText('Speed')
     await expect(details).toContainText('mph')
+    await expect(details).toContainText('Time')
+    await expect(details).toContainText('min)')
+    await expect(details).toContainText('Distance')
+    await expect(details).toContainText('mi')
+    await expect(details).toContainText('Lat/Lon')
+    // Lat/Lon renders to 5 decimal places, e.g. "40.12345, -74.67890".
+    await expect(details).toContainText(/-?\d+\.\d{5},\s*-?\d+\.\d{5}/)
 
     // Leaflet hover marker is added to the route map. Target the dedicated
     // `activity-hover-marker` class so we don't match the route polylines or

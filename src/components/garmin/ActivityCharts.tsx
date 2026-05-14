@@ -26,8 +26,8 @@ interface ActivityChartsProps {
   /**
    * Notifies the parent which chart point is currently under the cursor so the
    * page can render a shared details panel and a map hover marker. The two
-   * charts share this state via Recharts' syncId — both charts crosshair the
-   * same x-position and emit the same active index.
+   * charts share this state via Recharts' syncId — both charts show a
+   * crosshair at the same x-position and emit the same active index.
    */
   onActivePointChange?: (point: ChartDataPoint | null) => void
 }

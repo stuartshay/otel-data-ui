@@ -26,6 +26,17 @@ export function GarminDetailPage() {
   const location = useLocation()
   const [activePoint, setActivePoint] = useState<ChartDataPoint | null>(null)
 
+  // Reset hover state when switching activities so the shared details
+  // panel and map marker don't briefly show stale coordinates from the
+  // previously-viewed activity. React's recommended "adjusting state on
+  // prop change" pattern keeps this in render and avoids the
+  // set-state-in-effect lint rule.
+  const [prevActivityId, setPrevActivityId] = useState(activityId)
+  if (activityId !== prevActivityId) {
+    setPrevActivityId(activityId)
+    setActivePoint(null)
+  }
+
   useEffect(() => {
     setNRCustomAttribute('garmin.flow', true)
   }, [])
