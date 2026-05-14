@@ -71,4 +71,54 @@ test.describe('Garmin Activity Charts', () => {
     await expect(charts.nth(0)).toBeVisible()
     await expect(charts.nth(1)).toBeVisible()
   })
+
+  test('hovering one chart syncs the cursor and map marker', async ({
+    page,
+  }) => {
+    await page.goto(`/garmin/${ACTIVITY_ID}`)
+
+    const elevationCard = page.getByTestId('chart-elevation')
+    const speedCard = page.getByTestId('chart-speed')
+    const routeMap = page.getByTestId('activity-route-map')
+    const details = page.getByTestId('activity-hover-details')
+
+    await expect(elevationCard).toBeVisible({ timeout: 20_000 })
+    await expect(speedCard).toBeVisible({ timeout: 20_000 })
+    await expect(routeMap).toBeVisible({ timeout: 20_000 })
+    await expect(details).toBeVisible()
+
+    // Hover the middle of the Elevation chart's SVG.
+    const elevationSvg = elevationCard.locator('.recharts-responsive-container')
+    const box = await elevationSvg.boundingBox()
+    if (!box) throw new Error('Elevation chart bounding box unavailable')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+
+    // Both charts should render a synced cursor line (Recharts syncId).
+    await expect(
+      elevationCard.locator('.recharts-tooltip-cursor'),
+    ).toHaveCount(1, { timeout: 5_000 })
+    await expect(
+      speedCard.locator('.recharts-tooltip-cursor'),
+    ).toHaveCount(1, { timeout: 5_000 })
+
+    // Hover details panel should now show a numeric Elevation value
+    // (replaces the placeholder text).
+    await expect(details).not.toContainText('Hover the Elevation', {
+      timeout: 5_000,
+    })
+    await expect(details).toContainText('ft')
+    await expect(details).toContainText('mph')
+
+    // Leaflet hover marker is added to the route map.
+    // The route polyline already adds <path> elements, so we look for the
+    // dedicated circleMarker element rendered into the leaflet overlay pane.
+    await expect(
+      routeMap.locator('.leaflet-overlay-pane svg path.leaflet-interactive'),
+    ).not.toHaveCount(0)
+
+    await page.screenshot({
+      path: 'e2e/screenshots/garmin-synced-cursor-and-map.png',
+      fullPage: true,
+    })
+  })
 })

@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
@@ -10,7 +10,11 @@ import { ErrorState } from '@/components/shared/ErrorState'
 import { ActivityHeader } from '@/components/garmin/ActivityHeader'
 import { ActivityStatsBar } from '@/components/garmin/ActivityStatsBar'
 import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
-import { ActivityCharts } from '@/components/garmin/ActivityCharts'
+import {
+  ActivityCharts,
+  type ChartDataPoint,
+} from '@/components/garmin/ActivityCharts'
+import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
@@ -20,6 +24,7 @@ const SIMPLIFY_TOLERANCE = 0.00001
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
+  const [activePoint, setActivePoint] = useState<ChartDataPoint | null>(null)
 
   useEffect(() => {
     setNRCustomAttribute('garmin.flow', true)
@@ -87,14 +92,29 @@ export function GarminDetailPage() {
       {trackLoading && <LoadingState message="Loading track data..." />}
 
       {mapTrackPoints.length > 0 && (
-        <ActivityRouteMap trackPoints={mapTrackPoints} />
+        <ActivityRouteMap
+          trackPoints={mapTrackPoints}
+          activeLatLng={
+            activePoint?.latitude != null && activePoint?.longitude != null
+              ? { lat: activePoint.latitude, lng: activePoint.longitude }
+              : null
+          }
+        />
       )}
 
       {chartError && (
         <ErrorState message={`Chart data failed: ${chartError.message}`} />
       )}
 
-      {chartPoints.length > 0 && <ActivityCharts trackPoints={chartPoints} />}
+      {chartPoints.length > 0 && (
+        <>
+          <ActivityHoverDetails point={activePoint} />
+          <ActivityCharts
+            trackPoints={chartPoints}
+            onActivePointChange={setActivePoint}
+          />
+        </>
+      )}
 
       <ActivityStatsPanel activity={a} />
     </div>
