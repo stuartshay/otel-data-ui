@@ -172,8 +172,15 @@ export function ActivityCharts({
                 onMouseMove={(state: {
                   activeTooltipIndex?: number | string | null
                 }) => {
-                  const i = state?.activeTooltipIndex
-                  if (typeof i === 'number' && chartData[i]) {
+                  const raw = state?.activeTooltipIndex
+                  // Recharts 3 may emit the index as a string; normalize it.
+                  const i =
+                    typeof raw === 'number'
+                      ? raw
+                      : typeof raw === 'string' && raw !== ''
+                        ? Number(raw)
+                        : NaN
+                  if (Number.isInteger(i) && chartData[i]) {
                     onActivePointChange?.(chartData[i])
                   }
                 }}

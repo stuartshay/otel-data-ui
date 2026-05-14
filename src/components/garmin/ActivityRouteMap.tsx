@@ -148,6 +148,7 @@ export function ActivityRouteMap({
           weight: 2,
           fillColor: '#ffffff',
           fillOpacity: 1,
+          className: 'activity-hover-marker',
         },
       ).addTo(map)
     }

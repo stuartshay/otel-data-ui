@@ -1,4 +1,10 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
+
+const SCREENSHOT_DIR = path.join('e2e', 'screenshots', 'garmin-charts')
+
+fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 /**
  * Validates that the Garmin activity detail page renders
@@ -110,16 +116,26 @@ test.describe('Garmin Activity Charts', () => {
     await expect(details).toContainText('ft')
     await expect(details).toContainText('mph')
 
-    // Leaflet hover marker is added to the route map.
-    // The route polyline already adds <path> elements, so we look for the
-    // dedicated circleMarker element rendered into the leaflet overlay pane.
-    await expect(
-      routeMap.locator('.leaflet-overlay-pane svg path.leaflet-interactive'),
-    ).not.toHaveCount(0)
+    // Leaflet hover marker is added to the route map. Target the dedicated
+    // `activity-hover-marker` class so we don't match the route polylines or
+    // the start/finish circle markers (which are also leaflet-interactive).
+    const hoverMarker = routeMap.locator(
+      '.leaflet-overlay-pane svg path.activity-hover-marker',
+    )
+    await expect(hoverMarker).toHaveCount(1, { timeout: 5_000 })
 
     await page.screenshot({
-      path: 'e2e/screenshots/garmin-synced-cursor-and-map.png',
+      path: path.join(SCREENSHOT_DIR, 'synced-cursor-and-map.png'),
       fullPage: true,
     })
+
+    // Moving the pointer off the charts should clear the shared state:
+    // the details panel returns to its placeholder and the hover marker
+    // is removed from the map.
+    await page.mouse.move(0, 0)
+    await expect(details).toContainText('Hover the Elevation', {
+      timeout: 5_000,
+    })
+    await expect(hoverMarker).toHaveCount(0, { timeout: 5_000 })
   })
 })
