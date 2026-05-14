@@ -1,4 +1,10 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
+
+const SCREENSHOT_DIR = path.join('e2e', 'screenshots', 'garmin-charts')
+
+fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 /**
  * Validates that the Garmin activity detail page renders
@@ -70,5 +76,75 @@ test.describe('Garmin Activity Charts', () => {
     await expect(charts).toHaveCount(2)
     await expect(charts.nth(0)).toBeVisible()
     await expect(charts.nth(1)).toBeVisible()
+  })
+
+  test('hovering one chart syncs the cursor and map marker', async ({
+    page,
+  }) => {
+    await page.goto(`/garmin/${ACTIVITY_ID}`)
+
+    const elevationCard = page.getByTestId('chart-elevation')
+    const speedCard = page.getByTestId('chart-speed')
+    const routeMap = page.getByTestId('activity-route-map')
+    const details = page.getByTestId('activity-hover-details')
+
+    await expect(elevationCard).toBeVisible({ timeout: 20_000 })
+    await expect(speedCard).toBeVisible({ timeout: 20_000 })
+    await expect(routeMap).toBeVisible({ timeout: 20_000 })
+    await expect(details).toBeVisible()
+
+    // Hover the middle of the Elevation chart's SVG.
+    const elevationSvg = elevationCard.locator('.recharts-responsive-container')
+    const box = await elevationSvg.boundingBox()
+    if (!box) throw new Error('Elevation chart bounding box unavailable')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+
+    // Both charts should render a synced cursor line (Recharts syncId).
+    await expect(elevationCard.locator('.recharts-tooltip-cursor')).toHaveCount(
+      1,
+      { timeout: 5_000 },
+    )
+    await expect(speedCard.locator('.recharts-tooltip-cursor')).toHaveCount(1, {
+      timeout: 5_000,
+    })
+
+    // Hover details panel should now show the unified point metadata:
+    // elevation, speed, time, distance, and lat/lon — not the placeholder.
+    await expect(details).not.toContainText('Hover the Elevation', {
+      timeout: 5_000,
+    })
+    await expect(details).toContainText('Elevation')
+    await expect(details).toContainText('ft')
+    await expect(details).toContainText('Speed')
+    await expect(details).toContainText('mph')
+    await expect(details).toContainText('Time')
+    await expect(details).toContainText('min)')
+    await expect(details).toContainText('Distance')
+    await expect(details).toContainText('mi')
+    await expect(details).toContainText('Lat/Lon')
+    // Lat/Lon renders to 5 decimal places, e.g. "40.12345, -74.67890".
+    await expect(details).toContainText(/-?\d+\.\d{5},\s*-?\d+\.\d{5}/)
+
+    // Leaflet hover marker is added to the route map. Target the dedicated
+    // `activity-hover-marker` class so we don't match the route polylines or
+    // the start/finish circle markers (which are also leaflet-interactive).
+    const hoverMarker = routeMap.locator(
+      '.leaflet-overlay-pane svg path.activity-hover-marker',
+    )
+    await expect(hoverMarker).toHaveCount(1, { timeout: 5_000 })
+
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, 'synced-cursor-and-map.png'),
+      fullPage: true,
+    })
+
+    // Moving the pointer off the charts should clear the shared state:
+    // the details panel returns to its placeholder and the hover marker
+    // is removed from the map.
+    await page.mouse.move(0, 0)
+    await expect(details).toContainText('Hover the Elevation', {
+      timeout: 5_000,
+    })
+    await expect(hoverMarker).toHaveCount(0, { timeout: 5_000 })
   })
 })

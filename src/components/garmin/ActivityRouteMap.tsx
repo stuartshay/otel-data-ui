@@ -11,6 +11,12 @@ interface TrackPoint {
 
 interface ActivityRouteMapProps {
   trackPoints: TrackPoint[]
+  /**
+   * Optional point currently under the chart cursor. When provided, the map
+   * renders a small marker at that location so users can see where the active
+   * elevation/speed reading occurred. The map view is not re-centered.
+   */
+  activeLatLng?: { lat: number; lng: number } | null
 }
 
 function speedToColor(
@@ -29,9 +35,13 @@ function speedToColor(
   return '#ef4444' // red - fast
 }
 
-export function ActivityRouteMap({ trackPoints }: ActivityRouteMapProps) {
+export function ActivityRouteMap({
+  trackPoints,
+  activeLatLng,
+}: ActivityRouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const hoverMarkerRef = useRef<L.CircleMarker | null>(null)
 
   useEffect(() => {
     if (!mapRef.current || trackPoints.length === 0) return
@@ -109,13 +119,45 @@ export function ActivityRouteMap({ trackPoints }: ActivityRouteMapProps) {
     return () => {
       map.remove()
       mapInstanceRef.current = null
+      hoverMarkerRef.current = null
     }
   }, [trackPoints])
+
+  // Sync hover marker with the active chart point. Avoid re-fitting bounds so
+  // the map stays put while the user scrubs the charts.
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (!activeLatLng) {
+      if (hoverMarkerRef.current) {
+        hoverMarkerRef.current.remove()
+        hoverMarkerRef.current = null
+      }
+      return
+    }
+
+    if (hoverMarkerRef.current) {
+      hoverMarkerRef.current.setLatLng([activeLatLng.lat, activeLatLng.lng])
+    } else {
+      hoverMarkerRef.current = L.circleMarker(
+        [activeLatLng.lat, activeLatLng.lng],
+        {
+          radius: 6,
+          color: '#111827',
+          weight: 2,
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          className: 'activity-hover-marker',
+        },
+      ).addTo(map)
+    }
+  }, [activeLatLng])
 
   if (trackPoints.length === 0) return null
 
   return (
-    <Card>
+    <Card data-testid="activity-route-map">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Route</CardTitle>
       </CardHeader>

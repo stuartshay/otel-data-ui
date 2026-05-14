@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import {
   AreaChart,
   Area,
@@ -8,7 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { TooltipContentProps } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { kmToMi, metersToFeet, kmhToMph } from '@/lib/units'
@@ -24,6 +23,13 @@ interface TrackPoint {
 
 interface ActivityChartsProps {
   trackPoints: TrackPoint[]
+  /**
+   * Notifies the parent which chart point is currently under the cursor so the
+   * page can render a shared details panel and a map hover marker. The two
+   * charts share this state via Recharts' syncId — both charts show a
+   * crosshair at the same x-position and emit the same active index.
+   */
+  onActivePointChange?: (point: ChartDataPoint | null) => void
 }
 
 type XAxisMode = 'distance' | 'time'
@@ -50,7 +56,7 @@ interface ChartConfig {
   hasData: boolean
 }
 
-interface ChartDataPoint {
+export interface ChartDataPoint {
   distance: number | null
   distanceKm: number | null
   time: number
@@ -61,52 +67,10 @@ interface ChartDataPoint {
   timestamp: string
 }
 
-function ChartTooltipContent({
-  active,
-  payload,
-  chartConfig,
-}: TooltipContentProps<number, string> & {
-  chartConfig: ChartConfig
-}): ReactNode {
-  if (!active || !payload?.length) return null
-  const pt = payload[0].payload as ChartDataPoint
-  const value = payload[0].value
-
-  const timeStr = new Date(pt.timestamp).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-
-  return (
-    <div className="rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
-      <p className="font-semibold">
-        {chartConfig.title}:{' '}
-        {value != null
-          ? `${Number(value).toFixed(1)} ${chartConfig.unit}`
-          : '—'}
-      </p>
-      <div className="mt-1 space-y-0.5 text-muted-foreground">
-        <p>
-          Time: {timeStr} ({pt.time.toFixed(1)} min)
-        </p>
-        {pt.distance != null && (
-          <p>
-            Distance: {pt.distance.toFixed(2)} mi ({pt.distanceKm?.toFixed(2)}{' '}
-            km)
-          </p>
-        )}
-        {pt.latitude != null && pt.longitude != null && (
-          <p>
-            Lat/Lon: {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
+export function ActivityCharts({
+  trackPoints,
+  onActivePointChange,
+}: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
 
   if (trackPoints.length === 0) return null
@@ -204,6 +168,23 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
               <AreaChart
                 data={chartData}
                 margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                syncId="garmin-activity"
+                onMouseMove={(state: {
+                  activeTooltipIndex?: number | string | null
+                }) => {
+                  const raw = state?.activeTooltipIndex
+                  // Recharts 3 may emit the index as a string; normalize it.
+                  const i =
+                    typeof raw === 'number'
+                      ? raw
+                      : typeof raw === 'string' && raw !== ''
+                        ? Number(raw)
+                        : NaN
+                  if (Number.isInteger(i) && chartData[i]) {
+                    onActivePointChange?.(chartData[i])
+                  }
+                }}
+                onMouseLeave={() => onActivePointChange?.(null)}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
@@ -228,12 +209,8 @@ export function ActivityCharts({ trackPoints }: ActivityChartsProps) {
                   width={50}
                 />
                 <Tooltip
-                  content={(props) => (
-                    <ChartTooltipContent
-                      {...(props as TooltipContentProps<number, string>)}
-                      chartConfig={chart}
-                    />
-                  )}
+                  cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
+                  content={() => null}
                 />
                 <Area
                   type="monotone"
