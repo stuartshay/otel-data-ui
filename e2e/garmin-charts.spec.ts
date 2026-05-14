@@ -93,6 +93,11 @@ test.describe('Garmin Activity Charts', () => {
     await expect(routeMap).toBeVisible({ timeout: 20_000 })
     await expect(details).toBeVisible()
 
+    // Charts sit below the initial viewport fold; scroll the elevation card
+    // into view so its bounding box maps onto on-screen coordinates that
+    // page.mouse.move can actually hit.
+    await elevationCard.scrollIntoViewIfNeeded()
+
     // Hover the middle of the Elevation chart's SVG.
     const elevationSvg = elevationCard.locator('.recharts-responsive-container')
     const box = await elevationSvg.boundingBox()
