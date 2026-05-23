@@ -193,3 +193,42 @@ export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
     }
   }
 `
+
+export const GARMIN_EXPORT_POINTS_QUERY = gql`
+  query GarminExportPoints($activity_id: String!, $limit: Int, $offset: Int) {
+    garminTrackPoints(
+      activity_id: $activity_id
+      limit: $limit
+      offset: $offset
+    ) {
+      items {
+        id
+        activity_id
+        timestamp
+        latitude
+        longitude
+        altitude
+        distance_from_start_km
+        speed_kmh
+        heart_rate
+        cadence
+        temperature_c
+        address {
+          display_address
+          street
+          housenumber
+          neighbourhood
+          locality
+          region
+          country
+          postalcode
+          confidence
+          waypoint_kind
+          status
+          geocoded_at
+        }
+      }
+      total
+    }
+  }
+`

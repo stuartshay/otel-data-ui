@@ -39,6 +39,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toLocalDate } from '@/lib/date-range'
+import { escapeCsvValue, triggerDownload } from '@/lib/export'
 
 const PAGE_SIZE = 100
 const EXPORT_LIMIT = 10000
@@ -71,27 +72,6 @@ function parseColorBy(value: string | null): ColorBy {
 
 function parseBoolParam(value: string | null): boolean {
   return value === '1' || value === 'true'
-}
-
-function escapeCsvValue(value: unknown): string {
-  if (value == null) return ''
-  const str = String(value)
-  if (/[,"\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
-}
-
-function triggerDownload(content: string, mime: string, filename: string) {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
 
 export function DailySummaryDetailPage() {

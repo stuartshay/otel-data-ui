@@ -8,6 +8,7 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminActivityQuery: vi.fn(),
   useGarminTrackPointsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
+  useGarminExportPointsLazyQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => garminDetailHooks)
@@ -45,6 +46,13 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityQuery.mockReset()
     garminDetailHooks.useGarminTrackPointsQuery.mockReset()
     garminDetailHooks.useGarminChartDataQuery.mockReset()
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
+
+    // Default no-op export hook so tests that don't exercise export don't crash.
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      vi.fn(),
+      { loading: false },
+    ])
   })
 
   function renderPage(
@@ -185,5 +193,142 @@ describe('GarminDetailPage', () => {
     renderPage()
 
     expect(screen.getByText('Activity not found')).toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
+  // Export helpers
+  // ---------------------------------------------------------------------------
+
+  function mockLoadedActivity() {
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'cycling',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 50.6,
+          duration_seconds: 6932,
+          avg_speed_kmh: 26.3,
+          total_ascent_m: 385,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: { garminTrackPoints: { items: [] } },
+    })
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+  }
+
+  function mockExportPoints() {
+    return [
+      {
+        id: 1,
+        activity_id: '42',
+        timestamp: '2026-03-14T09:00:00Z',
+        latitude: 40.715,
+        longitude: -74.017,
+        altitude: 12.4,
+        distance_from_start_km: 0.0,
+        speed_kmh: 24.5,
+        heart_rate: 135,
+        cadence: 80,
+        temperature_c: 18,
+        address: {
+          display_address: 'Pier 13, Hoboken, NJ',
+          street: 'Sinatra Drive',
+          housenumber: '1301',
+          neighbourhood: 'Waterfront',
+          locality: 'Hoboken',
+          region: 'New Jersey',
+          country: 'United States',
+          postalcode: '07030',
+          confidence: 0.92,
+          waypoint_kind: 'start',
+          status: 'success',
+          geocoded_at: '2026-02-12T08:10:55Z',
+        },
+      },
+    ]
+  }
+
+  it('clicking Export CSV calls the lazy query and triggers a CSV download', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    const fetchExport = vi.fn().mockResolvedValue({
+      data: {
+        garminTrackPoints: { total: 1, items: mockExportPoints() },
+      },
+    })
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    const createObjectURL = vi.fn(() => 'blob:test')
+    const revokeObjectURL = vi.fn()
+    const clickSpy = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
+
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /Export CSV/i }))
+
+    expect(fetchExport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ activity_id: '42' }),
+      }),
+    )
+    expect(createObjectURL).toHaveBeenCalledTimes(1)
+    expect(clickSpy).toHaveBeenCalledTimes(1)
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('clicking Export GeoJSON calls the lazy query and triggers a GeoJSON download', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    const fetchExport = vi.fn().mockResolvedValue({
+      data: {
+        garminTrackPoints: { total: 1, items: mockExportPoints() },
+      },
+    })
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    const createObjectURL = vi.fn(() => 'blob:test')
+    const revokeObjectURL = vi.fn()
+    const clickSpy = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
+
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
+
+    expect(fetchExport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ activity_id: '42' }),
+      }),
+    )
+    expect(createObjectURL).toHaveBeenCalledTimes(1)
+    expect(clickSpy).toHaveBeenCalledTimes(1)
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 })
