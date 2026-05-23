@@ -10,8 +10,13 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminChartDataQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
 }))
+const toastMocks = vi.hoisted(() => ({
+  error: vi.fn(),
+  warning: vi.fn(),
+}))
 
 vi.mock('@/__generated__/graphql', () => garminDetailHooks)
+vi.mock('sonner', () => ({ toast: toastMocks }))
 
 vi.mock('@/components/garmin/ActivityHeader', () => ({
   ActivityHeader: ({ backTo, sport }: { backTo: string; sport: string }) => (
@@ -47,6 +52,8 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminTrackPointsQuery.mockReset()
     garminDetailHooks.useGarminChartDataQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
+    toastMocks.error.mockReset()
+    toastMocks.warning.mockReset()
 
     // Default no-op export hook so tests that don't exercise export don't crash.
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
@@ -327,6 +334,127 @@ describe('GarminDetailPage', () => {
     )
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(clickSpy).toHaveBeenCalledTimes(1)
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('clicking Export GeoJSON downloads an empty FeatureCollection when no points are returned', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    const fetchExport = vi.fn().mockResolvedValue({
+      data: {
+        garminTrackPoints: { total: 0, items: [] },
+      },
+    })
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    let exportedBlob: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob
+      return 'blob:test'
+    })
+    const revokeObjectURL = vi.fn()
+    const clickSpy = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
+
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1)
+    if (!exportedBlob) throw new Error('Expected export blob to be created')
+    expect(exportedBlob).toBeInstanceOf(Blob)
+    await expect(exportedBlob.text()).resolves.toBe(
+      JSON.stringify({ type: 'FeatureCollection', features: [] }, null, 2),
+    )
+    expect(clickSpy).toHaveBeenCalledTimes(1)
+    expect(toastMocks.warning).toHaveBeenCalledWith(
+      'No track points found for this activity',
+      expect.any(Object),
+    )
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('shows an error toast when the export query fails', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      vi.fn().mockRejectedValue(new Error('gateway unavailable')),
+      { loading: false },
+    ])
+
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
+
+    await vi.waitFor(() => {
+      expect(toastMocks.error).toHaveBeenCalledWith('Export GEOJSON failed', {
+        description: 'gateway unavailable',
+      })
+    })
+  })
+
+  it('only activates the clicked export button — the other stays idle but disabled', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    // Build a manually-resolved promise so we can observe the in-flight
+    // loading window between click and resolution.
+    let resolveFetch: (value: unknown) => void = () => {}
+    const pending = new Promise((resolve) => {
+      resolveFetch = resolve
+    })
+    const fetchExport = vi.fn().mockReturnValue(pending)
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    const createObjectURL = vi.fn(() => 'blob:test')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    renderPage()
+
+    const csvButton = screen.getByTestId('export-csv-button')
+    const geojsonButton = screen.getByTestId('export-geojson-button')
+
+    // Before click — both buttons enabled, no spinners.
+    expect(csvButton).not.toBeDisabled()
+    expect(geojsonButton).not.toBeDisabled()
+    expect(screen.queryByTestId('export-csv-spinner')).toBeNull()
+    expect(screen.queryByTestId('export-geojson-spinner')).toBeNull()
+
+    await user.click(csvButton)
+
+    // Mid-flight — CSV button shows a spinner, both are disabled,
+    // and the GeoJSON button must NOT show a spinner.
+    expect(screen.getByTestId('export-csv-spinner')).toBeInTheDocument()
+    expect(screen.queryByTestId('export-geojson-spinner')).toBeNull()
+    expect(csvButton).toBeDisabled()
+    expect(geojsonButton).toBeDisabled()
+
+    // Resolve the in-flight export and wait for state to settle.
+    resolveFetch({
+      data: { garminTrackPoints: { total: 1, items: mockExportPoints() } },
+    })
+
+    await vi.waitFor(() => {
+      expect(screen.queryByTestId('export-csv-spinner')).toBeNull()
+    })
+    expect(screen.queryByTestId('export-geojson-spinner')).toBeNull()
+    expect(csvButton).not.toBeDisabled()
+    expect(geojsonButton).not.toBeDisabled()
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
