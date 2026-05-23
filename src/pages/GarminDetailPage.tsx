@@ -20,30 +20,12 @@ import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
+import { escapeCsvValue, triggerDownload } from '@/lib/export'
 
 /** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
 const SIMPLIFY_TOLERANCE = 0.00001
-
-function escapeCsvValue(value: unknown): string {
-  if (value == null) return ''
-  const str = String(value)
-  if (/[,"\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
-}
-
-function triggerDownload(content: string, mime: string, filename: string) {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
+/** Maximum track points fetched per page when exporting. */
+const EXPORT_PAGE_SIZE = 10000
 
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
@@ -74,10 +56,28 @@ export function GarminDetailPage() {
 
   async function handleExport(format: 'csv' | 'geojson') {
     if (!activityId) return
-    const result = await fetchExportPoints({
-      variables: { activity_id: activityId },
-    })
-    const points = result.data?.garminTrackPoints?.items ?? []
+
+    // Page through all track points in batches to avoid the 25 k hard limit.
+    type TrackItem = NonNullable<
+      Awaited<ReturnType<typeof fetchExportPoints>>['data']
+    >['garminTrackPoints']['items'][number]
+    const allPoints: TrackItem[] = []
+    let offset = 0
+    let total = Infinity
+
+    while (offset < total) {
+      const result = await fetchExportPoints({
+        variables: { activity_id: activityId, limit: EXPORT_PAGE_SIZE, offset },
+      })
+      const page = result.data?.garminTrackPoints
+      if (!page) break
+      total = page.total
+      allPoints.push(...(page.items ?? []))
+      offset += EXPORT_PAGE_SIZE
+      if (allPoints.length >= total) break
+    }
+
+    const points = allPoints
     if (points.length === 0) return
 
     if (format === 'csv') {

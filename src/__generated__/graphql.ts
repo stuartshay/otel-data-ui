@@ -798,12 +798,7 @@ export type ReferenceLocation = {
   updated_at?: Maybe<Scalars['String']['output']>;
 };
 
-/** Sort direction for query results. */
-export type SortOrder =
-  /** Ascending order (oldest first, A-Z) */
-  | 'asc'
-  /** Descending order (newest first, Z-A) */
-  | 'desc';
+
 
 /** Sport type with its activity count. */
 export type SportInfo = {
@@ -941,6 +936,8 @@ export type TriggerGarminSyncMutation = { triggerGarminSync: { status: string, m
 
 export type GarminExportPointsQueryVariables = Exact<{
   activity_id: string;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }>;
 
 
@@ -1537,8 +1534,8 @@ export type TriggerGarminSyncMutationHookResult = ReturnType<typeof useTriggerGa
 export type TriggerGarminSyncMutationResult = ApolloReactCommon.MutationResult<TriggerGarminSyncMutation>;
 export type TriggerGarminSyncMutationOptions = ApolloReactCommon.BaseMutationOptions<TriggerGarminSyncMutation, TriggerGarminSyncMutationVariables>;
 export const GarminExportPointsDocument = gql`
-    query GarminExportPoints($activity_id: String!) {
-  garminTrackPoints(activity_id: $activity_id, limit: 25000) {
+    query GarminExportPoints($activity_id: String!, $limit: Int, $offset: Int) {
+  garminTrackPoints(activity_id: $activity_id, limit: $limit, offset: $offset) {
     items {
       id
       activity_id
@@ -1584,6 +1581,8 @@ export const GarminExportPointsDocument = gql`
  * const { data, loading, error } = useGarminExportPointsQuery({
  *   variables: {
  *      activity_id: // value for 'activity_id'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
