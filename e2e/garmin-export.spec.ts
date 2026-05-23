@@ -13,6 +13,17 @@ import { test, expect, type Page, type Route } from '@playwright/test'
  * with the PLAYWRIGHT_GARMIN_ACTIVITY_ID environment variable.
  */
 const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '9965963574'
+const GRAPHQL_ENDPOINT_PATTERN =
+  /^https:\/\/gateway\.lab\.informationcart\.com\/(?:\?.*)?$|^http:\/\/(?:localhost|127\.0\.0\.1):4000\/(?:\?.*)?$/
+
+function isGarminExportOperation(body: string): boolean {
+  try {
+    const payload = JSON.parse(body) as { operationName?: string }
+    return payload.operationName === 'GarminExportPoints'
+  } catch {
+    return body.includes('GarminExportPoints')
+  }
+}
 
 /**
  * Intercept the GraphQL `GarminExportPoints` query, delay the response,
@@ -23,13 +34,13 @@ const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '9965963574'
 async function mockExportQuery(page: Page, delayMs: number) {
   let requestCount = 0
 
-  await page.route('**/*', async (route: Route) => {
+  await page.route(GRAPHQL_ENDPOINT_PATTERN, async (route: Route) => {
     const request = route.request()
     if (request.method() !== 'POST') {
       return route.continue()
     }
     const body = request.postData() ?? ''
-    if (body.includes('GarminExportPoints')) {
+    if (isGarminExportOperation(body)) {
       requestCount += 1
       await new Promise((resolve) => setTimeout(resolve, delayMs))
       return route.fulfill({
