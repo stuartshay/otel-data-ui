@@ -192,14 +192,12 @@ test.describe('Garmin Activity Export Buttons', () => {
     const downloadPromise = page.waitForEvent('download')
     await csvButton.click()
 
-    // While CSV is exporting, the GeoJSON button must be `disabled`
-    // and its click must be a no-op (no second download, no extra
-    // spinner). We `click({ force: true })` to verify the underlying
-    // handler honors the guard, not just the disabled HTML attribute.
+    // While CSV is exporting, dispatch a DOM click event directly on
+    // the GeoJSON button. Native disabled buttons will not fire normal
+    // Playwright clicks, so this exercises the handler-level guard
+    // instead of only the disabled HTML attribute.
     await expect(geojsonButton).toBeDisabled({ timeout: 5_000 })
-    await geojsonButton.click({ force: true }).catch(() => {
-      /* clicking a disabled button can throw — that's fine */
-    })
+    await geojsonButton.dispatchEvent('click')
     await expect(page.getByTestId('export-geojson-spinner')).toHaveCount(0)
 
     // The original CSV download still completes successfully.

@@ -36,5 +36,11 @@ export function triggerDownload(
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  const revokeObjectURL =
+    typeof URL.revokeObjectURL === 'function'
+      ? URL.revokeObjectURL.bind(URL)
+      : undefined
+  if (revokeObjectURL) {
+    window.setTimeout(() => revokeObjectURL(url), 0)
+  }
 }

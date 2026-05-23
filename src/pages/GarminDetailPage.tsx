@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -62,14 +62,16 @@ export function GarminDetailPage() {
   const [activeExport, setActiveExport] = useState<'csv' | 'geojson' | null>(
     null,
   )
+  const exportInFlightRef = useRef(false)
   const isExporting = activeExport !== null
 
   async function handleExport(format: 'csv' | 'geojson') {
     if (!activityId) return
     // Prevent concurrent exports — the other button is disabled, but
     // also guard programmatic re-entry just in case.
-    if (activeExport !== null) return
+    if (exportInFlightRef.current) return
 
+    exportInFlightRef.current = true
     setActiveExport(format)
     try {
       // Page through all track points in batches to avoid the 25 k hard limit.
@@ -210,6 +212,7 @@ export function GarminDetailPage() {
           error instanceof Error ? error.message : 'Unknown export error',
       })
     } finally {
+      exportInFlightRef.current = false
       setActiveExport(null)
     }
   }

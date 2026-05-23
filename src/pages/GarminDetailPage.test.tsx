@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Routes } from 'react-router-dom'
@@ -401,6 +401,28 @@ describe('GarminDetailPage', () => {
         description: 'gateway unavailable',
       })
     })
+  })
+
+  it('ignores a second export click before React applies disabled state', () => {
+    mockLoadedActivity()
+
+    const fetchExport = vi.fn().mockReturnValue(new Promise(() => {}))
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('export-csv-button'))
+    fireEvent.click(screen.getByTestId('export-geojson-button'))
+
+    expect(fetchExport).toHaveBeenCalledTimes(1)
+    expect(fetchExport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ activity_id: '42' }),
+      }),
+    )
   })
 
   it('only activates the clicked export button — the other stays idle but disabled', async () => {
