@@ -1,15 +1,14 @@
 /* eslint-disable */
 // @ts-nocheck
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+/** Internal type. DO NOT USE DIRECTLY. */
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import { gql } from '@apollo/client';
 import type * as ApolloReactCommon from '@apollo/client/react';
 import * as ApolloReactHooks from '@apollo/client/react';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 const defaultOptions = {} as const;
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
@@ -154,6 +153,45 @@ export type GarminActivity = {
   uploaded_at?: Maybe<Scalars['String']['output']>;
 };
 
+/** Full reverse-geocoded address attached to a Garmin activity waypoint. */
+export type GarminActivityAddress = {
+  __typename?: 'GarminActivityAddress';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** Pelias confidence score (0-1) */
+  confidence?: Maybe<Scalars['Float']['output']>;
+  /** Country name */
+  country?: Maybe<Scalars['String']['output']>;
+  /** Full formatted address label from Pelias */
+  display_address?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when geocoding was performed */
+  geocoded_at?: Maybe<Scalars['String']['output']>;
+  /** House or building number */
+  housenumber?: Maybe<Scalars['String']['output']>;
+  /** GPS latitude in decimal degrees (WGS 84) */
+  latitude: Scalars['Float']['output'];
+  /** City or town */
+  locality?: Maybe<Scalars['String']['output']>;
+  /** GPS longitude in decimal degrees (WGS 84) */
+  longitude: Scalars['Float']['output'];
+  /** Neighbourhood name */
+  neighbourhood?: Maybe<Scalars['String']['output']>;
+  /** Postal or ZIP code */
+  postalcode?: Maybe<Scalars['String']['output']>;
+  /** State or province */
+  region?: Maybe<Scalars['String']['output']>;
+  /** Geocoding status: success, no_coverage, error, pending */
+  status: Scalars['String']['output'];
+  /** Street name */
+  street?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp of the track point this address was derived from */
+  timestamp: Scalars['DateTime']['output'];
+  /** garmin_track_points.id this address was geocoded from */
+  track_point_id: Scalars['Int']['output'];
+  /** Role of this waypoint within the activity: start, end, or waypoint */
+  waypoint_kind: Scalars['String']['output'];
+};
+
 /** Paginated list of Garmin activities. */
 export type GarminActivityConnection = {
   __typename?: 'GarminActivityConnection';
@@ -242,6 +280,8 @@ export type GarminTrackPoint = {
   __typename?: 'GarminTrackPoint';
   /** Parent Garmin activity identifier */
   activity_id: Scalars['String']['output'];
+  /** Compact reverse-geocoded address summary, when geocoded */
+  address?: Maybe<GeocodedAddressSummary>;
   /** Elevation above sea level in meters */
   altitude?: Maybe<Scalars['Float']['output']>;
   /** Pedal/step cadence in RPM */
@@ -306,9 +346,55 @@ export type GeocodedAddress = {
   street?: Maybe<Scalars['String']['output']>;
 };
 
+/** Compact reverse-geocoded address summary embedded in track-point payloads. */
+export type GeocodedAddressSummary = {
+  __typename?: 'GeocodedAddressSummary';
+  /** Pelias confidence score (0-1) */
+  confidence?: Maybe<Scalars['Float']['output']>;
+  /** Country name */
+  country?: Maybe<Scalars['String']['output']>;
+  /** Full formatted address label from Pelias */
+  display_address?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when geocoding was performed */
+  geocoded_at?: Maybe<Scalars['String']['output']>;
+  /** House or building number */
+  housenumber?: Maybe<Scalars['String']['output']>;
+  /** City or town */
+  locality?: Maybe<Scalars['String']['output']>;
+  /** Neighbourhood name */
+  neighbourhood?: Maybe<Scalars['String']['output']>;
+  /** Postal or ZIP code */
+  postalcode?: Maybe<Scalars['String']['output']>;
+  /** State or province */
+  region?: Maybe<Scalars['String']['output']>;
+  /** Geocoding status: success, no_coverage, error, pending */
+  status: Scalars['String']['output'];
+  /** Street name */
+  street?: Maybe<Scalars['String']['output']>;
+  /** Role of this waypoint within a Garmin activity (start, end, waypoint). Null for OwnTracks records. */
+  waypoint_kind?: Maybe<Scalars['String']['output']>;
+};
+
+/** Coverage statistics for a single geocoding source (owntracks or garmin). */
+export type GeocodingSourceStatus = {
+  __typename?: 'GeocodingSourceStatus';
+  /** Number of records that failed geocoding */
+  errors: Scalars['Int']['output'];
+  /** Number of records outside Pelias coverage area */
+  no_coverage: Scalars['Int']['output'];
+  /** Number of records awaiting geocoding for this source */
+  pending: Scalars['Int']['output'];
+  /** Number of successfully geocoded records for this source */
+  success: Scalars['Int']['output'];
+  /** Total number of geocoded_addresses rows for this source */
+  total: Scalars['Int']['output'];
+};
+
 /** Coverage statistics for geocoded location records. */
 export type GeocodingStatus = {
   __typename?: 'GeocodingStatus';
+  /** Per-source breakdown of geocoding coverage (owntracks, garmin) */
+  by_source: GeocodingStatusBySource;
   /** Percentage of locations with a geocoded address */
   coverage_percent: Scalars['Float']['output'];
   /** Number of locations that failed geocoding */
@@ -323,6 +409,21 @@ export type GeocodingStatus = {
   success: Scalars['Int']['output'];
   /** Total number of OwnTracks location records */
   total_locations: Scalars['Int']['output'];
+};
+
+/** Per-source breakdown of geocoding coverage. */
+export type GeocodingStatusBySource = {
+  __typename?: 'GeocodingStatusBySource';
+  /** Coverage stats for Garmin rows */
+  garmin: GeocodingSourceStatus;
+  /** Number of Garmin activities that have at least one address row */
+  garmin_activities_geocoded: Scalars['Int']['output'];
+  /** Total number of Garmin activities (denominator for activity-level coverage) */
+  garmin_activities_total: Scalars['Int']['output'];
+  /** Percentage of Garmin activities with at least one geocoded address */
+  garmin_coverage_percent: Scalars['Float']['output'];
+  /** Coverage stats for OwnTracks rows */
+  owntracks: GeocodingSourceStatus;
 };
 
 /** Result of triggering a batch geocoding operation. */
@@ -512,6 +613,8 @@ export type Query = {
   garminActivities: GarminActivityConnection;
   /** Retrieve a single Garmin activity by its ID. */
   garminActivity?: Maybe<GarminActivity>;
+  /** Retrieve all reverse-geocoded addresses for a Garmin activity (start, mid-route waypoints, and end). */
+  garminActivityAddresses: Array<GarminActivityAddress>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
@@ -577,6 +680,11 @@ export type QueryGarminActivitiesArgs = {
 
 
 export type QueryGarminActivityArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivityAddressesArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -757,204 +865,218 @@ export type WithinReferenceResult = {
   total_points: Scalars['Int']['output'];
 };
 
+/** Sort direction for query results. */
+export type SortOrder =
+  /** Ascending order (oldest first, A-Z) */
+  | 'asc'
+  /** Descending order (newest first, Z-A) */
+  | 'desc';
+
 export type GarminActivitiesQueryVariables = Exact<{
-  sport?: InputMaybe<Scalars['String']['input']>;
-  date_from?: InputMaybe<Scalars['String']['input']>;
-  date_to?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  sort?: InputMaybe<Scalars['String']['input']>;
-  order?: InputMaybe<SortOrder>;
+  sport?: string | null | undefined;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+  sort?: string | null | undefined;
+  order?: SortOrder | null | undefined;
 }>;
 
 
-export type GarminActivitiesQuery = { __typename?: 'Query', garminActivities: { __typename?: 'GarminActivityConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'GarminActivity', activity_id: string, sport: string, sub_sport?: string | null, start_time?: string | null, end_time?: string | null, distance_km?: number | null, duration_seconds?: number | null, avg_heart_rate?: number | null, max_heart_rate?: number | null, avg_cadence?: number | null, max_cadence?: number | null, calories?: number | null, avg_speed_kmh?: number | null, max_speed_kmh?: number | null, total_ascent_m?: number | null, total_descent_m?: number | null, total_distance?: number | null, avg_pace?: number | null, device_manufacturer?: string | null, created_at?: string | null, uploaded_at?: string | null, track_point_count?: number | null }> } };
+export type GarminActivitiesQuery = { garminActivities: { total: number, limit: number, offset: number, items: Array<{ activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null }> } };
 
 export type GarminActivityQueryVariables = Exact<{
-  activity_id: Scalars['String']['input'];
+  activity_id: string;
 }>;
 
 
-export type GarminActivityQuery = { __typename?: 'Query', garminActivity?: { __typename?: 'GarminActivity', activity_id: string, sport: string, sub_sport?: string | null, start_time?: string | null, end_time?: string | null, distance_km?: number | null, duration_seconds?: number | null, avg_heart_rate?: number | null, max_heart_rate?: number | null, avg_cadence?: number | null, max_cadence?: number | null, calories?: number | null, avg_speed_kmh?: number | null, max_speed_kmh?: number | null, total_ascent_m?: number | null, total_descent_m?: number | null, total_distance?: number | null, avg_pace?: number | null, device_manufacturer?: string | null, avg_temperature_c?: number | null, min_temperature_c?: number | null, max_temperature_c?: number | null, total_elapsed_time?: number | null, total_timer_time?: number | null, created_at?: string | null, uploaded_at?: string | null, track_point_count?: number | null } | null };
+export type GarminActivityQuery = { garminActivity: { activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, avg_temperature_c: number | null, min_temperature_c: number | null, max_temperature_c: number | null, total_elapsed_time: number | null, total_timer_time: number | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null } | null };
 
 export type GarminTrackPointsQueryVariables = Exact<{
-  activity_id: Scalars['String']['input'];
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  sort?: InputMaybe<Scalars['String']['input']>;
-  order?: InputMaybe<SortOrder>;
-  simplify?: InputMaybe<Scalars['Float']['input']>;
+  activity_id: string;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+  sort?: string | null | undefined;
+  order?: SortOrder | null | undefined;
+  simplify?: number | null | undefined;
 }>;
 
 
-export type GarminTrackPointsQuery = { __typename?: 'Query', garminTrackPoints: { __typename?: 'GarminTrackPointConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'GarminTrackPoint', id: number, activity_id: string, latitude: number, longitude: number, timestamp: string, altitude?: number | null, distance_from_start_km?: number | null, speed_kmh?: number | null, heart_rate?: number | null, cadence?: number | null, temperature_c?: number | null, created_at?: string | null }> } };
+export type GarminTrackPointsQuery = { garminTrackPoints: { total: number, limit: number, offset: number, items: Array<{ id: number, activity_id: string, latitude: number, longitude: number, timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, created_at: string | null }> } };
 
 export type GarminDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GarminDateRangeQuery = { __typename?: 'Query', garminDateRange: { __typename?: 'GarminDateRange', min_date: string, max_date: string } };
+export type GarminDateRangeQuery = { garminDateRange: { min_date: string, max_date: string } };
 
 export type GarminSportsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GarminSportsQuery = { __typename?: 'Query', garminSports: Array<{ __typename?: 'SportInfo', sport: string, activity_count: number }> };
+export type GarminSportsQuery = { garminSports: Array<{ sport: string, activity_count: number }> };
 
 export type GarminActivityTotalsQueryVariables = Exact<{
-  period: Scalars['String']['input'];
-  date_from?: InputMaybe<Scalars['String']['input']>;
-  date_to?: InputMaybe<Scalars['String']['input']>;
-  sport?: InputMaybe<Scalars['String']['input']>;
+  period: string;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  sport?: string | null | undefined;
 }>;
 
 
-export type GarminActivityTotalsQuery = { __typename?: 'Query', garminActivityTotals: Array<{ __typename?: 'GarminActivityTotal', period_start: string, activity_count: number, total_distance_km?: number | null, total_duration_seconds?: number | null, total_ascent_m?: number | null, total_calories?: number | null }> };
+export type GarminActivityTotalsQuery = { garminActivityTotals: Array<{ period_start: string, activity_count: number, total_distance_km: number | null, total_duration_seconds: number | null, total_ascent_m: number | null, total_calories: number | null }> };
 
 export type GarminChartDataQueryVariables = Exact<{
-  activity_id: Scalars['String']['input'];
+  activity_id: string;
 }>;
 
 
-export type GarminChartDataQuery = { __typename?: 'Query', garminChartData: Array<{ __typename?: 'GarminChartPoint', timestamp: string, altitude?: number | null, distance_from_start_km?: number | null, speed_kmh?: number | null, heart_rate?: number | null, cadence?: number | null, temperature_c?: number | null, latitude: number, longitude: number }> };
+export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, latitude: number, longitude: number }> };
 
 export type TriggerGarminSyncMutationVariables = Exact<{
-  window_hours?: InputMaybe<Scalars['Int']['input']>;
-  lookback?: InputMaybe<Scalars['Int']['input']>;
+  window_hours?: number | null | undefined;
+  lookback?: number | null | undefined;
 }>;
 
 
-export type TriggerGarminSyncMutation = { __typename?: 'Mutation', triggerGarminSync: { __typename?: 'GarminSyncTriggerResult', status: string, message: string, accepted: boolean, triggered_at?: string | null, started_at?: string | null, window_hours?: number | null, window_start?: string | null, lookback?: number | null } };
+export type TriggerGarminSyncMutation = { triggerGarminSync: { status: string, message: string, accepted: boolean, triggered_at: string | null, started_at: string | null, window_hours: number | null, window_start: string | null, lookback: number | null } };
+
+export type GarminExportPointsQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminExportPointsQuery = { garminTrackPoints: { total: number, items: Array<{ id: number, activity_id: string, timestamp: string, latitude: number, longitude: number, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, waypoint_kind: string | null, status: string, geocoded_at: string | null } | null }> } };
 
 export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GeocodingStatusQuery = { __typename?: 'Query', geocodingStatus: { __typename?: 'GeocodingStatus', total_locations: number, geocoded: number, success: number, pending: number, no_coverage: number, errors: number, coverage_percent: number } };
+export type GeocodingStatusQuery = { geocodingStatus: { total_locations: number, geocoded: number, success: number, pending: number, no_coverage: number, errors: number, coverage_percent: number } };
 
 export type TriggerGeocodingMutationVariables = Exact<{
-  batch_size?: InputMaybe<Scalars['Int']['input']>;
-  retry_failed?: InputMaybe<Scalars['Boolean']['input']>;
+  batch_size?: number | null | undefined;
+  retry_failed?: boolean | null | undefined;
 }>;
 
 
-export type TriggerGeocodingMutation = { __typename?: 'Mutation', triggerGeocoding: { __typename?: 'GeocodingTriggerResult', processed: number, remaining: number, skipped_dedup: number } };
+export type TriggerGeocodingMutation = { triggerGeocoding: { processed: number, remaining: number, skipped_dedup: number } };
 
 export type HealthQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HealthQuery = { __typename?: 'Query', health: { __typename?: 'HealthStatus', status: string, version: string } };
+export type HealthQuery = { health: { status: string, version: string } };
 
 export type ReadyQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ReadyQuery = { __typename?: 'Query', ready: { __typename?: 'ReadyStatus', status: string, database?: string | null, version?: string | null } };
+export type ReadyQuery = { ready: { status: string, database: string | null, version: string | null } };
 
 export type LocationsQueryVariables = Exact<{
-  device_id?: InputMaybe<Scalars['String']['input']>;
-  date_from?: InputMaybe<Scalars['String']['input']>;
-  date_to?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  sort?: InputMaybe<Scalars['String']['input']>;
-  order?: InputMaybe<SortOrder>;
+  device_id?: string | null | undefined;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+  sort?: string | null | undefined;
+  order?: SortOrder | null | undefined;
 }>;
 
 
-export type LocationsQuery = { __typename?: 'Query', locations: { __typename?: 'LocationConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'Location', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null, display_address?: string | null }> } };
+export type LocationsQuery = { locations: { total: number, limit: number, offset: number, items: Array<{ id: number, device_id: string, tid: string | null, latitude: number, longitude: number, accuracy: number | null, altitude: number | null, velocity: number | null, battery: number | null, battery_status: number | null, connection_type: string | null, trigger: string | null, timestamp: string, created_at: string | null, display_address: string | null }> } };
 
 export type LocationDetailQueryVariables = Exact<{
-  id: Scalars['Int']['input'];
+  id: number;
 }>;
 
 
-export type LocationDetailQuery = { __typename?: 'Query', location?: { __typename?: 'LocationDetail', id: number, device_id: string, tid?: string | null, latitude: number, longitude: number, accuracy?: number | null, altitude?: number | null, velocity?: number | null, battery?: number | null, battery_status?: number | null, connection_type?: string | null, trigger?: string | null, timestamp: string, created_at?: string | null, raw_payload?: Record<string, unknown> | null, address?: { __typename?: 'GeocodedAddress', display_address?: string | null, street?: string | null, housenumber?: string | null, neighbourhood?: string | null, locality?: string | null, region?: string | null, country?: string | null, postalcode?: string | null, confidence?: number | null, status: string, geocoded_at?: string | null } | null } | null };
+export type LocationDetailQuery = { location: { id: number, device_id: string, tid: string | null, latitude: number, longitude: number, accuracy: number | null, altitude: number | null, velocity: number | null, battery: number | null, battery_status: number | null, connection_type: string | null, trigger: string | null, timestamp: string, created_at: string | null, raw_payload: Record<string, unknown> | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, status: string, geocoded_at: string | null } | null } | null };
 
 export type DevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DevicesQuery = { __typename?: 'Query', devices: Array<{ __typename?: 'DeviceInfo', device_id: string }> };
+export type DevicesQuery = { devices: Array<{ device_id: string }> };
 
 export type LocationCountQueryVariables = Exact<{
-  date?: InputMaybe<Scalars['String']['input']>;
-  device_id?: InputMaybe<Scalars['String']['input']>;
+  date?: string | null | undefined;
+  device_id?: string | null | undefined;
 }>;
 
 
-export type LocationCountQuery = { __typename?: 'Query', locationCount: { __typename?: 'LocationCount', count: number, date?: string | null, device_id?: string | null } };
+export type LocationCountQuery = { locationCount: { count: number, date: string | null, device_id: string | null } };
 
 export type LocationDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LocationDateRangeQuery = { __typename?: 'Query', locationDateRange: { __typename?: 'LocationDateRange', min_date: string, max_date: string } };
+export type LocationDateRangeQuery = { locationDateRange: { min_date: string, max_date: string } };
 
 export type ReferenceLocationsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ReferenceLocationsQuery = { __typename?: 'Query', referenceLocations: Array<{ __typename?: 'ReferenceLocation', id: number, name: string, latitude: number, longitude: number, radius_meters: number, description?: string | null, created_at?: string | null, updated_at?: string | null }> };
+export type ReferenceLocationsQuery = { referenceLocations: Array<{ id: number, name: string, latitude: number, longitude: number, radius_meters: number, description: string | null, created_at: string | null, updated_at: string | null }> };
 
 export type ReferenceLocationQueryVariables = Exact<{
-  id: Scalars['Int']['input'];
+  id: number;
 }>;
 
 
-export type ReferenceLocationQuery = { __typename?: 'Query', referenceLocation?: { __typename?: 'ReferenceLocation', id: number, name: string, latitude: number, longitude: number, radius_meters: number, description?: string | null, created_at?: string | null, updated_at?: string | null } | null };
+export type ReferenceLocationQuery = { referenceLocation: { id: number, name: string, latitude: number, longitude: number, radius_meters: number, description: string | null, created_at: string | null, updated_at: string | null } | null };
 
 export type NearbyPointsQueryVariables = Exact<{
-  lat: Scalars['Float']['input'];
-  lon: Scalars['Float']['input'];
-  radius_meters?: InputMaybe<Scalars['Float']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
+  lat: number;
+  lon: number;
+  radius_meters?: number | null | undefined;
+  source?: string | null | undefined;
+  limit?: number | null | undefined;
 }>;
 
 
-export type NearbyPointsQuery = { __typename?: 'Query', nearbyPoints: Array<{ __typename?: 'NearbyPoint', source: string, id: number, latitude: number, longitude: number, distance_meters: number, timestamp: string }> };
+export type NearbyPointsQuery = { nearbyPoints: Array<{ source: string, id: number, latitude: number, longitude: number, distance_meters: number, timestamp: string }> };
 
 export type CalculateDistanceQueryVariables = Exact<{
-  from_lat: Scalars['Float']['input'];
-  from_lon: Scalars['Float']['input'];
-  to_lat: Scalars['Float']['input'];
-  to_lon: Scalars['Float']['input'];
+  from_lat: number;
+  from_lon: number;
+  to_lat: number;
+  to_lon: number;
 }>;
 
 
-export type CalculateDistanceQuery = { __typename?: 'Query', calculateDistance: { __typename?: 'DistanceResult', distance_meters: number, from_lat: number, from_lon: number, to_lat: number, to_lon: number } };
+export type CalculateDistanceQuery = { calculateDistance: { distance_meters: number, from_lat: number, from_lon: number, to_lat: number, to_lon: number } };
 
 export type WithinReferenceQueryVariables = Exact<{
-  name: Scalars['String']['input'];
-  source?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
+  name: string;
+  source?: string | null | undefined;
+  limit?: number | null | undefined;
 }>;
 
 
-export type WithinReferenceQuery = { __typename?: 'Query', withinReference: { __typename?: 'WithinReferenceResult', reference_name: string, radius_meters: number, total_points: number, points: Array<{ __typename?: 'NearbyPoint', source: string, id: number, latitude: number, longitude: number, distance_meters: number, timestamp: string }> } };
+export type WithinReferenceQuery = { withinReference: { reference_name: string, radius_meters: number, total_points: number, points: Array<{ source: string, id: number, latitude: number, longitude: number, distance_meters: number, timestamp: string }> } };
 
 export type UnifiedGpsQueryVariables = Exact<{
-  source?: InputMaybe<Scalars['String']['input']>;
-  date_from?: InputMaybe<Scalars['String']['input']>;
-  date_to?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  order?: InputMaybe<SortOrder>;
-  exclude_stationary?: InputMaybe<Scalars['Boolean']['input']>;
-  deduplicate?: InputMaybe<Scalars['Boolean']['input']>;
+  source?: string | null | undefined;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+  order?: SortOrder | null | undefined;
+  exclude_stationary?: boolean | null | undefined;
+  deduplicate?: boolean | null | undefined;
 }>;
 
 
-export type UnifiedGpsQuery = { __typename?: 'Query', unifiedGps: { __typename?: 'UnifiedGpsConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'UnifiedGpsPoint', source: string, identifier: string, latitude: number, longitude: number, timestamp: string, accuracy?: number | null, battery?: number | null, speed_kmh?: number | null, heart_rate?: number | null, created_at?: string | null }> } };
+export type UnifiedGpsQuery = { unifiedGps: { total: number, limit: number, offset: number, items: Array<{ source: string, identifier: string, latitude: number, longitude: number, timestamp: string, accuracy: number | null, battery: number | null, speed_kmh: number | null, heart_rate: number | null, created_at: string | null }> } };
 
 export type DailySummaryQueryVariables = Exact<{
-  date_from?: InputMaybe<Scalars['String']['input']>;
-  date_to?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }>;
 
 
-export type DailySummaryQuery = { __typename?: 'Query', dailySummary: { __typename?: 'DailySummaryConnection', total: number, limit: number, offset: number, items: Array<{ __typename?: 'DailyActivitySummary', activity_date?: string | null, owntracks_device?: string | null, owntracks_points?: number | null, min_battery?: number | null, max_battery?: number | null, avg_accuracy?: number | null, garmin_sport?: string | null, garmin_activities?: number | null, total_distance_km?: number | null, total_duration_seconds?: number | null, avg_heart_rate?: number | null, total_calories?: number | null }> } };
+export type DailySummaryQuery = { dailySummary: { total: number, limit: number, offset: number, items: Array<{ activity_date: string | null, owntracks_device: string | null, owntracks_points: number | null, min_battery: number | null, max_battery: number | null, avg_accuracy: number | null, garmin_sport: string | null, garmin_activities: number | null, total_distance_km: number | null, total_duration_seconds: number | null, avg_heart_rate: number | null, total_calories: number | null }> } };
 
 export type DailySummaryDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DailySummaryDateRangeQuery = { __typename?: 'Query', dailySummaryDateRange: { __typename?: 'DailySummaryDateRange', min_date: string, max_date: string } };
+export type DailySummaryDateRangeQuery = { dailySummaryDateRange: { min_date: string, max_date: string } };
 
 
 export const GarminActivitiesDocument = gql`
@@ -1414,6 +1536,76 @@ export function useTriggerGarminSyncMutation(baseOptions?: ApolloReactHooks.Muta
 export type TriggerGarminSyncMutationHookResult = ReturnType<typeof useTriggerGarminSyncMutation>;
 export type TriggerGarminSyncMutationResult = ApolloReactCommon.MutationResult<TriggerGarminSyncMutation>;
 export type TriggerGarminSyncMutationOptions = ApolloReactCommon.BaseMutationOptions<TriggerGarminSyncMutation, TriggerGarminSyncMutationVariables>;
+export const GarminExportPointsDocument = gql`
+    query GarminExportPoints($activity_id: String!) {
+  garminTrackPoints(activity_id: $activity_id, limit: 25000) {
+    items {
+      id
+      activity_id
+      timestamp
+      latitude
+      longitude
+      altitude
+      distance_from_start_km
+      speed_kmh
+      heart_rate
+      cadence
+      temperature_c
+      address {
+        display_address
+        street
+        housenumber
+        neighbourhood
+        locality
+        region
+        country
+        postalcode
+        confidence
+        waypoint_kind
+        status
+        geocoded_at
+      }
+    }
+    total
+  }
+}
+    `;
+
+/**
+ * __useGarminExportPointsQuery__
+ *
+ * To run a query within a React component, call `useGarminExportPointsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminExportPointsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminExportPointsQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminExportPointsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminExportPointsQuery, GarminExportPointsQueryVariables> & ({ variables: GarminExportPointsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminExportPointsQuery, GarminExportPointsQueryVariables>(GarminExportPointsDocument, options);
+      }
+export function useGarminExportPointsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminExportPointsQuery, GarminExportPointsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminExportPointsQuery, GarminExportPointsQueryVariables>(GarminExportPointsDocument, options);
+        }
+// @ts-ignore
+export function useGarminExportPointsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminExportPointsQuery, GarminExportPointsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminExportPointsQuery, GarminExportPointsQueryVariables>;
+export function useGarminExportPointsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminExportPointsQuery, GarminExportPointsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminExportPointsQuery | undefined, GarminExportPointsQueryVariables>;
+export function useGarminExportPointsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminExportPointsQuery, GarminExportPointsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminExportPointsQuery, GarminExportPointsQueryVariables>(GarminExportPointsDocument, options);
+        }
+export type GarminExportPointsQueryHookResult = ReturnType<typeof useGarminExportPointsQuery>;
+export type GarminExportPointsLazyQueryHookResult = ReturnType<typeof useGarminExportPointsLazyQuery>;
+export type GarminExportPointsSuspenseQueryHookResult = ReturnType<typeof useGarminExportPointsSuspenseQuery>;
+export type GarminExportPointsQueryResult = ApolloReactCommon.QueryResult<GarminExportPointsQuery, GarminExportPointsQueryVariables>;
 export const GeocodingStatusDocument = gql`
     query GeocodingStatus {
   geocodingStatus {

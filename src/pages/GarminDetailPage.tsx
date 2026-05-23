@@ -1,9 +1,11 @@
 import { useParams, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { Download, Loader2 } from 'lucide-react'
 import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
   useGarminChartDataQuery,
+  useGarminExportPointsLazyQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -16,10 +18,32 @@ import {
 } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
+import { Button } from '@/components/ui/button'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
 /** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
 const SIMPLIFY_TOLERANCE = 0.00001
+
+function escapeCsvValue(value: unknown): string {
+  if (value == null) return ''
+  const str = String(value)
+  if (/[,"\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+function triggerDownload(content: string, mime: string, filename: string) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
@@ -44,6 +68,116 @@ export function GarminDetailPage() {
     location.state as { garminListSearch?: string } | null
   )?.garminListSearch
   const backTo = garminListSearch ? `/garmin?${garminListSearch}` : '/garmin'
+
+  const [fetchExportPoints, { loading: exportLoading }] =
+    useGarminExportPointsLazyQuery({ fetchPolicy: 'no-cache' })
+
+  async function handleExport(format: 'csv' | 'geojson') {
+    if (!activityId) return
+    const result = await fetchExportPoints({
+      variables: { activity_id: activityId },
+    })
+    const points = result.data?.garminTrackPoints?.items ?? []
+    if (points.length === 0) return
+
+    if (format === 'csv') {
+      const headers = [
+        'activity_id',
+        'track_point_id',
+        'timestamp',
+        'latitude',
+        'longitude',
+        'altitude',
+        'distance_from_start_km',
+        'speed_kmh',
+        'heart_rate',
+        'cadence',
+        'temperature_c',
+        'geocode_status',
+        'confidence',
+        'waypoint_kind',
+        'display_address',
+        'street',
+        'housenumber',
+        'neighbourhood',
+        'locality',
+        'region',
+        'country',
+        'postalcode',
+        'geocoded_at',
+      ]
+      const rows = points.map((p) =>
+        [
+          p.activity_id,
+          p.id,
+          p.timestamp,
+          p.latitude,
+          p.longitude,
+          p.altitude,
+          p.distance_from_start_km,
+          p.speed_kmh,
+          p.heart_rate,
+          p.cadence,
+          p.temperature_c,
+          p.address?.status ?? '',
+          p.address?.confidence,
+          p.address?.waypoint_kind,
+          p.address?.display_address,
+          p.address?.street,
+          p.address?.housenumber,
+          p.address?.neighbourhood,
+          p.address?.locality,
+          p.address?.region,
+          p.address?.country,
+          p.address?.postalcode,
+          p.address?.geocoded_at,
+        ]
+          .map(escapeCsvValue)
+          .join(','),
+      )
+      const csv = [headers.join(','), ...rows].join('\n')
+      triggerDownload(csv, 'text/csv', `garmin_activity_${activityId}_points.csv`)
+    } else {
+      const geojson = {
+        type: 'FeatureCollection' as const,
+        features: points.map((p) => ({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [p.longitude, p.latitude],
+          },
+          properties: {
+            activity_id: p.activity_id,
+            track_point_id: p.id,
+            timestamp: p.timestamp,
+            altitude: p.altitude,
+            distance_from_start_km: p.distance_from_start_km,
+            speed_kmh: p.speed_kmh,
+            heart_rate: p.heart_rate,
+            cadence: p.cadence,
+            temperature_c: p.temperature_c,
+            geocode_status: p.address?.status ?? null,
+            confidence: p.address?.confidence ?? null,
+            waypoint_kind: p.address?.waypoint_kind ?? null,
+            display_address: p.address?.display_address ?? null,
+            street: p.address?.street ?? null,
+            housenumber: p.address?.housenumber ?? null,
+            neighbourhood: p.address?.neighbourhood ?? null,
+            locality: p.address?.locality ?? null,
+            region: p.address?.region ?? null,
+            country: p.address?.country ?? null,
+            postalcode: p.address?.postalcode ?? null,
+            geocoded_at: p.address?.geocoded_at ?? null,
+          },
+        })),
+      }
+      triggerDownload(
+        JSON.stringify(geojson, null, 2),
+        'application/geo+json',
+        `garmin_activity_${activityId}_points.geojson`,
+      )
+    }
+  }
   const { data, loading, error, refetch } = useGarminActivityQuery({
     variables: { activity_id: activityId ?? '' },
     skip: !activityId,
@@ -99,6 +233,35 @@ export function GarminDetailPage() {
         avgSpeedKmh={a.avg_speed_kmh}
         totalAscentM={a.total_ascent_m}
       />
+
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={exportLoading}
+          onClick={() => handleExport('csv')}
+        >
+          {exportLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="mr-2 h-4 w-4" />
+          )}
+          Export CSV
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={exportLoading}
+          onClick={() => handleExport('geojson')}
+        >
+          {exportLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="mr-2 h-4 w-4" />
+          )}
+          Export GeoJSON
+        </Button>
+      </div>
 
       {trackLoading && <LoadingState message="Loading track data..." />}
 
