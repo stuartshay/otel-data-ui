@@ -278,9 +278,7 @@ describe('GarminDetailPage', () => {
     const revokeObjectURL = vi.fn()
     const clickSpy = vi.fn()
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
-    vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(clickSpy)
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
 
     renderPage()
 
@@ -316,9 +314,7 @@ describe('GarminDetailPage', () => {
     const revokeObjectURL = vi.fn()
     const clickSpy = vi.fn()
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
-    vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(clickSpy)
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
 
     renderPage()
 

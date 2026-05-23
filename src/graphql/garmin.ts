@@ -196,7 +196,11 @@ export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
 
 export const GARMIN_EXPORT_POINTS_QUERY = gql`
   query GarminExportPoints($activity_id: String!, $limit: Int, $offset: Int) {
-    garminTrackPoints(activity_id: $activity_id, limit: $limit, offset: $offset) {
+    garminTrackPoints(
+      activity_id: $activity_id
+      limit: $limit
+      offset: $offset
+    ) {
       items {
         id
         activity_id

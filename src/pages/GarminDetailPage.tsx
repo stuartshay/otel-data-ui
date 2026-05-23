@@ -136,7 +136,11 @@ export function GarminDetailPage() {
           .join(','),
       )
       const csv = [headers.join(','), ...rows].join('\n')
-      triggerDownload(csv, 'text/csv', `garmin_activity_${activityId}_points.csv`)
+      triggerDownload(
+        csv,
+        'text/csv',
+        `garmin_activity_${activityId}_points.csv`,
+      )
     } else {
       const geojson = {
         type: 'FeatureCollection' as const,
