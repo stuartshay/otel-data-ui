@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -14,9 +14,10 @@ import { ActivityHeader } from '@/components/garmin/ActivityHeader'
 import { ActivityStatsBar } from '@/components/garmin/ActivityStatsBar'
 import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
 import {
-  ActivityCharts,
+  buildActivityChartData,
   type ChartDataPoint,
-} from '@/components/garmin/ActivityCharts'
+} from '@/components/garmin/ActivityChartData'
+import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,59 @@ import { escapeCsvValue, triggerDownload } from '@/lib/export'
 const SIMPLIFY_TOLERANCE = 0.00001
 /** Maximum track points fetched per page when exporting. */
 const EXPORT_PAGE_SIZE = 10000
+const EARTH_RADIUS_M = 6_371_000
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180
+}
+
+function isFiniteCoordinate(
+  point: ChartDataPoint,
+): point is ChartDataPoint & { latitude: number; longitude: number } {
+  return (
+    point.latitude != null &&
+    point.longitude != null &&
+    Number.isFinite(point.latitude) &&
+    Number.isFinite(point.longitude)
+  )
+}
+
+function distanceMeters(
+  latA: number,
+  lonA: number,
+  latB: number,
+  lonB: number,
+): number {
+  const dLat = toRadians(latB - latA)
+  const dLon = toRadians(lonB - lonA)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(latA)) *
+      Math.cos(toRadians(latB)) *
+      Math.sin(dLon / 2) ** 2
+  return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function findNearestChartPoint(
+  points: ChartDataPoint[],
+  lat: number,
+  lng: number,
+): ChartDataPoint | null {
+  let nearest: ChartDataPoint | null = null
+  let nearestDistance = Infinity
+
+  for (const point of points) {
+    if (!isFiniteCoordinate(point)) continue
+
+    const distance = distanceMeters(lat, lng, point.latitude, point.longitude)
+    if (distance < nearestDistance) {
+      nearest = point
+      nearestDistance = distance
+    }
+  }
+
+  return nearest
+}
 
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
@@ -243,6 +297,16 @@ export function GarminDetailPage() {
     skip: !activityId,
     fetchPolicy: 'no-cache',
   })
+  const chartDataPoints = useMemo(
+    () => buildActivityChartData(chartData?.garminChartData ?? []).chartData,
+    [chartData?.garminChartData],
+  )
+  const handleMapPointSelect = useCallback(
+    ({ lat, lng }: { lat: number; lng: number }) => {
+      setActivePoint(findNearestChartPoint(chartDataPoints, lat, lng))
+    },
+    [chartDataPoints],
+  )
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
@@ -319,6 +383,9 @@ export function GarminDetailPage() {
               ? { lat: activePoint.latitude, lng: activePoint.longitude }
               : null
           }
+          onMapPointSelect={
+            chartDataPoints.length > 0 ? handleMapPointSelect : undefined
+          }
         />
       )}
 
@@ -331,6 +398,7 @@ export function GarminDetailPage() {
           <ActivityHoverDetails point={activePoint} />
           <ActivityCharts
             trackPoints={chartPoints}
+            activePoint={activePoint}
             onActivePointChange={setActivePoint}
           />
         </>

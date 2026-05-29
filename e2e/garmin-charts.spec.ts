@@ -152,4 +152,43 @@ test.describe('Garmin Activity Charts', () => {
     })
     await expect(hoverMarker).toHaveCount(0, { timeout: 5_000 })
   })
+
+  test('clicking the route map syncs the chart crosshair', async ({ page }) => {
+    await page.goto(`/garmin/${ACTIVITY_ID}`)
+
+    const elevationCard = page.getByTestId('chart-elevation')
+    const speedCard = page.getByTestId('chart-speed')
+    const routeMap = page.getByTestId('activity-route-map')
+    const details = page.getByTestId('activity-hover-details')
+
+    await expect(elevationCard).toBeVisible({ timeout: 20_000 })
+    await expect(speedCard).toBeVisible({ timeout: 20_000 })
+    await expect(routeMap).toBeVisible({ timeout: 20_000 })
+    await expect(details).toContainText('Hover the Elevation')
+
+    await routeMap.scrollIntoViewIfNeeded()
+    const mapBox = await routeMap.boundingBox()
+    if (!mapBox) throw new Error('Route map bounding box unavailable')
+
+    await page.mouse.click(
+      mapBox.x + mapBox.width / 2,
+      mapBox.y + mapBox.height / 2,
+    )
+
+    await expect(details).not.toContainText('Hover the Elevation', {
+      timeout: 5_000,
+    })
+    await expect(details).toContainText(/-?\d+\.\d{5},\s*-?\d+\.\d{5}/)
+
+    await expect(
+      routeMap.locator('.leaflet-overlay-pane svg path.activity-hover-marker'),
+    ).toHaveCount(1, { timeout: 5_000 })
+    await expect(elevationCard.locator('.recharts-reference-line')).toHaveCount(
+      1,
+      { timeout: 5_000 },
+    )
+    await expect(speedCard.locator('.recharts-reference-line')).toHaveCount(1, {
+      timeout: 5_000,
+    })
+  })
 })
