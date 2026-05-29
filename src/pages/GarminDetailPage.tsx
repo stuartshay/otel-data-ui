@@ -14,7 +14,9 @@ import { ActivityHeader } from '@/components/garmin/ActivityHeader'
 import { ActivityStatsBar } from '@/components/garmin/ActivityStatsBar'
 import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
 import {
-  buildActivityChartData,
+  getActivityChartContext,
+  toChartDataPoint,
+  type ActivityChartTrackPoint,
   type ChartDataPoint,
 } from '@/components/garmin/ActivityChartData'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
@@ -35,8 +37,8 @@ function toRadians(degrees: number): number {
 }
 
 function isFiniteCoordinate(
-  point: ChartDataPoint,
-): point is ChartDataPoint & { latitude: number; longitude: number } {
+  point: ActivityChartTrackPoint,
+): point is ActivityChartTrackPoint & { latitude: number; longitude: number } {
   return (
     point.latitude != null &&
     point.longitude != null &&
@@ -61,12 +63,12 @@ function distanceMeters(
   return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function findNearestChartPoint(
-  points: ChartDataPoint[],
+function findNearestTrackPoint(
+  points: ActivityChartTrackPoint[],
   lat: number,
   lng: number,
-): ChartDataPoint | null {
-  let nearest: ChartDataPoint | null = null
+): ActivityChartTrackPoint | null {
+  let nearest: ActivityChartTrackPoint | null = null
   let nearestDistance = Infinity
 
   for (const point of points) {
@@ -297,15 +299,37 @@ export function GarminDetailPage() {
     skip: !activityId,
     fetchPolicy: 'no-cache',
   })
-  const chartDataPoints = useMemo(
-    () => buildActivityChartData(chartData?.garminChartData ?? []).chartData,
+  // Resolve map clicks against the *full-resolution* track series (not the
+  // downsampled chart series) so the selected point is the true nearest
+  // location, then convert it into the chart/display shape using the same
+  // context the charts use. This keeps map clicks accurate for activities with
+  // more than 800 points while charts still render a downsampled series.
+  const rawChartPoints = useMemo(
+    () => chartData?.garminChartData ?? [],
     [chartData?.garminChartData],
+  )
+  const chartContext = useMemo(
+    () => getActivityChartContext(rawChartPoints),
+    [rawChartPoints],
   )
   const handleMapPointSelect = useCallback(
     ({ lat, lng }: { lat: number; lng: number }) => {
-      setActivePoint(findNearestChartPoint(chartDataPoints, lat, lng))
+      if (!chartContext) {
+        setActivePoint(null)
+        return
+      }
+      const nearest = findNearestTrackPoint(rawChartPoints, lat, lng)
+      setActivePoint(
+        nearest
+          ? toChartDataPoint(
+              nearest,
+              chartContext.startTime,
+              chartContext.hasReliableDistance,
+            )
+          : null,
+      )
     },
-    [chartDataPoints],
+    [rawChartPoints, chartContext],
   )
 
   if (loading) return <LoadingState message="Loading activity..." />
@@ -384,7 +408,7 @@ export function GarminDetailPage() {
               : null
           }
           onMapPointSelect={
-            chartDataPoints.length > 0 ? handleMapPointSelect : undefined
+            rawChartPoints.length > 0 ? handleMapPointSelect : undefined
           }
         />
       )}

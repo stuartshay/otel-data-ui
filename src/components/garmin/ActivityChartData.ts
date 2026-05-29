@@ -25,6 +25,13 @@ export interface ActivityChartDataResult {
   hasReliableDistance: boolean
 }
 
+export interface ActivityChartDataContext {
+  /** Epoch ms of the first sampled point, used to compute the time axis. */
+  startTime: number
+  /** Whether distance data is dense enough to drive the distance axis. */
+  hasReliableDistance: boolean
+}
+
 function downsample<T>(data: T[], target: number): T[] {
   if (data.length <= target) return data
   const step = data.length / target
@@ -38,20 +45,22 @@ function downsample<T>(data: T[], target: number): T[] {
   return result
 }
 
-export function buildActivityChartData(
-  trackPoints: ActivityChartTrackPoint[],
-): ActivityChartDataResult {
-  const sampled = downsample(trackPoints, 800)
-  if (sampled.length === 0) {
-    return { chartData: [], hasReliableDistance: false }
-  }
-
-  const startTime = new Date(sampled[0].timestamp).getTime()
-  const hasReliableDistance =
-    sampled.filter((pt) => pt.distance_from_start_km != null).length >=
-    sampled.length * 0.5
-
-  const chartData = sampled.map((pt) => ({
+/**
+ * Convert a single raw track point into the chart/display shape. Kept separate
+ * from {@link buildActivityChartData} so callers (e.g. map-click selection) can
+ * resolve the nearest *full-resolution* point and still render it with the same
+ * unit conversions the downsampled chart series uses.
+ *
+ * `startTime` and `hasReliableDistance` must be derived from the same source
+ * series (see {@link getActivityChartContext}) so the resulting `time`/
+ * `distance` values line up with the rendered charts.
+ */
+export function toChartDataPoint(
+  pt: ActivityChartTrackPoint,
+  startTime: number,
+  hasReliableDistance: boolean,
+): ChartDataPoint {
+  return {
     distance: hasReliableDistance
       ? pt.distance_from_start_km != null
         ? kmToMi(pt.distance_from_start_km)
@@ -64,7 +73,41 @@ export function buildActivityChartData(
     latitude: pt.latitude ?? null,
     longitude: pt.longitude ?? null,
     timestamp: pt.timestamp,
-  }))
+  }
+}
 
-  return { chartData, hasReliableDistance }
+/**
+ * Derive the shared conversion context (start time + distance reliability) from
+ * the same downsampled series the charts render, so map-click selections that
+ * resolve against full-resolution data stay consistent with the displayed
+ * charts.
+ */
+export function getActivityChartContext(
+  trackPoints: ActivityChartTrackPoint[],
+): ActivityChartDataContext | null {
+  const sampled = downsample(trackPoints, 800)
+  if (sampled.length === 0) return null
+
+  const startTime = new Date(sampled[0].timestamp).getTime()
+  const hasReliableDistance =
+    sampled.filter((pt) => pt.distance_from_start_km != null).length >=
+    sampled.length * 0.5
+
+  return { startTime, hasReliableDistance }
+}
+
+export function buildActivityChartData(
+  trackPoints: ActivityChartTrackPoint[],
+): ActivityChartDataResult {
+  const context = getActivityChartContext(trackPoints)
+  if (!context) {
+    return { chartData: [], hasReliableDistance: false }
+  }
+
+  const sampled = downsample(trackPoints, 800)
+  const chartData = sampled.map((pt) =>
+    toChartDataPoint(pt, context.startTime, context.hasReliableDistance),
+  )
+
+  return { chartData, hasReliableDistance: context.hasReliableDistance }
 }

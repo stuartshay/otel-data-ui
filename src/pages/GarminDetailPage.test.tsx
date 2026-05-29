@@ -274,6 +274,65 @@ describe('GarminDetailPage', () => {
     )
   })
 
+  it('resolves map clicks against full-resolution points, not the downsampled chart series', async () => {
+    const user = userEvent.setup()
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'running',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 5,
+          duration_seconds: 1800,
+          avg_speed_kmh: 10,
+          total_ascent_m: 40,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: {
+        garminTrackPoints: {
+          items: [{ latitude: 40.702, longitude: -74.002 }],
+        },
+      },
+    })
+
+    // 1000 points exceeds the 800-point downsample target. Index 4 is dropped
+    // by downsampling (no integer i satisfies floor(i * 1.25) === 4), so it
+    // only exists in the full-resolution series. Placing the click target there
+    // proves the lookup searches raw data rather than the downsampled charts.
+    const TARGET_INDEX = 4
+    const garminChartData = Array.from({ length: 1000 }, (_, i) => ({
+      timestamp: new Date(Date.UTC(2026, 2, 14, 9, 0, i)).toISOString(),
+      latitude: i === TARGET_INDEX ? 40.702 : 10,
+      longitude: i === TARGET_INDEX ? -74.002 : 10,
+      altitude: 10 + i,
+      speed_kmh: 8,
+      distance_from_start_km: i * 0.01,
+    }))
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData },
+    })
+
+    renderPage()
+
+    await user.click(screen.getByTestId('activity-route-map'))
+
+    expect(screen.getByTestId('activity-charts')).toHaveTextContent(
+      garminChartData[TARGET_INDEX].timestamp,
+    )
+    expect(screen.getByTestId('activity-hover-details')).toHaveTextContent(
+      '40.70200, -74.00200',
+    )
+  })
+
   it('shows not found when the activity query returns no activity', () => {
     garminDetailHooks.useGarminActivityQuery.mockReturnValue({
       loading: false,
