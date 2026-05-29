@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { reverseGeocode } from '@/services/geocoder'
-import type { ChartDataPoint } from './ActivityCharts'
+import type { ChartDataPoint } from './ActivityChartData'
 
 interface ActivityHoverDetailsProps {
   point: ChartDataPoint | null
@@ -98,7 +98,8 @@ export function ActivityHoverDetails({ point }: ActivityHoverDetailsProps) {
     return (
       <Card data-testid="activity-hover-details">
         <CardContent className="py-3 text-xs text-muted-foreground">
-          Hover the Elevation or Speed chart to see details for that point.
+          Hover the Elevation or Speed chart, or click the map, to see details
+          for that point.
         </CardContent>
       </Card>
     )

@@ -17,6 +17,12 @@ interface ActivityRouteMapProps {
    * elevation/speed reading occurred. The map view is not re-centered.
    */
   activeLatLng?: { lat: number; lng: number } | null
+  /**
+   * Emits the raw map click coordinate. The page resolves it to the nearest
+   * chart point so the map and charts stay synchronized on full-resolution
+   * data, even when the displayed route is simplified.
+   */
+  onMapPointSelect?: (latLng: { lat: number; lng: number }) => void
 }
 
 function speedToColor(
@@ -38,6 +44,7 @@ function speedToColor(
 export function ActivityRouteMap({
   trackPoints,
   activeLatLng,
+  onMapPointSelect,
 }: ActivityRouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -112,16 +119,25 @@ export function ActivityRouteMap({
       .bindPopup('Finish')
       .addTo(map)
 
+    const handleMapClick = (event: L.LeafletMouseEvent) => {
+      onMapPointSelect?.({
+        lat: event.latlng.lat,
+        lng: event.latlng.lng,
+      })
+    }
+    map.on('click', handleMapClick)
+
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [30, 30] })
     }
 
     return () => {
+      map.off('click', handleMapClick)
       map.remove()
       mapInstanceRef.current = null
       hoverMarkerRef.current = null
     }
-  }, [trackPoints])
+  }, [trackPoints, onMapPointSelect])
 
   // Sync hover marker with the active chart point. Avoid re-fitting bounds so
   // the map stays put while the user scrubs the charts.

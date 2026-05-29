@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -14,9 +14,12 @@ import { ActivityHeader } from '@/components/garmin/ActivityHeader'
 import { ActivityStatsBar } from '@/components/garmin/ActivityStatsBar'
 import { ActivityRouteMap } from '@/components/garmin/ActivityRouteMap'
 import {
-  ActivityCharts,
+  getActivityChartContext,
+  toChartDataPoint,
+  type ActivityChartTrackPoint,
   type ChartDataPoint,
-} from '@/components/garmin/ActivityCharts'
+} from '@/components/garmin/ActivityChartData'
+import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
@@ -27,6 +30,59 @@ import { escapeCsvValue, triggerDownload } from '@/lib/export'
 const SIMPLIFY_TOLERANCE = 0.00001
 /** Maximum track points fetched per page when exporting. */
 const EXPORT_PAGE_SIZE = 10000
+const EARTH_RADIUS_M = 6_371_000
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180
+}
+
+function isFiniteCoordinate(
+  point: ActivityChartTrackPoint,
+): point is ActivityChartTrackPoint & { latitude: number; longitude: number } {
+  return (
+    point.latitude != null &&
+    point.longitude != null &&
+    Number.isFinite(point.latitude) &&
+    Number.isFinite(point.longitude)
+  )
+}
+
+function distanceMeters(
+  latA: number,
+  lonA: number,
+  latB: number,
+  lonB: number,
+): number {
+  const dLat = toRadians(latB - latA)
+  const dLon = toRadians(lonB - lonA)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(latA)) *
+      Math.cos(toRadians(latB)) *
+      Math.sin(dLon / 2) ** 2
+  return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function findNearestTrackPoint(
+  points: ActivityChartTrackPoint[],
+  lat: number,
+  lng: number,
+): ActivityChartTrackPoint | null {
+  let nearest: ActivityChartTrackPoint | null = null
+  let nearestDistance = Infinity
+
+  for (const point of points) {
+    if (!isFiniteCoordinate(point)) continue
+
+    const distance = distanceMeters(lat, lng, point.latitude, point.longitude)
+    if (distance < nearestDistance) {
+      nearest = point
+      nearestDistance = distance
+    }
+  }
+
+  return nearest
+}
 
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
@@ -243,6 +299,38 @@ export function GarminDetailPage() {
     skip: !activityId,
     fetchPolicy: 'no-cache',
   })
+  // Resolve map clicks against the *full-resolution* track series (not the
+  // downsampled chart series) so the selected point is the true nearest
+  // location, then convert it into the chart/display shape using the same
+  // context the charts use. This keeps map clicks accurate for activities with
+  // more than 800 points while charts still render a downsampled series.
+  const rawChartPoints = useMemo(
+    () => chartData?.garminChartData ?? [],
+    [chartData?.garminChartData],
+  )
+  const chartContext = useMemo(
+    () => getActivityChartContext(rawChartPoints),
+    [rawChartPoints],
+  )
+  const handleMapPointSelect = useCallback(
+    ({ lat, lng }: { lat: number; lng: number }) => {
+      if (!chartContext) {
+        setActivePoint(null)
+        return
+      }
+      const nearest = findNearestTrackPoint(rawChartPoints, lat, lng)
+      setActivePoint(
+        nearest
+          ? toChartDataPoint(
+              nearest,
+              chartContext.startTime,
+              chartContext.hasReliableDistance,
+            )
+          : null,
+      )
+    },
+    [rawChartPoints, chartContext],
+  )
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
@@ -319,6 +407,9 @@ export function GarminDetailPage() {
               ? { lat: activePoint.latitude, lng: activePoint.longitude }
               : null
           }
+          onMapPointSelect={
+            rawChartPoints.length > 0 ? handleMapPointSelect : undefined
+          }
         />
       )}
 
@@ -331,6 +422,7 @@ export function GarminDetailPage() {
           <ActivityHoverDetails point={activePoint} />
           <ActivityCharts
             trackPoints={chartPoints}
+            activePoint={activePoint}
             onActivePointChange={setActivePoint}
           />
         </>

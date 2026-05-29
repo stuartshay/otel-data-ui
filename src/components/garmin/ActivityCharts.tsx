@@ -5,24 +5,22 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  ReferenceDot,
+  ReferenceLine,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { kmToMi, metersToFeet, kmhToMph } from '@/lib/units'
-
-interface TrackPoint {
-  distance_from_start_km?: number | null
-  timestamp: string
-  altitude?: number | null
-  speed_kmh?: number | null
-  latitude?: number | null
-  longitude?: number | null
-}
+import {
+  buildActivityChartData,
+  type ActivityChartTrackPoint,
+  type ChartDataPoint,
+} from './ActivityChartData'
 
 interface ActivityChartsProps {
-  trackPoints: TrackPoint[]
+  trackPoints: ActivityChartTrackPoint[]
+  activePoint?: ChartDataPoint | null
   /**
    * Notifies the parent which chart point is currently under the cursor so the
    * page can render a shared details panel and a map hover marker. The two
@@ -34,20 +32,6 @@ interface ActivityChartsProps {
 
 type XAxisMode = 'distance' | 'time'
 
-function downsample<T>(data: T[], target: number): T[] {
-  if (data.length <= target) return data
-  const step = data.length / target
-  const result: T[] = []
-  for (let i = 0; i < target; i++) {
-    result.push(data[Math.floor(i * step)])
-  }
-  // Always include last point
-  if (result[result.length - 1] !== data[data.length - 1]) {
-    result.push(data[data.length - 1])
-  }
-  return result
-}
-
 interface ChartConfig {
   title: string
   dataKey: string
@@ -56,54 +40,35 @@ interface ChartConfig {
   hasData: boolean
 }
 
-export interface ChartDataPoint {
-  distance: number | null
-  distanceKm: number | null
-  time: number
-  elevation: number | null
-  speed: number | null
-  latitude: number | null
-  longitude: number | null
-  timestamp: string
+function activeMetricValue(
+  point: ChartDataPoint | null | undefined,
+  dataKey: string,
+): number | null {
+  if (dataKey !== 'elevation' && dataKey !== 'speed') return null
+  const value = point?.[dataKey]
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 export function ActivityCharts({
   trackPoints,
+  activePoint,
   onActivePointChange,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
 
   if (trackPoints.length === 0) return null
 
-  // Build chart data with unit conversions
-  const sampled = downsample(trackPoints, 800)
-  const startTime = new Date(sampled[0].timestamp).getTime()
-
-  // Determine whether distance_from_start_km is sufficiently populated to use as the X-axis
-  const hasReliableDistance =
-    sampled.filter((pt) => pt.distance_from_start_km != null).length >=
-    sampled.length * 0.5
-
-  const chartData = sampled.map((pt) => ({
-    distance: hasReliableDistance
-      ? pt.distance_from_start_km != null
-        ? kmToMi(pt.distance_from_start_km)
-        : null
-      : null,
-    distanceKm: pt.distance_from_start_km ?? null,
-    time: (new Date(pt.timestamp).getTime() - startTime) / 60000, // minutes
-    elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
-    speed: pt.speed_kmh != null ? kmhToMph(pt.speed_kmh) : null,
-    latitude: pt.latitude ?? null,
-    longitude: pt.longitude ?? null,
-    timestamp: pt.timestamp,
-  }))
+  const { chartData, hasReliableDistance } = buildActivityChartData(trackPoints)
 
   // Fall back to time if distance data is too sparse
   const effectiveXMode =
     xMode === 'distance' && !hasReliableDistance ? 'time' : xMode
   const xKey = effectiveXMode === 'distance' ? 'distance' : 'time'
   const xLabel = effectiveXMode === 'distance' ? 'Distance (mi)' : 'Time (min)'
+  const activeX =
+    activePoint?.[xKey] != null && Number.isFinite(activePoint[xKey])
+      ? activePoint[xKey]
+      : null
 
   const hasElevation = chartData.some((d) => d.elevation != null)
   const hasSpeed = chartData.some((d) => d.speed != null)
@@ -212,6 +177,26 @@ export function ActivityCharts({
                   cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
                   content={() => null}
                 />
+                {activeX != null && (
+                  <ReferenceLine
+                    x={activeX}
+                    stroke="currentColor"
+                    strokeOpacity={0.55}
+                    ifOverflow="extendDomain"
+                  />
+                )}
+                {activeX != null &&
+                  activeMetricValue(activePoint, chart.dataKey) != null && (
+                    <ReferenceDot
+                      x={activeX}
+                      y={activeMetricValue(activePoint, chart.dataKey) ?? 0}
+                      r={4}
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      fill="var(--background)"
+                      ifOverflow="extendDomain"
+                    />
+                  )}
                 <Area
                   type="monotone"
                   dataKey={chart.dataKey}
