@@ -18,6 +18,11 @@ interface ActivityRouteMapProps {
    */
   activeLatLng?: { lat: number; lng: number } | null
   /**
+   * Optional point explicitly locked from a chart double-click. It remains on
+   * the map independently of the transient hover marker.
+   */
+  lockedLatLng?: { lat: number; lng: number } | null
+  /**
    * Emits the raw map click coordinate. The page resolves it to the nearest
    * chart point so the map and charts stay synchronized on full-resolution
    * data, even when the displayed route is simplified.
@@ -44,11 +49,13 @@ function speedToColor(
 export function ActivityRouteMap({
   trackPoints,
   activeLatLng,
+  lockedLatLng,
   onMapPointSelect,
 }: ActivityRouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const hoverMarkerRef = useRef<L.CircleMarker | null>(null)
+  const lockedMarkerRef = useRef<L.CircleMarker | null>(null)
 
   useEffect(() => {
     if (!mapRef.current || trackPoints.length === 0) return
@@ -136,6 +143,7 @@ export function ActivityRouteMap({
       map.remove()
       mapInstanceRef.current = null
       hoverMarkerRef.current = null
+      lockedMarkerRef.current = null
     }
   }, [trackPoints, onMapPointSelect])
 
@@ -169,6 +177,42 @@ export function ActivityRouteMap({
       ).addTo(map)
     }
   }, [activeLatLng])
+
+  // Keep the locked chart-selection marker on the map until the user locks a
+  // different chart point or switches activities.
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (!lockedLatLng) {
+      if (lockedMarkerRef.current) {
+        lockedMarkerRef.current.remove()
+        lockedMarkerRef.current = null
+      }
+      return
+    }
+
+    if (lockedMarkerRef.current) {
+      lockedMarkerRef.current.setLatLng([lockedLatLng.lat, lockedLatLng.lng])
+    } else {
+      lockedMarkerRef.current = L.circleMarker(
+        [lockedLatLng.lat, lockedLatLng.lng],
+        {
+          radius: 8,
+          color: '#f97316',
+          weight: 3,
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          className: 'activity-locked-marker',
+        },
+      )
+        .bindTooltip('Locked chart point', {
+          direction: 'top',
+          offset: [0, -8],
+        })
+        .addTo(map)
+    }
+  }, [lockedLatLng])
 
   if (trackPoints.length === 0) return null
 

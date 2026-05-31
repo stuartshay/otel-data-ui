@@ -28,6 +28,11 @@ interface ActivityChartsProps {
    * crosshair at the same x-position and emit the same active index.
    */
   onActivePointChange?: (point: ChartDataPoint | null) => void
+  /**
+   * Locks the current chart point so it remains visible on the route map after
+   * the cursor leaves the chart.
+   */
+  onPointLock?: (point: ChartDataPoint) => void
 }
 
 type XAxisMode = 'distance' | 'time'
@@ -49,10 +54,27 @@ function activeMetricValue(
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+function pointFromTooltipState(
+  state: { activeTooltipIndex?: number | string | null } | undefined,
+  chartData: ChartDataPoint[],
+): ChartDataPoint | null {
+  const raw = state?.activeTooltipIndex
+  // Recharts 3 may emit the index as a string; normalize it.
+  const i =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string' && raw !== ''
+        ? Number(raw)
+        : NaN
+
+  return Number.isInteger(i) && chartData[i] ? chartData[i] : null
+}
+
 export function ActivityCharts({
   trackPoints,
   activePoint,
   onActivePointChange,
+  onPointLock,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
 
@@ -137,17 +159,14 @@ export function ActivityCharts({
                 onMouseMove={(state: {
                   activeTooltipIndex?: number | string | null
                 }) => {
-                  const raw = state?.activeTooltipIndex
-                  // Recharts 3 may emit the index as a string; normalize it.
-                  const i =
-                    typeof raw === 'number'
-                      ? raw
-                      : typeof raw === 'string' && raw !== ''
-                        ? Number(raw)
-                        : NaN
-                  if (Number.isInteger(i) && chartData[i]) {
-                    onActivePointChange?.(chartData[i])
-                  }
+                  const point = pointFromTooltipState(state, chartData)
+                  if (point) onActivePointChange?.(point)
+                }}
+                onDoubleClick={(state: {
+                  activeTooltipIndex?: number | string | null
+                }) => {
+                  const point = pointFromTooltipState(state, chartData)
+                  if (point) onPointLock?.(point)
                 }}
                 onMouseLeave={() => onActivePointChange?.(null)}
               >

@@ -88,6 +88,7 @@ export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
   const [activePoint, setActivePoint] = useState<ChartDataPoint | null>(null)
+  const [lockedPoint, setLockedPoint] = useState<ChartDataPoint | null>(null)
 
   // Reset hover state when switching activities so the shared details
   // panel and map marker don't briefly show stale coordinates from the
@@ -98,6 +99,7 @@ export function GarminDetailPage() {
   if (activityId !== prevActivityId) {
     setPrevActivityId(activityId)
     setActivePoint(null)
+    setLockedPoint(null)
   }
 
   useEffect(() => {
@@ -342,6 +344,7 @@ export function GarminDetailPage() {
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
   const chartPoints = chartData?.garminChartData ?? []
   const trackLoading = mapTrackLoading || chartLoading
+  const displayPoint = activePoint ?? lockedPoint
 
   return (
     <div className="space-y-6">
@@ -403,8 +406,13 @@ export function GarminDetailPage() {
         <ActivityRouteMap
           trackPoints={mapTrackPoints}
           activeLatLng={
-            activePoint?.latitude != null && activePoint?.longitude != null
+            activePoint?.latitude != null && activePoint.longitude != null
               ? { lat: activePoint.latitude, lng: activePoint.longitude }
+              : null
+          }
+          lockedLatLng={
+            lockedPoint?.latitude != null && lockedPoint.longitude != null
+              ? { lat: lockedPoint.latitude, lng: lockedPoint.longitude }
               : null
           }
           onMapPointSelect={
@@ -419,11 +427,12 @@ export function GarminDetailPage() {
 
       {chartPoints.length > 0 && (
         <>
-          <ActivityHoverDetails point={activePoint} />
+          <ActivityHoverDetails point={displayPoint} />
           <ActivityCharts
             trackPoints={chartPoints}
-            activePoint={activePoint}
+            activePoint={displayPoint}
             onActivePointChange={setActivePoint}
+            onPointLock={setLockedPoint}
           />
         </>
       )}
