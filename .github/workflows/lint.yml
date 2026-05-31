@@ -142,8 +142,20 @@ jobs:
           minimum="${COVERAGE_MINIMUM}"
           failed=0
 
+          read_coverage_pct() {
+            key="$1"
+            pct=$(jq -er ".total.${key}.pct | numbers" coverage/coverage-summary.json) || {
+              echo "ERROR: total ${key} coverage percentage is missing or invalid" >&2
+              return 1
+            }
+            printf '%s\n' "${pct}"
+          }
+
           for key in statements functions lines; do
-            pct=$(jq -r ".total.${key}.pct" coverage/coverage-summary.json)
+            pct=$(read_coverage_pct "${key}") || {
+              failed=1
+              continue
+            }
             awk -v key="${key}" -v pct="${pct}" -v min="${minimum}" '
               BEGIN {
                 if (pct + 0 < min + 0) {
@@ -155,8 +167,8 @@ jobs:
             ' || failed=1
           done
 
-          branch_pct=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
-          echo "INFO: total branch coverage is ${branch_pct}% (reported, non-blocking)"
+          branch_pct=$(read_coverage_pct branches) || failed=1
+          echo "INFO: total branch coverage is ${branch_pct}% (Vitest threshold enforced separately)"
 
           exit "${failed}"
 
@@ -278,7 +290,7 @@ jobs:
             if [ -f coverage/coverage-summary.json ]; then
               echo "## Code Coverage"
               echo ""
-              echo "Required minimum: ${COVERAGE_MINIMUM}% for total statements, functions, and lines. Branch coverage is reported but non-blocking."
+              echo "Required minimum: ${COVERAGE_MINIMUM}% for total statements, functions, and lines. Branch coverage follows the Vitest threshold."
               echo ""
               echo "| Category | Covered | Total | Percentage |"
               echo "|----------|---------|-------|------------|"
