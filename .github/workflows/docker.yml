@@ -13,6 +13,10 @@ on:
   pull_request:
     branches: [master, develop]
 
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: stuartshay/otel-data-ui
 
@@ -22,7 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout
@@ -109,11 +112,13 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ steps.push.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ github.ref_name }}
+          cache-from: |
+            type=gha,scope=${{ github.ref_name }}
+            type=gha,scope=master
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}
           provenance: true
           sbom: true
@@ -121,7 +126,7 @@ jobs:
             APP_VERSION=${{ steps.version.outputs.version }}
 
       - name: Update Docker Hub description
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master' && steps.push.outputs.should_push == 'true'
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -131,7 +136,7 @@ jobs:
           readme-filepath: ./README.md
 
       - name: Trigger k8s-gitops update
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master' && steps.push.outputs.should_push == 'true'
         uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.GITOPS_PAT }}
