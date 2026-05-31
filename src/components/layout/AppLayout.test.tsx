@@ -101,6 +101,35 @@ describe('AppLayout', () => {
     expect(setTheme).toHaveBeenCalledWith('system')
   })
 
+  it('cycles light theme to dark', async () => {
+    const user = userEvent.setup()
+    const setTheme = vi.fn()
+    useThemeMock.mockReturnValue({
+      theme: 'light',
+      setTheme,
+    })
+
+    renderLayout()
+
+    await user.click(screen.getByTitle('Theme: light'))
+    expect(setTheme).toHaveBeenCalledWith('dark')
+  })
+
+  it('cycles system theme to light', async () => {
+    const user = userEvent.setup()
+    const setTheme = vi.fn()
+
+    useThemeMock.mockReturnValue({
+      theme: 'system',
+      setTheme,
+    })
+
+    renderLayout()
+
+    await user.click(screen.getByTitle('Theme: system'))
+    expect(setTheme).toHaveBeenCalledWith('light')
+  })
+
   it('keeps the daily summary nav item active on day detail pages', () => {
     renderLayout('/daily-summary/2026-03-14')
 

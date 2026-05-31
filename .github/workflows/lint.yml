@@ -6,10 +6,22 @@ on:
   pull_request:
     branches: [master, develop]
 
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  COVERAGE_MINIMUM: '80'
+  NODE_VERSION: '24'
+
 jobs:
   lint:
     name: ESLint and TypeScript Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -17,11 +29,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Run ESLint
         run: npm run lint
@@ -50,6 +62,7 @@ jobs:
   build:
     name: Build Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -57,11 +70,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Build
         run: npm run build
@@ -69,6 +82,7 @@ jobs:
   docker-lint:
     name: Dockerfile Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -81,6 +95,7 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -88,11 +103,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Run npm audit
         run: npm audit --audit-level=moderate || true
@@ -100,6 +115,7 @@ jobs:
   test:
     name: Tests and Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -107,14 +123,42 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Run tests with coverage
         run: npm run test:coverage
+
+      - name: Enforce total coverage
+        run: |
+          if [ ! -f coverage/coverage-summary.json ]; then
+            echo "ERROR: coverage/coverage-summary.json was not generated"
+            exit 1
+          fi
+
+          minimum="${COVERAGE_MINIMUM}"
+          failed=0
+
+          for key in statements functions lines; do
+            pct=$(jq -r ".total.${key}.pct" coverage/coverage-summary.json)
+            awk -v key="${key}" -v pct="${pct}" -v min="${minimum}" '
+              BEGIN {
+                if (pct + 0 < min + 0) {
+                  printf("ERROR: total %s coverage %.2f%% is below required %.2f%%\n", key, pct, min)
+                  exit 1
+                }
+                printf("OK: total %s coverage %.2f%% meets required %.2f%%\n", key, pct, min)
+              }
+            ' || failed=1
+          done
+
+          branch_pct=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
+          echo "INFO: total branch coverage is ${branch_pct}% (reported, non-blocking)"
+
+          exit "${failed}"
 
       - name: Upload coverage summary
         if: always() && hashFiles('coverage/coverage-summary.json') != ''
@@ -131,6 +175,8 @@ jobs:
           if [ -f coverage/coverage-summary.json ]; then
             {
               echo "## Test Coverage Report"
+              echo ""
+              echo "Required minimum: ${COVERAGE_MINIMUM}% for total statements, functions, and lines."
               echo ""
               echo "| Category | Covered | Total | Percentage |"
               echo "|----------|---------|-------|------------|"
@@ -154,6 +200,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, build, docker-lint, security, test]
     if: always()
+    timeout-minutes: 5
     steps:
       - name: Download coverage summary artifact
         uses: actions/download-artifact@v8
@@ -168,7 +215,7 @@ jobs:
           DOCKER_LINT_RESULT: ${{ needs.docker-lint.result }}
           EVENT_NAME: ${{ github.event_name }}
           LINT_RESULT: ${{ needs.lint.result }}
-          NODE_VERSION: '24'
+          NODE_VERSION: ${{ env.NODE_VERSION }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
@@ -225,11 +272,13 @@ jobs:
             echo "- Production build"
             echo "- Dockerfile lint"
             echo "- npm audit (informational)"
-            echo "- Vitest coverage run"
+            echo "- Vitest coverage run with ${COVERAGE_MINIMUM}% minimum for total statements, functions, and lines"
             echo ""
 
             if [ -f coverage/coverage-summary.json ]; then
               echo "## Code Coverage"
+              echo ""
+              echo "Required minimum: ${COVERAGE_MINIMUM}% for total statements, functions, and lines. Branch coverage is reported but non-blocking."
               echo ""
               echo "| Category | Covered | Total | Percentage |"
               echo "|----------|---------|-------|------------|"
