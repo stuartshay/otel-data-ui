@@ -36,9 +36,11 @@ vi.mock('@/components/garmin/ActivityStatsBar', () => ({
 vi.mock('@/components/garmin/ActivityRouteMap', () => ({
   ActivityRouteMap: ({
     activeLatLng,
+    lockedLatLng,
     onMapPointSelect,
   }: {
     activeLatLng?: { lat: number; lng: number } | null
+    lockedLatLng?: { lat: number; lng: number } | null
     onMapPointSelect?: (latLng: { lat: number; lng: number }) => void
   }) => (
     <button
@@ -47,7 +49,8 @@ vi.mock('@/components/garmin/ActivityRouteMap', () => ({
       onClick={() => onMapPointSelect?.({ lat: 40.702, lng: -74.002 })}
     >
       route-map
-      {activeLatLng ? ` ${activeLatLng.lat},${activeLatLng.lng}` : ''}
+      {activeLatLng ? ` active:${activeLatLng.lat},${activeLatLng.lng}` : ''}
+      {lockedLatLng ? ` locked:${lockedLatLng.lat},${lockedLatLng.lng}` : ''}
     </button>
   ),
 }))
@@ -55,12 +58,32 @@ vi.mock('@/components/garmin/ActivityRouteMap', () => ({
 vi.mock('@/components/garmin/ActivityCharts', () => ({
   ActivityCharts: ({
     activePoint,
+    onPointLock,
   }: {
-    activePoint?: { timestamp: string }
+    activePoint?: { timestamp: string; latitude?: number; longitude?: number }
+    onPointLock?: (point: {
+      timestamp: string
+      time: number
+      distance?: number | null
+      latitude?: number
+      longitude?: number
+    }) => void
   }) => (
-    <div data-testid="activity-charts">
+    <button
+      data-testid="activity-charts"
+      type="button"
+      onDoubleClick={() =>
+        onPointLock?.({
+          timestamp: '2026-03-14T09:10:00Z',
+          time: 10,
+          distance: 1,
+          latitude: 40.704,
+          longitude: -74.004,
+        })
+      }
+    >
       {activePoint ? activePoint.timestamp : 'charts'}
-    </div>
+    </button>
   ),
 }))
 
@@ -270,7 +293,63 @@ describe('GarminDetailPage', () => {
       '40.70200, -74.00200',
     )
     expect(screen.getByTestId('activity-route-map')).toHaveTextContent(
-      '40.702,-74.002',
+      'active:40.702,-74.002',
+    )
+  })
+
+  it('locks a chart point on the route map when the chart is double-clicked', async () => {
+    const user = userEvent.setup()
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'running',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 5,
+          duration_seconds: 1800,
+          avg_speed_kmh: 10,
+          total_ascent_m: 40,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: {
+        garminTrackPoints: {
+          items: [{ latitude: 40.704, longitude: -74.004 }],
+        },
+      },
+    })
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminChartData: [
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            latitude: 40.704,
+            longitude: -74.004,
+            altitude: 20,
+            speed_kmh: 10,
+            distance_from_start_km: 1,
+          },
+        ],
+      },
+    })
+
+    renderPage()
+
+    await user.dblClick(screen.getByTestId('activity-charts'))
+
+    expect(screen.getByTestId('activity-route-map')).toHaveTextContent(
+      'locked:40.704,-74.004',
+    )
+    expect(screen.getByTestId('activity-hover-details')).toHaveTextContent(
+      '40.70400, -74.00400',
     )
   })
 
