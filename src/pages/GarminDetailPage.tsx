@@ -406,12 +406,12 @@ export function GarminDetailPage() {
         <ActivityRouteMap
           trackPoints={mapTrackPoints}
           activeLatLng={
-            activePoint?.latitude != null && activePoint.longitude != null
+            activePoint?.latitude != null && activePoint?.longitude != null
               ? { lat: activePoint.latitude, lng: activePoint.longitude }
               : null
           }
           lockedLatLng={
-            lockedPoint?.latitude != null && lockedPoint.longitude != null
+            lockedPoint?.latitude != null && lockedPoint?.longitude != null
               ? { lat: lockedPoint.latitude, lng: lockedPoint.longitude }
               : null
           }
