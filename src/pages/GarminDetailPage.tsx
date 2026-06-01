@@ -24,6 +24,7 @@ import { nextSavedPointColor } from '@/components/garmin/savedPointColors'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
 import { SavedPointsList } from '@/components/garmin/SavedPointsList'
+import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
@@ -485,6 +486,7 @@ export function GarminDetailPage() {
             onRemove={removeSavedPoint}
             onClear={clearSavedPoints}
           />
+          <SegmentAnalysis points={savedPoints} />
         </>
       )}
 

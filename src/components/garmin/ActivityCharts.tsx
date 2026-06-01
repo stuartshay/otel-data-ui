@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   ReferenceDot,
   ReferenceLine,
+  ReferenceArea,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
@@ -102,6 +103,22 @@ export function ActivityCharts({
   const hasElevation = chartData.some((d) => d.elevation != null)
   const hasSpeed = chartData.some((d) => d.speed != null)
 
+  // Shaded regions between consecutive saved points (ordered along the x-axis).
+  const savedPointsByX = savedPoints
+    .filter((sp) => sp[xKey] != null && Number.isFinite(sp[xKey]))
+    .map((sp) => ({ id: sp.id, color: sp.color, x: sp[xKey] as number }))
+    .sort((a, b) => a.x - b.x)
+  const savedSegments = savedPointsByX.slice(0, -1).map((sp, i) => {
+    const next = savedPointsByX[i + 1]
+    return {
+      fromId: sp.id,
+      toId: next.id,
+      color: next.color,
+      x1: sp.x,
+      x2: next.x,
+    }
+  })
+
   const charts: ChartConfig[] = [
     {
       title: 'Elevation',
@@ -178,6 +195,16 @@ export function ActivityCharts({
                 onMouseLeave={() => onActivePointChange?.(null)}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                {savedSegments.map((seg) => (
+                  <ReferenceArea
+                    key={`seg-${seg.fromId}-${seg.toId}`}
+                    x1={seg.x1}
+                    x2={seg.x2}
+                    fill={seg.color}
+                    fillOpacity={0.08}
+                    ifOverflow="extendDomain"
+                  />
+                ))}
                 <XAxis
                   dataKey={xKey}
                   type="number"
