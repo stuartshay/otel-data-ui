@@ -18,10 +18,13 @@ interface ActivityRouteMapProps {
    */
   activeLatLng?: { lat: number; lng: number } | null
   /**
-   * Optional point explicitly locked from a chart double-click. It remains on
-   * the map independently of the transient hover marker.
+   * Points the user has saved (via chart double-click, map click, or the
+   * details panel). Each renders a persistent color-coded marker. Clicking a
+   * saved marker removes it via {@link onSavedPointRemove}.
    */
-  lockedLatLng?: { lat: number; lng: number } | null
+  savedPoints?: Array<{ id: string; lat: number; lng: number; color: string }>
+  /** Removes a saved point when its marker is clicked. */
+  onSavedPointRemove?: (id: string) => void
   /**
    * Emits the raw map click coordinate. The page resolves it to the nearest
    * chart point so the map and charts stay synchronized on full-resolution
@@ -49,16 +52,27 @@ function speedToColor(
 export function ActivityRouteMap({
   trackPoints,
   activeLatLng,
-  lockedLatLng,
+  savedPoints = [],
+  onSavedPointRemove,
   onMapPointSelect,
 }: ActivityRouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const hoverMarkerRef = useRef<L.CircleMarker | null>(null)
-  const lockedMarkerRef = useRef<L.CircleMarker | null>(null)
+  const savedMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map())
+  // Keep the latest remove handler in a ref so marker click listeners (bound
+  // once per marker) always call the current callback without re-binding.
+  const onSavedPointRemoveRef = useRef(onSavedPointRemove)
+  useEffect(() => {
+    onSavedPointRemoveRef.current = onSavedPointRemove
+  }, [onSavedPointRemove])
 
   useEffect(() => {
     if (!mapRef.current || trackPoints.length === 0) return
+
+    // The saved-markers map is a stable ref object; capture it so the cleanup
+    // closure doesn't read a possibly-changed ref value at teardown time.
+    const savedMarkers = savedMarkersRef.current
 
     // Clean up previous instance
     if (mapInstanceRef.current) {
@@ -143,7 +157,7 @@ export function ActivityRouteMap({
       map.remove()
       mapInstanceRef.current = null
       hoverMarkerRef.current = null
-      lockedMarkerRef.current = null
+      savedMarkers.clear()
     }
   }, [trackPoints, onMapPointSelect])
 
@@ -178,41 +192,53 @@ export function ActivityRouteMap({
     }
   }, [activeLatLng])
 
-  // Keep the locked chart-selection marker on the map until the user locks a
-  // different chart point or switches activities.
+  // Keep the saved-point markers in sync with the saved set. Each marker is
+  // color-coded and clickable to remove its point; the map stays put so saving
+  // points never re-centers the view.
   useEffect(() => {
     const map = mapInstanceRef.current
     if (!map) return
 
-    if (!lockedLatLng) {
-      if (lockedMarkerRef.current) {
-        lockedMarkerRef.current.remove()
-        lockedMarkerRef.current = null
+    const markers = savedMarkersRef.current
+    const nextIds = new Set(savedPoints.map((p) => p.id))
+
+    // Drop markers whose points are no longer saved.
+    for (const [id, marker] of markers) {
+      if (!nextIds.has(id)) {
+        marker.remove()
+        markers.delete(id)
       }
-      return
     }
 
-    if (lockedMarkerRef.current) {
-      lockedMarkerRef.current.setLatLng([lockedLatLng.lat, lockedLatLng.lng])
-    } else {
-      lockedMarkerRef.current = L.circleMarker(
-        [lockedLatLng.lat, lockedLatLng.lng],
-        {
+    // Add or update markers for the current saved points.
+    for (const p of savedPoints) {
+      const existing = markers.get(p.id)
+      if (existing) {
+        existing.setLatLng([p.lat, p.lng])
+        existing.setStyle({ color: p.color, fillColor: p.color })
+      } else {
+        const marker = L.circleMarker([p.lat, p.lng], {
           radius: 8,
-          color: '#f97316',
+          color: p.color,
           weight: 3,
-          fillColor: '#ffffff',
-          fillOpacity: 1,
-          className: 'activity-locked-marker',
-        },
-      )
-        .bindTooltip('Locked chart point', {
-          direction: 'top',
-          offset: [0, -8],
+          fillColor: p.color,
+          fillOpacity: 0.9,
+          className: 'activity-saved-marker',
         })
-        .addTo(map)
+          .bindTooltip('Saved point — click to remove', {
+            direction: 'top',
+            offset: [0, -8],
+          })
+          .addTo(map)
+        marker.on('click', (event: L.LeafletMouseEvent) => {
+          // Stop the map 'click' handler from saving a new point on top.
+          L.DomEvent.stopPropagation(event)
+          onSavedPointRemoveRef.current?.(p.id)
+        })
+        markers.set(p.id, marker)
+      }
     }
-  }, [lockedLatLng])
+  }, [savedPoints])
 
   if (trackPoints.length === 0) return null
 

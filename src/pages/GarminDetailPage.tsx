@@ -18,9 +18,12 @@ import {
   toChartDataPoint,
   type ActivityChartTrackPoint,
   type ChartDataPoint,
+  type SavedPoint,
 } from '@/components/garmin/ActivityChartData'
+import { nextSavedPointColor } from '@/components/garmin/savedPointColors'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
+import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
@@ -88,7 +91,7 @@ export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
   const [activePoint, setActivePoint] = useState<ChartDataPoint | null>(null)
-  const [lockedPoint, setLockedPoint] = useState<ChartDataPoint | null>(null)
+  const [savedPoints, setSavedPoints] = useState<SavedPoint[]>([])
 
   // Reset hover state when switching activities so the shared details
   // panel and map marker don't briefly show stale coordinates from the
@@ -99,8 +102,26 @@ export function GarminDetailPage() {
   if (activityId !== prevActivityId) {
     setPrevActivityId(activityId)
     setActivePoint(null)
-    setLockedPoint(null)
+    setSavedPoints([])
   }
+
+  // Add the given point to the saved set, or remove it if already saved
+  // (toggle by timestamp). New points get the next palette color.
+  const addOrTogglePoint = useCallback((point: ChartDataPoint) => {
+    setSavedPoints((prev) => {
+      const id = point.timestamp
+      if (prev.some((p) => p.id === id)) {
+        return prev.filter((p) => p.id !== id)
+      }
+      return [...prev, { ...point, id, color: nextSavedPointColor(prev) }]
+    })
+  }, [])
+
+  const removeSavedPoint = useCallback((id: string) => {
+    setSavedPoints((prev) => prev.filter((p) => p.id !== id))
+  }, [])
+
+  const clearSavedPoints = useCallback(() => setSavedPoints([]), [])
 
   useEffect(() => {
     setNRCustomAttribute('garmin.flow', true)
@@ -321,17 +342,21 @@ export function GarminDetailPage() {
         return
       }
       const nearest = findNearestTrackPoint(rawChartPoints, lat, lng)
-      setActivePoint(
-        nearest
-          ? toChartDataPoint(
-              nearest,
-              chartContext.startTime,
-              chartContext.hasReliableDistance,
-            )
-          : null,
+      if (!nearest) {
+        setActivePoint(null)
+        return
+      }
+      const point = toChartDataPoint(
+        nearest,
+        chartContext.startTime,
+        chartContext.hasReliableDistance,
       )
+      // Show the clicked point in the details panel and toggle it in the
+      // saved set so it gets a persistent color-coded marker.
+      setActivePoint(point)
+      addOrTogglePoint(point)
     },
-    [rawChartPoints, chartContext],
+    [rawChartPoints, chartContext, addOrTogglePoint],
   )
 
   if (loading) return <LoadingState message="Loading activity..." />
@@ -344,7 +369,24 @@ export function GarminDetailPage() {
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
   const chartPoints = chartData?.garminChartData ?? []
   const trackLoading = mapTrackLoading || chartLoading
-  const displayPoint = activePoint ?? lockedPoint
+  const displayPoint = activePoint
+  const displayPointSaved =
+    displayPoint != null &&
+    savedPoints.some((p) => p.id === displayPoint.timestamp)
+  const savedMapPoints = savedPoints
+    .filter(
+      (p) =>
+        p.latitude != null &&
+        p.longitude != null &&
+        Number.isFinite(p.latitude) &&
+        Number.isFinite(p.longitude),
+    )
+    .map((p) => ({
+      id: p.id,
+      lat: p.latitude as number,
+      lng: p.longitude as number,
+      color: p.color,
+    }))
 
   return (
     <div className="space-y-6">
@@ -410,11 +452,8 @@ export function GarminDetailPage() {
               ? { lat: activePoint.latitude, lng: activePoint.longitude }
               : null
           }
-          lockedLatLng={
-            lockedPoint?.latitude != null && lockedPoint?.longitude != null
-              ? { lat: lockedPoint.latitude, lng: lockedPoint.longitude }
-              : null
-          }
+          savedPoints={savedMapPoints}
+          onSavedPointRemove={removeSavedPoint}
           onMapPointSelect={
             rawChartPoints.length > 0 ? handleMapPointSelect : undefined
           }
@@ -427,12 +466,24 @@ export function GarminDetailPage() {
 
       {chartPoints.length > 0 && (
         <>
-          <ActivityHoverDetails point={displayPoint} />
+          <ActivityHoverDetails
+            point={displayPoint}
+            isSaved={displayPointSaved}
+            onToggleSave={
+              displayPoint ? () => addOrTogglePoint(displayPoint) : undefined
+            }
+          />
           <ActivityCharts
             trackPoints={chartPoints}
             activePoint={displayPoint}
+            savedPoints={savedPoints}
             onActivePointChange={setActivePoint}
-            onPointLock={setLockedPoint}
+            onPointToggle={addOrTogglePoint}
+          />
+          <SavedPointsList
+            points={savedPoints}
+            onRemove={removeSavedPoint}
+            onClear={clearSavedPoints}
           />
         </>
       )}

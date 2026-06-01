@@ -36,32 +36,50 @@ vi.mock('@/components/garmin/ActivityStatsBar', () => ({
 vi.mock('@/components/garmin/ActivityRouteMap', () => ({
   ActivityRouteMap: ({
     activeLatLng,
-    lockedLatLng,
+    savedPoints,
+    onSavedPointRemove,
     onMapPointSelect,
   }: {
     activeLatLng?: { lat: number; lng: number } | null
-    lockedLatLng?: { lat: number; lng: number } | null
+    savedPoints?: Array<{ id: string; lat: number; lng: number; color: string }>
+    onSavedPointRemove?: (id: string) => void
     onMapPointSelect?: (latLng: { lat: number; lng: number }) => void
   }) => (
-    <button
-      data-testid="activity-route-map"
-      type="button"
-      onClick={() => onMapPointSelect?.({ lat: 40.702, lng: -74.002 })}
-    >
-      route-map
-      {activeLatLng ? ` active:${activeLatLng.lat},${activeLatLng.lng}` : ''}
-      {lockedLatLng ? ` locked:${lockedLatLng.lat},${lockedLatLng.lng}` : ''}
-    </button>
+    <div>
+      <button
+        data-testid="activity-route-map"
+        type="button"
+        onClick={() => onMapPointSelect?.({ lat: 40.702, lng: -74.002 })}
+      >
+        route-map
+        {activeLatLng ? ` active:${activeLatLng.lat},${activeLatLng.lng}` : ''}
+        {savedPoints && savedPoints.length > 0
+          ? ` saved:${savedPoints.map((p) => `${p.lat},${p.lng}`).join('|')}`
+          : ''}
+      </button>
+      {(savedPoints ?? []).map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          data-testid={`map-saved-marker-${p.id}`}
+          onClick={() => onSavedPointRemove?.(p.id)}
+        >
+          marker:{p.color}
+        </button>
+      ))}
+    </div>
   ),
 }))
 
 vi.mock('@/components/garmin/ActivityCharts', () => ({
   ActivityCharts: ({
     activePoint,
-    onPointLock,
+    savedPoints,
+    onPointToggle,
   }: {
     activePoint?: { timestamp: string; latitude?: number; longitude?: number }
-    onPointLock?: (point: {
+    savedPoints?: Array<{ id: string; color: string }>
+    onPointToggle?: (point: {
       timestamp: string
       time: number
       distance?: number | null
@@ -73,7 +91,7 @@ vi.mock('@/components/garmin/ActivityCharts', () => ({
       data-testid="activity-charts"
       type="button"
       onDoubleClick={() =>
-        onPointLock?.({
+        onPointToggle?.({
           timestamp: '2026-03-14T09:10:00Z',
           time: 10,
           distance: 1,
@@ -83,6 +101,9 @@ vi.mock('@/components/garmin/ActivityCharts', () => ({
       }
     >
       {activePoint ? activePoint.timestamp : 'charts'}
+      {savedPoints && savedPoints.length > 0
+        ? ` charts-saved:${savedPoints.length}`
+        : ''}
     </button>
   ),
 }))
@@ -295,9 +316,15 @@ describe('GarminDetailPage', () => {
     expect(screen.getByTestId('activity-route-map')).toHaveTextContent(
       'active:40.702,-74.002',
     )
+    // The clicked point is saved and gets a persistent map marker + list row.
+    expect(screen.getByTestId('activity-route-map')).toHaveTextContent(
+      'saved:40.702,-74.002',
+    )
+    expect(screen.getByTestId('saved-points-list')).toBeInTheDocument()
+    expect(screen.getAllByTestId('saved-point-row')).toHaveLength(1)
   })
 
-  it('locks a chart point on the route map when the chart is double-clicked', async () => {
+  it('saves a chart point on the route map when the chart is double-clicked', async () => {
     const user = userEvent.setup()
     garminDetailHooks.useGarminActivityQuery.mockReturnValue({
       loading: false,
@@ -345,12 +372,74 @@ describe('GarminDetailPage', () => {
 
     await user.dblClick(screen.getByTestId('activity-charts'))
 
+    // Double-click saves the point: it appears as a map marker and a list row.
     expect(screen.getByTestId('activity-route-map')).toHaveTextContent(
-      'locked:40.704,-74.004',
+      'saved:40.704,-74.004',
     )
-    expect(screen.getByTestId('activity-hover-details')).toHaveTextContent(
-      '40.70400, -74.00400',
-    )
+    expect(screen.getByTestId('saved-points-list')).toBeInTheDocument()
+    expect(screen.getAllByTestId('saved-point-row')).toHaveLength(1)
+
+    // Double-clicking the same point again toggles it off.
+    await user.dblClick(screen.getByTestId('activity-charts'))
+    expect(screen.queryByTestId('saved-points-list')).not.toBeInTheDocument()
+  })
+
+  it('removes a saved point via the list remove control and clear all', async () => {
+    const user = userEvent.setup()
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'running',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 5,
+          duration_seconds: 1800,
+          avg_speed_kmh: 10,
+          total_ascent_m: 40,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: {
+        garminTrackPoints: {
+          items: [{ latitude: 40.704, longitude: -74.004 }],
+        },
+      },
+    })
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminChartData: [
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            latitude: 40.704,
+            longitude: -74.004,
+            altitude: 20,
+            speed_kmh: 10,
+            distance_from_start_km: 1,
+          },
+        ],
+      },
+    })
+
+    renderPage()
+
+    await user.dblClick(screen.getByTestId('activity-charts'))
+    expect(screen.getAllByTestId('saved-point-row')).toHaveLength(1)
+
+    await user.click(screen.getByTestId('saved-point-remove'))
+    expect(screen.queryByTestId('saved-points-list')).not.toBeInTheDocument()
+
+    // Save again, then clear all.
+    await user.dblClick(screen.getByTestId('activity-charts'))
+    await user.click(screen.getByTestId('saved-points-clear'))
+    expect(screen.queryByTestId('saved-points-list')).not.toBeInTheDocument()
   })
 
   it('resolves map clicks against full-resolution points, not the downsampled chart series', async () => {
