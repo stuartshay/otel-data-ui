@@ -16,11 +16,17 @@ import {
   buildActivityChartData,
   type ActivityChartTrackPoint,
   type ChartDataPoint,
+  type SavedPoint,
 } from './ActivityChartData'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
   activePoint?: ChartDataPoint | null
+  /**
+   * Points the user has saved. Each renders a persistent crosshair in its own
+   * color on both charts so multiple selections stay visible at once.
+   */
+  savedPoints?: SavedPoint[]
   /**
    * Notifies the parent which chart point is currently under the cursor so the
    * page can render a shared details panel and a map hover marker. The two
@@ -29,10 +35,10 @@ interface ActivityChartsProps {
    */
   onActivePointChange?: (point: ChartDataPoint | null) => void
   /**
-   * Locks the current chart point so it remains visible on the route map after
-   * the cursor leaves the chart.
+   * Adds the current chart point to the saved set (or removes it if already
+   * saved). Triggered by double-clicking a chart.
    */
-  onPointLock?: (point: ChartDataPoint) => void
+  onPointToggle?: (point: ChartDataPoint) => void
 }
 
 type XAxisMode = 'distance' | 'time'
@@ -73,8 +79,9 @@ function pointFromTooltipState(
 export function ActivityCharts({
   trackPoints,
   activePoint,
+  savedPoints = [],
   onActivePointChange,
-  onPointLock,
+  onPointToggle,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
 
@@ -166,7 +173,7 @@ export function ActivityCharts({
                   activeTooltipIndex?: number | string | null
                 }) => {
                   const point = pointFromTooltipState(state, chartData)
-                  if (point) onPointLock?.(point)
+                  if (point) onPointToggle?.(point)
                 }}
                 onMouseLeave={() => onActivePointChange?.(null)}
               >
@@ -216,6 +223,37 @@ export function ActivityCharts({
                       ifOverflow="extendDomain"
                     />
                   )}
+                {savedPoints.map((sp) => {
+                  const x = sp[xKey]
+                  if (x == null || !Number.isFinite(x)) return null
+                  return (
+                    <ReferenceLine
+                      key={`saved-line-${sp.id}`}
+                      x={x}
+                      stroke={sp.color}
+                      strokeOpacity={0.8}
+                      strokeDasharray="4 2"
+                      ifOverflow="extendDomain"
+                    />
+                  )
+                })}
+                {savedPoints.map((sp) => {
+                  const x = sp[xKey]
+                  const y = activeMetricValue(sp, chart.dataKey)
+                  if (x == null || !Number.isFinite(x) || y == null) return null
+                  return (
+                    <ReferenceDot
+                      key={`saved-dot-${sp.id}`}
+                      x={x}
+                      y={y}
+                      r={4}
+                      stroke={sp.color}
+                      strokeWidth={2}
+                      fill={sp.color}
+                      ifOverflow="extendDomain"
+                    />
+                  )
+                })}
                 <Area
                   type="monotone"
                   dataKey={chart.dataKey}

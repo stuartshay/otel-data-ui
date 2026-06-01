@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { reverseGeocode } from '@/services/geocoder'
 import type { ChartDataPoint } from './ActivityChartData'
 
 interface ActivityHoverDetailsProps {
   point: ChartDataPoint | null
+  /** Whether the displayed point is already in the saved set. */
+  isSaved?: boolean
+  /** Adds the displayed point to the saved set (or removes it if saved). */
+  onToggleSave?: () => void
 }
 
 type AddressState =
@@ -44,7 +49,11 @@ function coordKey(point: ChartDataPoint | null): CoordKey | null {
   return { key: `${lat},${lon}`, lat, lon }
 }
 
-export function ActivityHoverDetails({ point }: ActivityHoverDetailsProps) {
+export function ActivityHoverDetails({
+  point,
+  isSaved = false,
+  onToggleSave,
+}: ActivityHoverDetailsProps) {
   const target = useMemo(() => coordKey(point), [point])
   const [pendingState, setPendingState] = useState<{
     key: string
@@ -114,6 +123,18 @@ export function ActivityHoverDetails({ point }: ActivityHoverDetailsProps) {
   return (
     <Card data-testid="activity-hover-details">
       <CardContent className="py-3">
+        {onToggleSave && (
+          <div className="mb-2 flex justify-end">
+            <Button
+              size="sm"
+              variant={isSaved ? 'secondary' : 'outline'}
+              onClick={onToggleSave}
+              data-testid="activity-hover-toggle-save"
+            >
+              {isSaved ? 'Remove point' : 'Add point'}
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-4 lg:grid-cols-5">
           <Field
             label="Elevation"

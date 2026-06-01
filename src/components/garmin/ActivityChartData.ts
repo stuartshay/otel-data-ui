@@ -20,6 +20,16 @@ export interface ChartDataPoint {
   timestamp: string
 }
 
+/**
+ * A {@link ChartDataPoint} the user has explicitly saved. `id` is the point
+ * timestamp (stable per track point, used for de-duplication/toggle) and
+ * `color` is the palette color assigned when the point was saved.
+ */
+export interface SavedPoint extends ChartDataPoint {
+  id: string
+  color: string
+}
+
 export interface ActivityChartDataResult {
   chartData: ChartDataPoint[]
   hasReliableDistance: boolean
