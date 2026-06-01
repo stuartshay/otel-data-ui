@@ -99,7 +99,7 @@ function buildSegment(
   const distanceIsStraightLine = route == null && straightLineMi != null
   const distanceMi = route ?? straightLineMi
 
-  const durationSeconds = Math.abs(to.time - from.time) * 60
+  const durationSeconds = Math.round(Math.abs(to.time - from.time) * 60)
 
   const avgSpeedMph =
     distanceMi != null && durationSeconds > 0
