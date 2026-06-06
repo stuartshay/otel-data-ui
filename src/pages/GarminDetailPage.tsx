@@ -27,12 +27,7 @@ import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 import { escapeCsvValue, triggerDownload } from '@/lib/export'
 
@@ -416,7 +411,11 @@ export function GarminDetailPage() {
         totalAscentM={a.total_ascent_m}
       />
 
-      <Tabs defaultValue="stats" className="w-full" data-testid="garmin-detail-tabs">
+      <Tabs
+        defaultValue="stats"
+        className="w-full"
+        data-testid="garmin-detail-tabs"
+      >
         <TabsList variant="line" className="w-full justify-start">
           <TabsTrigger value="stats" data-testid="garmin-tab-stats">
             Stats
@@ -496,7 +495,9 @@ export function GarminDetailPage() {
                 point={displayPoint}
                 isSaved={displayPointSaved}
                 onToggleSave={
-                  displayPoint ? () => addOrTogglePoint(displayPoint) : undefined
+                  displayPoint
+                    ? () => addOrTogglePoint(displayPoint)
+                    : undefined
                 }
               />
               <ActivityCharts

@@ -242,8 +242,7 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
               },
               {
                 label: 'Exercise Load',
-                value:
-                  a.exercise_load != null ? `${a.exercise_load}` : '—',
+                value: a.exercise_load != null ? `${a.exercise_load}` : '—',
               },
             ],
           } satisfies StatSection,
