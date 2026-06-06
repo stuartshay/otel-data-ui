@@ -19,6 +19,20 @@ interface ActivityStatsPanelProps {
     max_speed_kmh?: number | null
     avg_heart_rate?: number | null
     max_heart_rate?: number | null
+    hr_available?: boolean | null
+    min_heart_rate?: number | null
+    aerobic_training_effect?: number | null
+    anaerobic_training_effect?: number | null
+    exercise_load?: number | null
+    avg_respiration_rate?: number | null
+    min_respiration_rate?: number | null
+    max_respiration_rate?: number | null
+    sweat_loss_ml?: number | null
+    moderate_intensity_minutes?: number | null
+    vigorous_intensity_minutes?: number | null
+    total_intensity_minutes?: number | null
+    paved_distance_km?: number | null
+    unpaved_distance_km?: number | null
     avg_cadence?: number | null
     max_cadence?: number | null
     total_ascent_m?: number | null
@@ -51,6 +65,9 @@ function fmt(
 }
 
 export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
+  const hrAvailable =
+    a.hr_available ?? (a.avg_heart_rate != null || a.max_heart_rate != null)
+
   const sections: StatSection[] = [
     {
       title: 'Distance',
@@ -123,19 +140,30 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
         { label: 'Max Speed', value: fmt(a.max_speed_kmh, 1, 'km/h') },
       ],
     },
-    {
-      title: 'Heart Rate',
-      rows: [
-        {
-          label: 'Avg Heart Rate',
-          value: a.avg_heart_rate != null ? `${a.avg_heart_rate} bpm` : '—',
-        },
-        {
-          label: 'Max Heart Rate',
-          value: a.max_heart_rate != null ? `${a.max_heart_rate} bpm` : '—',
-        },
-      ],
-    },
+    ...(hrAvailable
+      ? [
+          {
+            title: 'Heart Rate',
+            rows: [
+              {
+                label: 'Avg Heart Rate',
+                value:
+                  a.avg_heart_rate != null ? `${a.avg_heart_rate} bpm` : '—',
+              },
+              {
+                label: 'Max Heart Rate',
+                value:
+                  a.max_heart_rate != null ? `${a.max_heart_rate} bpm` : '—',
+              },
+              {
+                label: 'Min Heart Rate',
+                value:
+                  a.min_heart_rate != null ? `${a.min_heart_rate} bpm` : '—',
+              },
+            ],
+          } satisfies StatSection,
+        ]
+      : []),
     {
       title: 'Cadence',
       rows: [
@@ -187,21 +215,109 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
           label: 'Total Calories',
           value: a.calories != null ? `${a.calories} kcal` : '—',
         },
+        {
+          label: 'Est. Sweat Loss',
+          value: a.sweat_loss_ml != null ? `${a.sweat_loss_ml} ml` : '—',
+        },
       ],
     },
+    ...(hrAvailable
+      ? [
+          {
+            title: 'Training Effect',
+            rows: [
+              {
+                label: 'Aerobic TE',
+                value:
+                  a.aerobic_training_effect != null
+                    ? a.aerobic_training_effect.toFixed(1)
+                    : '—',
+              },
+              {
+                label: 'Anaerobic TE',
+                value:
+                  a.anaerobic_training_effect != null
+                    ? a.anaerobic_training_effect.toFixed(1)
+                    : '—',
+              },
+              {
+                label: 'Exercise Load',
+                value:
+                  a.exercise_load != null ? `${a.exercise_load}` : '—',
+              },
+            ],
+          } satisfies StatSection,
+          {
+            title: 'Respiration',
+            rows: [
+              {
+                label: 'Avg Respiration',
+                value:
+                  a.avg_respiration_rate != null
+                    ? `${a.avg_respiration_rate} brpm`
+                    : '—',
+              },
+              {
+                label: 'Min Respiration',
+                value:
+                  a.min_respiration_rate != null
+                    ? `${a.min_respiration_rate} brpm`
+                    : '—',
+              },
+              {
+                label: 'Max Respiration',
+                value:
+                  a.max_respiration_rate != null
+                    ? `${a.max_respiration_rate} brpm`
+                    : '—',
+              },
+            ],
+          } satisfies StatSection,
+          {
+            title: 'Intensity Minutes',
+            rows: [
+              {
+                label: 'Moderate',
+                value:
+                  a.moderate_intensity_minutes != null
+                    ? `${a.moderate_intensity_minutes} min`
+                    : '—',
+              },
+              {
+                label: 'Vigorous',
+                value:
+                  a.vigorous_intensity_minutes != null
+                    ? `${a.vigorous_intensity_minutes} min`
+                    : '—',
+              },
+              {
+                label: 'Total',
+                value:
+                  a.total_intensity_minutes != null
+                    ? `${a.total_intensity_minutes} min`
+                    : '—',
+              },
+            ],
+          } satisfies StatSection,
+        ]
+      : []),
     {
-      title: 'Training Effect',
+      title: 'Road Surface',
       rows: [
-        { label: 'Aerobic TE', value: '—' },
-        { label: 'Anaerobic TE', value: '—' },
-      ],
-    },
-    {
-      title: 'Additional',
-      rows: [
-        { label: 'VO2 Max', value: '—' },
-        { label: 'Exercise Load', value: '—' },
-        { label: 'Sweat Loss', value: '—' },
+        {
+          label: 'Paved',
+          value:
+            a.paved_distance_km != null
+              ? `${kmToMi(a.paved_distance_km).toFixed(2)} mi`
+              : '—',
+        },
+        {
+          label: 'Unpaved',
+          value:
+            a.unpaved_distance_km != null
+              ? `${kmToMi(a.unpaved_distance_km).toFixed(2)} mi`
+              : '—',
+        },
       ],
     },
   ]

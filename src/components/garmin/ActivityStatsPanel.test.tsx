@@ -35,4 +35,21 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText('68 °F')).toBeInTheDocument()
     expect(screen.getByText('720 kcal')).toBeInTheDocument()
   })
+
+  it('hides HR-dependent sections when hr data is unavailable', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          distance_km: 10,
+          duration_seconds: 3661,
+          hr_available: false,
+        }}
+      />,
+    )
+
+    expect(screen.queryByText('Heart Rate')).not.toBeInTheDocument()
+    expect(screen.queryByText('Training Effect')).not.toBeInTheDocument()
+    expect(screen.queryByText('Respiration')).not.toBeInTheDocument()
+    expect(screen.queryByText('Intensity Minutes')).not.toBeInTheDocument()
+  })
 })

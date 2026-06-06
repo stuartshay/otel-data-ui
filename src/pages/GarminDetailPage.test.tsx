@@ -197,7 +197,7 @@ describe('GarminDetailPage', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('renders the activity detail sections and preserves the back link state', () => {
+  it('renders the activity detail sections and preserves the back link state', async () => {
     garminDetailHooks.useGarminActivityQuery.mockReturnValue({
       loading: false,
       error: undefined,
@@ -240,9 +240,14 @@ describe('GarminDetailPage', () => {
       'running:/garmin?page=2&sport=running',
     )
     expect(screen.getByTestId('activity-stats-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('garmin-detail-tabs')).toBeInTheDocument()
+    expect(screen.getByTestId('activity-stats-panel')).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
+
     expect(screen.getByTestId('activity-route-map')).toBeInTheDocument()
     expect(screen.getByTestId('activity-charts')).toBeInTheDocument()
-    expect(screen.getByTestId('activity-stats-panel')).toBeInTheDocument()
     expect(
       screen.getByText('Chart data failed: chart fetch failed'),
     ).toBeInTheDocument()
@@ -304,6 +309,7 @@ describe('GarminDetailPage', () => {
     })
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByTestId('activity-route-map'))
 
@@ -369,6 +375,7 @@ describe('GarminDetailPage', () => {
     })
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.dblClick(screen.getByTestId('activity-charts'))
 
@@ -429,6 +436,7 @@ describe('GarminDetailPage', () => {
     })
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.dblClick(screen.getByTestId('activity-charts'))
     expect(screen.getAllByTestId('saved-point-row')).toHaveLength(1)
@@ -490,6 +498,7 @@ describe('GarminDetailPage', () => {
     })
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByTestId('activity-route-map'))
 
@@ -611,6 +620,7 @@ describe('GarminDetailPage', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByRole('button', { name: /Export CSV/i }))
 
@@ -647,6 +657,7 @@ describe('GarminDetailPage', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
 
@@ -687,6 +698,7 @@ describe('GarminDetailPage', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
 
@@ -716,6 +728,7 @@ describe('GarminDetailPage', () => {
     ])
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
 
@@ -726,7 +739,8 @@ describe('GarminDetailPage', () => {
     })
   })
 
-  it('ignores a second export click before React applies disabled state', () => {
+  it('ignores a second export click before React applies disabled state', async () => {
+    const user = userEvent.setup()
     mockLoadedActivity()
 
     const fetchExport = vi.fn().mockReturnValue(new Promise(() => {}))
@@ -736,6 +750,7 @@ describe('GarminDetailPage', () => {
     ])
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     fireEvent.click(screen.getByTestId('export-csv-button'))
     fireEvent.click(screen.getByTestId('export-geojson-button'))
@@ -770,6 +785,7 @@ describe('GarminDetailPage', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 
     renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
 
     const csvButton = screen.getByTestId('export-csv-button')
     const geojsonButton = screen.getByTestId('export-geojson-button')

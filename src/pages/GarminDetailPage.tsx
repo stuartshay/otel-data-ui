@@ -27,6 +27,12 @@ import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 import { escapeCsvValue, triggerDownload } from '@/lib/export'
 
@@ -369,6 +375,10 @@ export function GarminDetailPage() {
 
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
   const chartPoints = chartData?.garminChartData ?? []
+  const hasHrData =
+    a.avg_heart_rate != null ||
+    a.max_heart_rate != null ||
+    chartPoints.some((point) => point.heart_rate != null)
   const trackLoading = mapTrackLoading || chartLoading
   const displayPoint = activePoint
   const displayPointSaved =
@@ -406,91 +416,106 @@ export function GarminDetailPage() {
         totalAscentM={a.total_ascent_m}
       />
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          data-testid="export-csv-button"
-          disabled={isExporting}
-          onClick={() => handleExport('csv')}
-        >
-          {activeExport === 'csv' ? (
-            <Loader2
-              data-testid="export-csv-spinner"
-              className="mr-2 h-4 w-4 animate-spin"
+      <Tabs defaultValue="stats" className="w-full" data-testid="garmin-detail-tabs">
+        <TabsList variant="line" className="w-full justify-start">
+          <TabsTrigger value="stats" data-testid="garmin-tab-stats">
+            Stats
+          </TabsTrigger>
+          <TabsTrigger value="charts" data-testid="garmin-tab-charts">
+            Charts
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stats" className="space-y-4">
+          <ActivityStatsPanel activity={{ ...a, hr_available: hasHrData }} />
+        </TabsContent>
+
+        <TabsContent value="charts" className="space-y-4">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="export-csv-button"
+              disabled={isExporting}
+              onClick={() => handleExport('csv')}
+            >
+              {activeExport === 'csv' ? (
+                <Loader2
+                  data-testid="export-csv-spinner"
+                  className="mr-2 h-4 w-4 animate-spin"
+                />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="export-geojson-button"
+              disabled={isExporting}
+              onClick={() => handleExport('geojson')}
+            >
+              {activeExport === 'geojson' ? (
+                <Loader2
+                  data-testid="export-geojson-spinner"
+                  className="mr-2 h-4 w-4 animate-spin"
+                />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Export GeoJSON
+            </Button>
+          </div>
+
+          {trackLoading && <LoadingState message="Loading track data..." />}
+
+          {mapTrackPoints.length > 0 && (
+            <ActivityRouteMap
+              trackPoints={mapTrackPoints}
+              activeLatLng={
+                activePoint?.latitude != null && activePoint?.longitude != null
+                  ? { lat: activePoint.latitude, lng: activePoint.longitude }
+                  : null
+              }
+              savedPoints={savedMapPoints}
+              onSavedPointRemove={removeSavedPoint}
+              onMapPointSelect={
+                rawChartPoints.length > 0 ? handleMapPointSelect : undefined
+              }
             />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
           )}
-          Export CSV
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          data-testid="export-geojson-button"
-          disabled={isExporting}
-          onClick={() => handleExport('geojson')}
-        >
-          {activeExport === 'geojson' ? (
-            <Loader2
-              data-testid="export-geojson-spinner"
-              className="mr-2 h-4 w-4 animate-spin"
-            />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
+
+          {chartError && (
+            <ErrorState message={`Chart data failed: ${chartError.message}`} />
           )}
-          Export GeoJSON
-        </Button>
-      </div>
 
-      {trackLoading && <LoadingState message="Loading track data..." />}
-
-      {mapTrackPoints.length > 0 && (
-        <ActivityRouteMap
-          trackPoints={mapTrackPoints}
-          activeLatLng={
-            activePoint?.latitude != null && activePoint?.longitude != null
-              ? { lat: activePoint.latitude, lng: activePoint.longitude }
-              : null
-          }
-          savedPoints={savedMapPoints}
-          onSavedPointRemove={removeSavedPoint}
-          onMapPointSelect={
-            rawChartPoints.length > 0 ? handleMapPointSelect : undefined
-          }
-        />
-      )}
-
-      {chartError && (
-        <ErrorState message={`Chart data failed: ${chartError.message}`} />
-      )}
-
-      {chartPoints.length > 0 && (
-        <>
-          <ActivityHoverDetails
-            point={displayPoint}
-            isSaved={displayPointSaved}
-            onToggleSave={
-              displayPoint ? () => addOrTogglePoint(displayPoint) : undefined
-            }
-          />
-          <ActivityCharts
-            trackPoints={chartPoints}
-            activePoint={displayPoint}
-            savedPoints={savedPoints}
-            onActivePointChange={setActivePoint}
-            onPointToggle={addOrTogglePoint}
-          />
-          <SavedPointsList
-            points={savedPoints}
-            onRemove={removeSavedPoint}
-            onClear={clearSavedPoints}
-          />
-          <SegmentAnalysis points={savedPoints} />
-        </>
-      )}
-
-      <ActivityStatsPanel activity={a} />
+          {chartPoints.length > 0 && (
+            <>
+              <ActivityHoverDetails
+                point={displayPoint}
+                isSaved={displayPointSaved}
+                onToggleSave={
+                  displayPoint ? () => addOrTogglePoint(displayPoint) : undefined
+                }
+              />
+              <ActivityCharts
+                trackPoints={chartPoints}
+                activePoint={displayPoint}
+                savedPoints={savedPoints}
+                onActivePointChange={setActivePoint}
+                onPointToggle={addOrTogglePoint}
+              />
+              <SavedPointsList
+                points={savedPoints}
+                onRemove={removeSavedPoint}
+                onClear={clearSavedPoints}
+              />
+              <SegmentAnalysis points={savedPoints} />
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
