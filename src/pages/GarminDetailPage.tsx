@@ -412,7 +412,7 @@ export function GarminDetailPage() {
       />
 
       <Tabs
-        defaultValue="stats"
+        defaultValue="charts"
         className="w-full"
         data-testid="garmin-detail-tabs"
       >
