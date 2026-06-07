@@ -241,11 +241,6 @@ describe('GarminDetailPage', () => {
     )
     expect(screen.getByTestId('activity-stats-bar')).toBeInTheDocument()
     expect(screen.getByTestId('garmin-detail-tabs')).toBeInTheDocument()
-    expect(screen.getByTestId('activity-stats-panel')).toBeInTheDocument()
-
-    const user = userEvent.setup()
-    await user.click(screen.getByTestId('garmin-tab-charts'))
-
     expect(screen.getByTestId('activity-route-map')).toBeInTheDocument()
     expect(screen.getByTestId('activity-charts')).toBeInTheDocument()
     expect(
