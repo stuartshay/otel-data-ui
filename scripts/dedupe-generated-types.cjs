@@ -10,24 +10,66 @@
  * "Identifier `X` has already been declared".
  *
  * This script removes duplicate top-level `export type <Name> = ...;` blocks,
- * keeping the first occurrence. It is wired into codegen via the
- * `hooks.afterOneFileWrite` hook so regeneration always yields a parseable file.
+ * keeping the first occurrence. It scans line-by-line and tracks bracket depth
+ * (`{}`, `()`, `[]`) so the end of a type alias is only recognised at a line
+ * ending in `;` while at depth 0 — object/array/union type bodies (whose
+ * property lines also end in `;`) are handled correctly.
+ *
+ * It is wired into codegen via the `hooks.afterOneFileWrite` hook so
+ * regeneration always yields a parseable file.
  */
 'use strict'
 
 const fs = require('fs')
 
+const START_RE = /^export type (\w+) =/
+
+function bracketDelta(line) {
+  let delta = 0
+  for (const ch of line) {
+    if (ch === '{' || ch === '(' || ch === '[') delta++
+    else if (ch === '}' || ch === ')' || ch === ']') delta--
+  }
+  return delta
+}
+
 function dedupeExportedTypes(source) {
-  // Match top-level `export type Name =` ... up to the terminating `;`.
-  const pattern = /^export type (\w+) =[\s\S]*?;\n/gm
+  const lines = source.split('\n')
+  const out = []
   const seen = new Set()
-  return source.replace(pattern, (block, name) => {
-    if (seen.has(name)) {
-      return '' // drop the duplicate declaration
+  let i = 0
+
+  while (i < lines.length) {
+    const match = lines[i].match(START_RE)
+    if (!match) {
+      out.push(lines[i])
+      i++
+      continue
     }
-    seen.add(name)
-    return block
-  })
+
+    // Collect the full `export type Name = ...;` block. The alias ends at the
+    // first line ending in `;` while bracket depth has returned to 0.
+    const name = match[1]
+    const block = []
+    let depth = 0
+    let j = i
+    for (; j < lines.length; j++) {
+      const line = lines[j]
+      block.push(line)
+      depth += bracketDelta(line)
+      if (depth <= 0 && /;\s*$/.test(line)) break
+    }
+
+    if (seen.has(name)) {
+      // Drop the duplicate declaration entirely.
+    } else {
+      seen.add(name)
+      out.push(...block)
+    }
+    i = j + 1
+  }
+
+  return out.join('\n')
 }
 
 function main() {

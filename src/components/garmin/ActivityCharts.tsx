@@ -44,9 +44,11 @@ interface ActivityChartsProps {
 
 type XAxisMode = 'distance' | 'time'
 
+type MetricKey = 'elevation' | 'speed' | 'heartRate'
+
 interface ChartConfig {
   title: string
-  dataKey: string
+  dataKey: MetricKey
   color: string
   unit: string
   hasData: boolean
@@ -54,15 +56,8 @@ interface ChartConfig {
 
 function activeMetricValue(
   point: ChartDataPoint | null | undefined,
-  dataKey: string,
+  dataKey: MetricKey,
 ): number | null {
-  if (
-    dataKey !== 'elevation' &&
-    dataKey !== 'speed' &&
-    dataKey !== 'heartRate'
-  ) {
-    return null
-  }
   const value = point?.[dataKey]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
