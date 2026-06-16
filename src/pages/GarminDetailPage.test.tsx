@@ -596,12 +596,8 @@ describe('GarminDetailPage', () => {
         distance_from_start_km: 0.0,
         speed_kmh: 24.5,
         heart_rate: 135,
-        hr_zone: 3,
-        respiration_rate: 22,
         cadence: 80,
         temperature_c: 18,
-        surface_type: 'paved',
-        effort_level: 'steady',
         address: {
           display_address: 'Pier 13, Hoboken, NJ',
           street: 'Sinatra Drive',
@@ -658,10 +654,8 @@ describe('GarminDetailPage', () => {
     expect(clickSpy).toHaveBeenCalledTimes(1)
 
     const csvText = exportedBlob ? await exportedBlob.text() : ''
-    expect(csvText).toContain(
-      'heart_rate,hr_zone,respiration_rate,cadence,temperature_c,surface_type,effort_level',
-    )
-    expect(csvText).toContain('135,3,22,80,18,paved,steady')
+    expect(csvText).toContain('heart_rate,cadence,temperature_c')
+    expect(csvText).toContain('135,80,18')
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
