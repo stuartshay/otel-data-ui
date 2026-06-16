@@ -56,7 +56,13 @@ function activeMetricValue(
   point: ChartDataPoint | null | undefined,
   dataKey: string,
 ): number | null {
-  if (dataKey !== 'elevation' && dataKey !== 'speed') return null
+  if (
+    dataKey !== 'elevation' &&
+    dataKey !== 'speed' &&
+    dataKey !== 'heartRate'
+  ) {
+    return null
+  }
   const value = point?.[dataKey]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
@@ -102,6 +108,7 @@ export function ActivityCharts({
 
   const hasElevation = chartData.some((d) => d.elevation != null)
   const hasSpeed = chartData.some((d) => d.speed != null)
+  const hasHeartRate = chartData.some((d) => d.heartRate != null)
 
   // Shaded regions between consecutive saved points (ordered along the x-axis).
   const savedPointsByX = savedPoints
@@ -133,6 +140,13 @@ export function ActivityCharts({
       color: '#3b82f6',
       unit: 'mph',
       hasData: hasSpeed,
+    },
+    {
+      title: 'Heart Rate',
+      dataKey: 'heartRate',
+      color: '#ef4444',
+      unit: 'bpm',
+      hasData: hasHeartRate,
     },
   ]
 

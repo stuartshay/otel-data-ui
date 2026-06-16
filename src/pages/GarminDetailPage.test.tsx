@@ -540,14 +540,36 @@ describe('GarminDetailPage', () => {
       refetch: vi.fn(),
       data: {
         garminActivity: {
+          activity_id: '42',
           sport: 'cycling',
           sub_sport: 'road',
           start_time: '2026-03-14T09:00:00Z',
+          end_time: '2026-03-14T10:55:32Z',
           device_manufacturer: 'Garmin',
           distance_km: 50.6,
           duration_seconds: 6932,
+          avg_heart_rate: 145,
+          max_heart_rate: 176,
+          hr_available: true,
+          min_heart_rate: 101,
+          avg_respiration_rate: 24,
+          min_respiration_rate: 18,
+          max_respiration_rate: 31,
           avg_speed_kmh: 26.3,
+          max_speed_kmh: 44.2,
           total_ascent_m: 385,
+          total_descent_m: 380,
+          avg_cadence: 81,
+          max_cadence: 108,
+          calories: 1689,
+          avg_temperature_c: 18,
+          min_temperature_c: 14,
+          max_temperature_c: 22,
+          total_elapsed_time: 7200.5,
+          total_timer_time: 6932.1,
+          paved_distance_km: 47.1,
+          unpaved_distance_km: 3.5,
+          track_point_count: 1,
         },
       },
     })
@@ -574,8 +596,12 @@ describe('GarminDetailPage', () => {
         distance_from_start_km: 0.0,
         speed_kmh: 24.5,
         heart_rate: 135,
+        hr_zone: 3,
+        respiration_rate: 22,
         cadence: 80,
         temperature_c: 18,
+        surface_type: 'paved',
+        effort_level: 'steady',
         address: {
           display_address: 'Pier 13, Hoboken, NJ',
           street: 'Sinatra Drive',
@@ -608,7 +634,11 @@ describe('GarminDetailPage', () => {
       { loading: false },
     ])
 
-    const createObjectURL = vi.fn(() => 'blob:test')
+    let exportedBlob: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob
+      return 'blob:test'
+    })
     const revokeObjectURL = vi.fn()
     const clickSpy = vi.fn()
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
@@ -626,6 +656,12 @@ describe('GarminDetailPage', () => {
     )
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(clickSpy).toHaveBeenCalledTimes(1)
+
+    const csvText = exportedBlob ? await exportedBlob.text() : ''
+    expect(csvText).toContain(
+      'heart_rate,hr_zone,respiration_rate,cadence,temperature_c,surface_type,effort_level',
+    )
+    expect(csvText).toContain('135,3,22,80,18,paved,steady')
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()

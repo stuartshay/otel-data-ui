@@ -62,6 +62,20 @@ export const GARMIN_ACTIVITY_QUERY = gql`
       duration_seconds
       avg_heart_rate
       max_heart_rate
+      hr_available
+      min_heart_rate
+      aerobic_training_effect
+      anaerobic_training_effect
+      exercise_load
+      avg_respiration_rate
+      min_respiration_rate
+      max_respiration_rate
+      sweat_loss_ml
+      moderate_intensity_minutes
+      vigorous_intensity_minutes
+      total_intensity_minutes
+      paved_distance_km
+      unpaved_distance_km
       avg_cadence
       max_cadence
       calories
@@ -111,8 +125,12 @@ export const GARMIN_TRACK_POINTS_QUERY = gql`
         distance_from_start_km
         speed_kmh
         heart_rate
+        hr_zone
+        respiration_rate
         cadence
         temperature_c
+        surface_type
+        effort_level
         created_at
       }
       total
@@ -171,8 +189,12 @@ export const GARMIN_CHART_DATA_QUERY = gql`
       distance_from_start_km
       speed_kmh
       heart_rate
+      hr_zone
+      respiration_rate
       cadence
       temperature_c
+      surface_type
+      effort_level
       latitude
       longitude
     }
@@ -211,8 +233,12 @@ export const GARMIN_EXPORT_POINTS_QUERY = gql`
         distance_from_start_km
         speed_kmh
         heart_rate
+        hr_zone
+        respiration_rate
         cadence
         temperature_c
+        surface_type
+        effort_level
         address {
           display_address
           street

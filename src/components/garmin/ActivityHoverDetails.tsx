@@ -147,6 +147,10 @@ export function ActivityHoverDetails({
             value={point.speed != null ? `${point.speed.toFixed(1)} mph` : '—'}
           />
           <Field
+            label="Heart Rate"
+            value={point.heartRate != null ? `${point.heartRate} bpm` : '—'}
+          />
+          <Field
             label="Time"
             value={`${timeStr} (${point.time.toFixed(1)} min)`}
           />

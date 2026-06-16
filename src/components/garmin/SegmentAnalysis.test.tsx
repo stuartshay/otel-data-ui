@@ -13,6 +13,7 @@ function savedPoint(overrides: Partial<SavedPoint> = {}): SavedPoint {
     distanceKm: null,
     elevation: null,
     speed: null,
+    heartRate: null,
     latitude: null,
     longitude: null,
     ...overrides,

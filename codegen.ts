@@ -34,6 +34,13 @@ const config: CodegenConfig = {
       },
     },
   },
+  hooks: {
+    // typescript@6 + typescript-operations@6 emit some enums (e.g. SortOrder,
+    // used as an operation variable) twice, producing a duplicate
+    // `export type` that oxc/esbuild (vitest/vite) cannot parse. Strip the
+    // duplicates so regeneration always yields a parseable file.
+    afterOneFileWrite: ['node scripts/dedupe-generated-types.cjs'],
+  },
 }
 
 export default config

@@ -18,6 +18,7 @@ function chartPoint(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
     distanceKm: 5.05,
     elevation: 120.4,
     speed: 9.8,
+    heartRate: 142,
     latitude: 40.71234,
     longitude: -74.00567,
     ...overrides,
@@ -83,13 +84,14 @@ describe('ActivityHoverDetails', () => {
           longitude: -74.00611,
           elevation: null,
           speed: null,
+          heartRate: null,
           distance: null,
           distanceKm: null,
         })}
       />,
     )
 
-    expect(screen.getAllByText('—')).toHaveLength(3)
+    expect(screen.getAllByText('—')).toHaveLength(4)
     expect(await screen.findByText('No address found')).toBeInTheDocument()
 
     geocoderMocks.reverseGeocode.mockRejectedValueOnce(new Error('offline'))
