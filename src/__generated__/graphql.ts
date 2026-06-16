@@ -99,12 +99,18 @@ export type GarminActivity = {
   __typename?: 'GarminActivity';
   /** Garmin Connect activity identifier */
   activity_id: Scalars['String']['output'];
+  /** Aerobic training effect score */
+  aerobic_training_effect?: Maybe<Scalars['Float']['output']>;
+  /** Anaerobic training effect score */
+  anaerobic_training_effect?: Maybe<Scalars['Float']['output']>;
   /** Average cadence in RPM */
   avg_cadence?: Maybe<Scalars['Int']['output']>;
   /** Average heart rate in beats per minute */
   avg_heart_rate?: Maybe<Scalars['Int']['output']>;
   /** Average pace in minutes per kilometre */
   avg_pace?: Maybe<Scalars['Float']['output']>;
+  /** Average respiration rate in breaths per minute */
+  avg_respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Average speed in km/h */
   avg_speed_kmh?: Maybe<Scalars['Float']['output']>;
   /** Average ambient temperature in degrees C */
@@ -121,22 +127,38 @@ export type GarminActivity = {
   duration_seconds?: Maybe<Scalars['Float']['output']>;
   /** Activity end time in UTC */
   end_time?: Maybe<Scalars['String']['output']>;
+  /** Exercise load score */
+  exercise_load?: Maybe<Scalars['Int']['output']>;
+  /** Whether this activity has usable heart-rate data in summary or track points */
+  hr_available: Scalars['Boolean']['output'];
   /** Maximum cadence in RPM */
   max_cadence?: Maybe<Scalars['Int']['output']>;
   /** Maximum heart rate in beats per minute */
   max_heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Maximum respiration rate in breaths per minute */
+  max_respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Maximum speed in km/h */
   max_speed_kmh?: Maybe<Scalars['Float']['output']>;
   /** Maximum ambient temperature in degrees C */
   max_temperature_c?: Maybe<Scalars['Int']['output']>;
+  /** Minimum heart rate in beats per minute */
+  min_heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Minimum respiration rate in breaths per minute */
+  min_respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Minimum ambient temperature in degrees C */
   min_temperature_c?: Maybe<Scalars['Int']['output']>;
+  /** Moderate intensity minutes */
+  moderate_intensity_minutes?: Maybe<Scalars['Int']['output']>;
+  /** Distance over paved surfaces in kilometres */
+  paved_distance_km?: Maybe<Scalars['Float']['output']>;
   /** Primary sport type (e.g. cycling, running) */
   sport: Scalars['String']['output'];
   /** Activity start time in UTC */
   start_time?: Maybe<Scalars['String']['output']>;
   /** Sub-sport classification (e.g. road, trail) */
   sub_sport?: Maybe<Scalars['String']['output']>;
+  /** Estimated sweat loss in millilitres */
+  sweat_loss_ml?: Maybe<Scalars['Int']['output']>;
   /** Total elevation gain in meters */
   total_ascent_m?: Maybe<Scalars['Float']['output']>;
   /** Total elevation loss in meters */
@@ -145,12 +167,18 @@ export type GarminActivity = {
   total_distance?: Maybe<Scalars['Float']['output']>;
   /** Total elapsed time in seconds (includes pauses) */
   total_elapsed_time?: Maybe<Scalars['Float']['output']>;
+  /** Total intensity minutes */
+  total_intensity_minutes?: Maybe<Scalars['Int']['output']>;
   /** Total timer time in seconds (active recording) */
   total_timer_time?: Maybe<Scalars['Float']['output']>;
   /** Number of GPS track points in this activity */
   track_point_count?: Maybe<Scalars['Int']['output']>;
+  /** Distance over unpaved surfaces in kilometres */
+  unpaved_distance_km?: Maybe<Scalars['Float']['output']>;
   /** UTC timestamp when the FIT file was uploaded */
   uploaded_at?: Maybe<Scalars['String']['output']>;
+  /** Vigorous intensity minutes */
+  vigorous_intensity_minutes?: Maybe<Scalars['Int']['output']>;
 };
 
 /** Full reverse-geocoded address attached to a Garmin activity waypoint. */
@@ -231,14 +259,22 @@ export type GarminChartPoint = {
   cadence?: Maybe<Scalars['Int']['output']>;
   /** Cumulative distance from activity start in km */
   distance_from_start_km?: Maybe<Scalars['Float']['output']>;
+  /** Effort classification label */
+  effort_level?: Maybe<Scalars['String']['output']>;
   /** Heart rate in beats per minute */
   heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Heart-rate zone index (1-5) */
+  hr_zone?: Maybe<Scalars['Int']['output']>;
   /** GPS latitude in decimal degrees (WGS 84) */
   latitude: Scalars['Float']['output'];
   /** GPS longitude in decimal degrees (WGS 84) */
   longitude: Scalars['Float']['output'];
+  /** Respiration rate in breaths per minute */
+  respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Instantaneous speed in km/h */
   speed_kmh?: Maybe<Scalars['Float']['output']>;
+  /** Road or terrain type */
+  surface_type?: Maybe<Scalars['String']['output']>;
   /** Ambient temperature in degrees C */
   temperature_c?: Maybe<Scalars['Float']['output']>;
   /** UTC timestamp of the data point */
@@ -290,16 +326,24 @@ export type GarminTrackPoint = {
   created_at?: Maybe<Scalars['String']['output']>;
   /** Cumulative distance from activity start in km */
   distance_from_start_km?: Maybe<Scalars['Float']['output']>;
+  /** Effort classification label */
+  effort_level?: Maybe<Scalars['String']['output']>;
   /** Heart rate in beats per minute */
   heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Heart-rate zone index (1-5) */
+  hr_zone?: Maybe<Scalars['Int']['output']>;
   /** Unique track point record identifier */
   id: Scalars['Int']['output'];
   /** GPS latitude in decimal degrees (WGS 84) */
   latitude: Scalars['Float']['output'];
   /** GPS longitude in decimal degrees (WGS 84) */
   longitude: Scalars['Float']['output'];
+  /** Respiration rate in breaths per minute */
+  respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Instantaneous speed in km/h */
   speed_kmh?: Maybe<Scalars['Float']['output']>;
+  /** Road or terrain type */
+  surface_type?: Maybe<Scalars['String']['output']>;
   /** Ambient temperature in degrees C */
   temperature_c?: Maybe<Scalars['Float']['output']>;
   /** UTC timestamp of the track point recording */
@@ -798,7 +842,12 @@ export type ReferenceLocation = {
   updated_at?: Maybe<Scalars['String']['output']>;
 };
 
-
+/** Sort direction for query results. */
+export type SortOrder =
+  /** Ascending order (oldest first, A-Z) */
+  | 'asc'
+  /** Descending order (newest first, Z-A) */
+  | 'desc';
 
 /** Sport type with its activity count. */
 export type SportInfo = {
@@ -861,11 +910,6 @@ export type WithinReferenceResult = {
 };
 
 /** Sort direction for query results. */
-export type SortOrder =
-  /** Ascending order (oldest first, A-Z) */
-  | 'asc'
-  /** Descending order (newest first, Z-A) */
-  | 'desc';
 
 export type GarminActivitiesQueryVariables = Exact<{
   sport?: string | null | undefined;
@@ -885,7 +929,7 @@ export type GarminActivityQueryVariables = Exact<{
 }>;
 
 
-export type GarminActivityQuery = { garminActivity: { activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, avg_temperature_c: number | null, min_temperature_c: number | null, max_temperature_c: number | null, total_elapsed_time: number | null, total_timer_time: number | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null } | null };
+export type GarminActivityQuery = { garminActivity: { activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, hr_available: boolean, min_heart_rate: number | null, aerobic_training_effect: number | null, anaerobic_training_effect: number | null, exercise_load: number | null, avg_respiration_rate: number | null, min_respiration_rate: number | null, max_respiration_rate: number | null, sweat_loss_ml: number | null, moderate_intensity_minutes: number | null, vigorous_intensity_minutes: number | null, total_intensity_minutes: number | null, paved_distance_km: number | null, unpaved_distance_km: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, avg_temperature_c: number | null, min_temperature_c: number | null, max_temperature_c: number | null, total_elapsed_time: number | null, total_timer_time: number | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null } | null };
 
 export type GarminTrackPointsQueryVariables = Exact<{
   activity_id: string;
@@ -897,7 +941,7 @@ export type GarminTrackPointsQueryVariables = Exact<{
 }>;
 
 
-export type GarminTrackPointsQuery = { garminTrackPoints: { total: number, limit: number, offset: number, items: Array<{ id: number, activity_id: string, latitude: number, longitude: number, timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, created_at: string | null }> } };
+export type GarminTrackPointsQuery = { garminTrackPoints: { total: number, limit: number, offset: number, items: Array<{ id: number, activity_id: string, latitude: number, longitude: number, timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, surface_type: string | null, effort_level: string | null, created_at: string | null }> } };
 
 export type GarminDateRangeQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -924,7 +968,7 @@ export type GarminChartDataQueryVariables = Exact<{
 }>;
 
 
-export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, latitude: number, longitude: number }> };
+export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, surface_type: string | null, effort_level: string | null, latitude: number, longitude: number }> };
 
 export type TriggerGarminSyncMutationVariables = Exact<{
   window_hours?: number | null | undefined;
@@ -941,7 +985,7 @@ export type GarminExportPointsQueryVariables = Exact<{
 }>;
 
 
-export type GarminExportPointsQuery = { garminTrackPoints: { total: number, items: Array<{ id: number, activity_id: string, timestamp: string, latitude: number, longitude: number, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, waypoint_kind: string | null, status: string, geocoded_at: string | null } | null }> } };
+export type GarminExportPointsQuery = { garminTrackPoints: { total: number, items: Array<{ id: number, activity_id: string, timestamp: string, latitude: number, longitude: number, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, surface_type: string | null, effort_level: string | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, waypoint_kind: string | null, status: string, geocoded_at: string | null } | null }> } };
 
 export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1171,6 +1215,20 @@ export const GarminActivityDocument = gql`
     duration_seconds
     avg_heart_rate
     max_heart_rate
+    hr_available
+    min_heart_rate
+    aerobic_training_effect
+    anaerobic_training_effect
+    exercise_load
+    avg_respiration_rate
+    min_respiration_rate
+    max_respiration_rate
+    sweat_loss_ml
+    moderate_intensity_minutes
+    vigorous_intensity_minutes
+    total_intensity_minutes
+    paved_distance_km
+    unpaved_distance_km
     avg_cadence
     max_cadence
     calories
@@ -1248,8 +1306,12 @@ export const GarminTrackPointsDocument = gql`
       distance_from_start_km
       speed_kmh
       heart_rate
+      hr_zone
+      respiration_rate
       cadence
       temperature_c
+      surface_type
+      effort_level
       created_at
     }
     total
@@ -1449,8 +1511,12 @@ export const GarminChartDataDocument = gql`
     distance_from_start_km
     speed_kmh
     heart_rate
+    hr_zone
+    respiration_rate
     cadence
     temperature_c
+    surface_type
+    effort_level
     latitude
     longitude
   }
@@ -1546,8 +1612,12 @@ export const GarminExportPointsDocument = gql`
       distance_from_start_km
       speed_kmh
       heart_rate
+      hr_zone
+      respiration_rate
       cadence
       temperature_c
+      surface_type
+      effort_level
       address {
         display_address
         street

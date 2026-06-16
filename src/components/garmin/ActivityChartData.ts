@@ -5,6 +5,7 @@ export interface ActivityChartTrackPoint {
   timestamp: string
   altitude?: number | null
   speed_kmh?: number | null
+  heart_rate?: number | null
   latitude?: number | null
   longitude?: number | null
 }
@@ -15,6 +16,7 @@ export interface ChartDataPoint {
   time: number
   elevation: number | null
   speed: number | null
+  heartRate: number | null
   latitude: number | null
   longitude: number | null
   timestamp: string
@@ -80,6 +82,7 @@ export function toChartDataPoint(
     time: (new Date(pt.timestamp).getTime() - startTime) / 60000,
     elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
     speed: pt.speed_kmh != null ? kmhToMph(pt.speed_kmh) : null,
+    heartRate: pt.heart_rate ?? null,
     latitude: pt.latitude ?? null,
     longitude: pt.longitude ?? null,
     timestamp: pt.timestamp,
