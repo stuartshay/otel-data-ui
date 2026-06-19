@@ -6,6 +6,7 @@ export interface ActivityChartTrackPoint {
   altitude?: number | null
   speed_kmh?: number | null
   heart_rate?: number | null
+  respiration_rate?: number | null
   latitude?: number | null
   longitude?: number | null
 }
@@ -17,6 +18,7 @@ export interface ChartDataPoint {
   elevation: number | null
   speed: number | null
   heartRate: number | null
+  respirationRate: number | null
   latitude: number | null
   longitude: number | null
   timestamp: string
@@ -83,6 +85,7 @@ export function toChartDataPoint(
     elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
     speed: pt.speed_kmh != null ? kmhToMph(pt.speed_kmh) : null,
     heartRate: pt.heart_rate ?? null,
+    respirationRate: pt.respiration_rate ?? null,
     latitude: pt.latitude ?? null,
     longitude: pt.longitude ?? null,
     timestamp: pt.timestamp,

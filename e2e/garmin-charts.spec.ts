@@ -17,8 +17,34 @@ fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
  * PLAYWRIGHT_GARMIN_ACTIVITY_ID environment variable.
  */
 const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '9965963574'
+const RESPIRATION_ACTIVITY_ID =
+  process.env.PLAYWRIGHT_GARMIN_RESPIRATION_ACTIVITY_ID ?? '23300698725'
 
 test.describe('Garmin Activity Charts', () => {
+  test('renders respiration data without a chart query error', async ({
+    page,
+  }) => {
+    await page.goto(`/garmin/${RESPIRATION_ACTIVITY_ID}`)
+
+    await expect(page.getByText(/Chart data failed:/i)).toHaveCount(0)
+
+    const heartRateCard = page.getByTestId('chart-heartRate')
+    const respirationCard = page.getByTestId('chart-respirationRate')
+    await expect(heartRateCard).toBeVisible({ timeout: 20_000 })
+    await expect(respirationCard).toBeVisible({ timeout: 20_000 })
+    await expect(
+      respirationCard.getByLabel(/Respiration Rate average \d+ brpm/i),
+    ).toBeVisible()
+    await expect(respirationCard.locator('svg path').first()).toBeVisible()
+
+    const chartOrder = await page
+      .locator('[data-testid^="chart-"]')
+      .evaluateAll((charts) => charts.map((chart) => chart.dataset.testid))
+    expect(chartOrder.indexOf('chart-respirationRate')).toBeGreaterThan(
+      chartOrder.indexOf('chart-heartRate'),
+    )
+  })
+
   test('page loads and activity header is visible', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
     // The activity stats bar should always render
