@@ -394,10 +394,34 @@ export function GarminActivityTotals() {
       return []
     }
 
-    // Seed every year in the known Garmin range with a zero bucket so the
-    // chart shows a continuous x-axis even when some years have no activity.
+    const relevantBuckets = mapped.flatMap((bucket) => {
+      const bucketDate = parseISO(bucket.period_start)
+      if (Number.isNaN(bucketDate.getTime())) {
+        return []
+      }
+
+      if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
+        return []
+      }
+
+      return [{ bucket, year: format(bucketDate, 'yyyy') }]
+    })
+
+    if (relevantBuckets.length === 0) {
+      return []
+    }
+
+    // Date-range metadata can predate the first real activity. Start at the
+    // earliest returned bucket, then zero-fill subsequent years so the chart
+    // remains continuous without rendering empty leading years.
+    const earliestDataYear = Math.min(
+      ...relevantBuckets.map(({ year }) => Number(year)),
+    )
     const byYear = new Map<string, ChartBucket>()
     for (const year of yearList) {
+      if (year < earliestDataYear) {
+        continue
+      }
       const yearStr = String(year)
       const periodStart =
         period === 'month'
@@ -414,17 +438,7 @@ export function GarminActivityTotals() {
       })
     }
 
-    for (const bucket of mapped) {
-      const bucketDate = parseISO(bucket.period_start)
-      if (Number.isNaN(bucketDate.getTime())) {
-        continue
-      }
-
-      if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
-        continue
-      }
-
-      const year = format(bucketDate, 'yyyy')
+    for (const { bucket, year } of relevantBuckets) {
       const existing = byYear.get(year)
 
       if (!existing) {
