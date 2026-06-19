@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AreaChart,
   Area,
@@ -24,6 +24,7 @@ import {
   formatXAxisValue,
   type XAxisMode,
 } from './ActivityChartTooltip'
+import { getActivityYAxisConfig } from './ActivityChartYAxis'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
@@ -138,10 +139,47 @@ export function ActivityCharts({
   onPointToggle,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
+  const { chartData, hasReliableDistance } = useMemo(
+    () => buildActivityChartData(trackPoints),
+    [trackPoints],
+  )
+  const pendingActivePointRef = useRef<ChartDataPoint | null>(null)
+  const lastActivePointRef = useRef<ChartDataPoint | null>(null)
+  const activePointFrameRef = useRef<number | null>(null)
+
+  const queueActivePointChange = useCallback(
+    (point: ChartDataPoint | null) => {
+      if (!onActivePointChange) return
+
+      pendingActivePointRef.current = point
+      if (activePointFrameRef.current != null) return
+
+      activePointFrameRef.current = window.requestAnimationFrame(() => {
+        activePointFrameRef.current = null
+        const nextPoint = pendingActivePointRef.current
+        if (
+          nextPoint !== null &&
+          lastActivePointRef.current?.timestamp === nextPoint.timestamp
+        ) {
+          return
+        }
+        lastActivePointRef.current = nextPoint
+        onActivePointChange(nextPoint)
+      })
+    },
+    [onActivePointChange],
+  )
+
+  useEffect(
+    () => () => {
+      if (activePointFrameRef.current != null) {
+        window.cancelAnimationFrame(activePointFrameRef.current)
+      }
+    },
+    [],
+  )
 
   if (trackPoints.length === 0) return null
-
-  const { chartData, hasReliableDistance } = buildActivityChartData(trackPoints)
 
   // Fall back to time if distance data is too sparse
   const effectiveXMode =
@@ -203,6 +241,7 @@ export function ActivityCharts({
   const activeCharts = charts.filter((c) => c.hasData)
   const activeChartLabels = activeCharts.map((chart) => ({
     chart,
+    yAxisConfig: getActivityYAxisConfig(chart.dataKey),
     averageLabel: formatMetricValue(
       averageMetricValue(chartData, chart.dataKey),
       chart,
@@ -240,7 +279,7 @@ export function ActivityCharts({
         </Button>
       </div>
 
-      {activeChartLabels.map(({ chart, averageLabel }) => (
+      {activeChartLabels.map(({ chart, yAxisConfig, averageLabel }) => (
         <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-3">
@@ -270,7 +309,7 @@ export function ActivityCharts({
                   activeTooltipIndex?: number | string | null
                 }) => {
                   const point = pointFromTooltipState(state, chartData)
-                  if (point) onActivePointChange?.(point)
+                  if (point) queueActivePointChange(point)
                 }}
                 onDoubleClick={(state: {
                   activeTooltipIndex?: number | string | null
@@ -278,7 +317,7 @@ export function ActivityCharts({
                   const point = pointFromTooltipState(state, chartData)
                   if (point) onPointToggle?.(point)
                 }}
-                onMouseLeave={() => onActivePointChange?.(null)}
+                onMouseLeave={() => queueActivePointChange(null)}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 {savedSegments.map((seg) => (
@@ -308,6 +347,7 @@ export function ActivityCharts({
                   className="text-xs"
                 />
                 <YAxis
+                  {...yAxisConfig}
                   tickFormatter={(v: number) => (v != null ? v.toFixed(0) : '')}
                   className="text-xs"
                   width={50}
