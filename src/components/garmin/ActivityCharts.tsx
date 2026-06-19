@@ -19,6 +19,11 @@ import {
   type ChartDataPoint,
   type SavedPoint,
 } from './ActivityChartData'
+import {
+  coerceTooltipMetricValue,
+  formatXAxisValue,
+  type XAxisMode,
+} from './ActivityChartTooltip'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
@@ -42,8 +47,6 @@ interface ActivityChartsProps {
   onPointToggle?: (point: ChartDataPoint) => void
 }
 
-type XAxisMode = 'distance' | 'time'
-
 type MetricKey = 'elevation' | 'speed' | 'heartRate'
 
 interface ChartConfig {
@@ -52,6 +55,7 @@ interface ChartConfig {
   color: string
   unit: string
   hasData: boolean
+  precision: number
 }
 
 function activeMetricValue(
@@ -60,6 +64,54 @@ function activeMetricValue(
 ): number | null {
   const value = point?.[dataKey]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function averageMetricValue(
+  data: ChartDataPoint[],
+  dataKey: MetricKey,
+): number | null {
+  let sum = 0
+  let count = 0
+
+  for (const point of data) {
+    const value = activeMetricValue(point, dataKey)
+    if (value == null) continue
+
+    sum += value
+    count += 1
+  }
+
+  return count > 0 ? sum / count : null
+}
+
+function formatNumber(value: number | null, precision: number): string {
+  return value != null ? value.toFixed(precision) : '--'
+}
+
+function formatMetricValue(
+  value: number | null,
+  chart: Pick<ChartConfig, 'precision' | 'unit'>,
+): string {
+  return `${formatNumber(value, chart.precision)} ${chart.unit}`
+}
+
+interface ChartTooltipProps {
+  label?: unknown
+  payload?: ReadonlyArray<{ value?: unknown }>
+  chart: ChartConfig
+  xMode: XAxisMode
+}
+
+function ChartTooltip({ label, payload, chart, xMode }: ChartTooltipProps) {
+  const metricValue = coerceTooltipMetricValue(payload?.[0]?.value)
+  const xValue = formatXAxisValue(label, xMode)
+
+  return (
+    <div className="space-y-1 rounded bg-neutral-950/90 px-2 py-1 text-xs text-white shadow-md">
+      {xValue && <div>{xValue}</div>}
+      <div>{formatMetricValue(metricValue, chart)}</div>
+    </div>
+  )
 }
 
 function pointFromTooltipState(
@@ -125,9 +177,10 @@ export function ActivityCharts({
     {
       title: 'Elevation',
       dataKey: 'elevation',
-      color: '#6b7280',
+      color: '#55b922',
       unit: 'ft',
       hasData: hasElevation,
+      precision: 0,
     },
     {
       title: 'Speed',
@@ -135,6 +188,7 @@ export function ActivityCharts({
       color: '#3b82f6',
       unit: 'mph',
       hasData: hasSpeed,
+      precision: 1,
     },
     {
       title: 'Heart Rate',
@@ -142,10 +196,18 @@ export function ActivityCharts({
       color: '#ef4444',
       unit: 'bpm',
       hasData: hasHeartRate,
+      precision: 0,
     },
   ]
 
   const activeCharts = charts.filter((c) => c.hasData)
+  const activeChartLabels = activeCharts.map((chart) => ({
+    chart,
+    averageLabel: formatMetricValue(
+      averageMetricValue(chartData, chart.dataKey),
+      chart,
+    ),
+  }))
 
   if (activeCharts.length === 0) return null
 
@@ -178,10 +240,25 @@ export function ActivityCharts({
         </Button>
       </div>
 
-      {activeCharts.map((chart) => (
+      {activeChartLabels.map(({ chart, averageLabel }) => (
         <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{chart.title}</CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <span
+                  aria-hidden="true"
+                  className="size-3 rounded-full"
+                  style={{ backgroundColor: chart.color }}
+                />
+                {chart.title}
+              </CardTitle>
+              <div
+                aria-label={`${chart.title} average ${averageLabel}`}
+                className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
+              >
+                Avg: {averageLabel}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
@@ -237,7 +314,14 @@ export function ActivityCharts({
                 />
                 <Tooltip
                   cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
-                  content={() => null}
+                  content={({ label, payload }) => (
+                    <ChartTooltip
+                      label={label}
+                      payload={payload}
+                      chart={chart}
+                      xMode={effectiveXMode}
+                    />
+                  )}
                 />
                 {activeX != null && (
                   <ReferenceLine
