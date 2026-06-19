@@ -1,12 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ActivityCharts } from './ActivityCharts'
+import { getActivityYAxisConfig } from './ActivityChartYAxis'
 import {
   coerceTooltipMetricValue,
   formatXAxisValue,
 } from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
+  it('uses Garmin-style Y-axis ticks only for heart rate', () => {
+    expect(getActivityYAxisConfig('heartRate')).toEqual({
+      domain: [100, 200],
+      ticks: [100, 150, 200],
+    })
+    expect(getActivityYAxisConfig('elevation')).toEqual({})
+    expect(getActivityYAxisConfig('speed')).toEqual({})
+  })
+
   it('renders a heart-rate chart when heart-rate data is present', () => {
     render(
       <ActivityCharts
