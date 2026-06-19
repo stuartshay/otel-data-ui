@@ -32,4 +32,37 @@ describe('ActivityCharts', () => {
     expect(screen.getByTestId('chart-heartRate')).toBeInTheDocument()
     expect(screen.getByText('Heart Rate')).toBeInTheDocument()
   })
+
+  it('renders Garmin-style labels and average values for each chart', () => {
+    render(
+      <ActivityCharts
+        trackPoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            distance_from_start_km: 0,
+            altitude: 10,
+            speed_kmh: 22,
+            heart_rate: 118,
+            latitude: 40.7,
+            longitude: -74,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            distance_from_start_km: 5,
+            altitude: 30,
+            speed_kmh: 28,
+            heart_rate: 152,
+            latitude: 40.71,
+            longitude: -74.01,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByLabelText('Elevation average 66 ft')).toBeInTheDocument()
+    expect(screen.getByLabelText('Speed average 15.5 mph')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Heart Rate average 135 bpm'),
+    ).toBeInTheDocument()
+  })
 })
