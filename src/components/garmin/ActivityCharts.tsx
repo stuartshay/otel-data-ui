@@ -149,17 +149,22 @@ export function ActivityCharts({
 
   const queueActivePointChange = useCallback(
     (point: ChartDataPoint | null) => {
+      if (!onActivePointChange) return
+
       pendingActivePointRef.current = point
       if (activePointFrameRef.current != null) return
 
       activePointFrameRef.current = window.requestAnimationFrame(() => {
         activePointFrameRef.current = null
         const nextPoint = pendingActivePointRef.current
-        if (lastActivePointRef.current?.timestamp === nextPoint?.timestamp) {
+        if (
+          nextPoint !== null &&
+          lastActivePointRef.current?.timestamp === nextPoint.timestamp
+        ) {
           return
         }
         lastActivePointRef.current = nextPoint
-        onActivePointChange?.(nextPoint)
+        onActivePointChange(nextPoint)
       })
     },
     [onActivePointChange],

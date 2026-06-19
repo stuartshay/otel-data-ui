@@ -9,10 +9,14 @@ import {
 
 describe('ActivityCharts', () => {
   it('uses Garmin-style Y-axis ticks only for heart rate', () => {
-    expect(getActivityYAxisConfig('heartRate')).toEqual({
-      domain: [100, 200],
-      ticks: [100, 150, 200],
-    })
+    const heartRateAxis = getActivityYAxisConfig('heartRate')
+    const [minimumDomain, maximumDomain] = heartRateAxis.domain ?? []
+
+    expect(heartRateAxis.ticks).toEqual([100, 150, 200])
+    expect(minimumDomain?.(120)).toBe(100)
+    expect(minimumDomain?.(80)).toBe(80)
+    expect(maximumDomain?.(180)).toBe(200)
+    expect(maximumDomain?.(220)).toBe(220)
     expect(getActivityYAxisConfig('elevation')).toEqual({})
     expect(getActivityYAxisConfig('speed')).toEqual({})
   })
