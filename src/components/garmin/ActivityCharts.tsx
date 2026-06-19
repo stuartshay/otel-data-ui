@@ -67,13 +67,18 @@ function averageMetricValue(
   data: ChartDataPoint[],
   dataKey: MetricKey,
 ): number | null {
-  const values = data
-    .map((point) => activeMetricValue(point, dataKey))
-    .filter((value): value is number => value != null)
+  let sum = 0
+  let count = 0
 
-  if (values.length === 0) return null
+  for (const point of data) {
+    const value = activeMetricValue(point, dataKey)
+    if (value == null) continue
 
-  return values.reduce((sum, value) => sum + value, 0) / values.length
+    sum += value
+    count += 1
+  }
+
+  return count > 0 ? sum / count : null
 }
 
 function formatNumber(value: number | null, precision: number): string {
@@ -205,6 +210,13 @@ export function ActivityCharts({
   ]
 
   const activeCharts = charts.filter((c) => c.hasData)
+  const activeChartLabels = activeCharts.map((chart) => ({
+    chart,
+    averageLabel: formatMetricValue(
+      averageMetricValue(chartData, chart.dataKey),
+      chart,
+    ),
+  }))
 
   if (activeCharts.length === 0) return null
 
@@ -237,7 +249,7 @@ export function ActivityCharts({
         </Button>
       </div>
 
-      {activeCharts.map((chart) => (
+      {activeChartLabels.map(({ chart, averageLabel }) => (
         <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-3">
@@ -250,17 +262,10 @@ export function ActivityCharts({
                 {chart.title}
               </CardTitle>
               <div
-                aria-label={`${chart.title} average ${formatMetricValue(
-                  averageMetricValue(chartData, chart.dataKey),
-                  chart,
-                )}`}
+                aria-label={`${chart.title} average ${averageLabel}`}
                 className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
               >
-                Avg:{' '}
-                {formatMetricValue(
-                  averageMetricValue(chartData, chart.dataKey),
-                  chart,
-                )}
+                Avg: {averageLabel}
               </div>
             </div>
           </CardHeader>
