@@ -201,6 +201,14 @@ describe('GarminActivityTotals', () => {
       data: {
         garminActivityTotals: [
           {
+            period_start: `2010-${currentMonth}-01`,
+            activity_count: 1,
+            total_distance_km: 3,
+            total_duration_seconds: 1200,
+            total_ascent_m: 20,
+            total_calories: 100,
+          },
+          {
             period_start: `2024-${currentMonth}-01`,
             activity_count: 2,
             total_distance_km: 10,
@@ -285,6 +293,56 @@ describe('GarminActivityTotals', () => {
           activity_count: 0,
           distance_km: 0,
         }),
+      ]),
+    )
+  })
+
+  it('omits empty years before the earliest returned activity bucket', () => {
+    const selectedMonth = new Date().getMonth()
+    const currentMonth = String(selectedMonth + 1).padStart(2, '0')
+    hooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: { min_date: '1999-01-01', max_date: '2026-12-31' },
+      },
+      loading: false,
+    })
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: {
+        garminActivityTotals: [
+          {
+            period_start: `2010-${currentMonth}-01`,
+            activity_count: 1,
+            total_distance_km: 10,
+            total_duration_seconds: 3600,
+            total_ascent_m: 100,
+            total_calories: 500,
+          },
+          {
+            period_start: `2012-${currentMonth}-01`,
+            activity_count: 1,
+            total_distance_km: 12,
+            total_duration_seconds: 3600,
+            total_ascent_m: 120,
+            total_calories: 600,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<GarminActivityTotals />)
+
+    expect(latestBarChartData[0]).toEqual(
+      expect.objectContaining({ label: '2010', distance_km: 10 }),
+    )
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('1999')
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('2009')
+    expect(latestBarChartData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '2011', distance_km: 0 }),
+        expect.objectContaining({ label: '2012', distance_km: 12 }),
       ]),
     )
   })
