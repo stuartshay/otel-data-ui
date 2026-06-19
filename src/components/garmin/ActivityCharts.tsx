@@ -19,6 +19,11 @@ import {
   type ChartDataPoint,
   type SavedPoint,
 } from './ActivityChartData'
+import {
+  coerceTooltipMetricValue,
+  formatXAxisValue,
+  type XAxisMode,
+} from './ActivityChartTooltip'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
@@ -41,8 +46,6 @@ interface ActivityChartsProps {
    */
   onPointToggle?: (point: ChartDataPoint) => void
 }
-
-type XAxisMode = 'distance' | 'time'
 
 type MetricKey = 'elevation' | 'speed' | 'heartRate'
 
@@ -92,15 +95,6 @@ function formatMetricValue(
   return `${formatNumber(value, chart.precision)} ${chart.unit}`
 }
 
-function formatXAxisValue(value: unknown, mode: XAxisMode): string | undefined {
-  const numeric = typeof value === 'number' ? value : Number(value)
-  if (!Number.isFinite(numeric)) return undefined
-
-  return mode === 'distance'
-    ? `${numeric.toFixed(1)} mi`
-    : `${numeric.toFixed(0)} min`
-}
-
 interface ChartTooltipProps {
   label?: unknown
   payload?: ReadonlyArray<{ value?: unknown }>
@@ -109,10 +103,7 @@ interface ChartTooltipProps {
 }
 
 function ChartTooltip({ label, payload, chart, xMode }: ChartTooltipProps) {
-  const metricValue =
-    typeof payload?.[0]?.value === 'number' && Number.isFinite(payload[0].value)
-      ? payload[0].value
-      : null
+  const metricValue = coerceTooltipMetricValue(payload?.[0]?.value)
   const xValue = formatXAxisValue(label, xMode)
 
   return (

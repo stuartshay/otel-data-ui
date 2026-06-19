@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ActivityCharts } from './ActivityCharts'
+import {
+  coerceTooltipMetricValue,
+  formatXAxisValue,
+} from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
   it('renders a heart-rate chart when heart-rate data is present', () => {
@@ -64,5 +68,25 @@ describe('ActivityCharts', () => {
     expect(
       screen.getByLabelText('Heart Rate average 135 bpm'),
     ).toBeInTheDocument()
+  })
+
+  it('ignores nullish and empty x-axis tooltip labels', () => {
+    expect(formatXAxisValue(null, 'distance')).toBeUndefined()
+    expect(formatXAxisValue(undefined, 'time')).toBeUndefined()
+    expect(formatXAxisValue('', 'distance')).toBeUndefined()
+  })
+
+  it('formats numeric x-axis tooltip labels', () => {
+    expect(formatXAxisValue(1.234, 'distance')).toBe('1.2 mi')
+    expect(formatXAxisValue('12', 'time')).toBe('12 min')
+    expect(formatXAxisValue('not-a-number', 'distance')).toBeUndefined()
+  })
+
+  it('coerces numeric tooltip payload values', () => {
+    expect(coerceTooltipMetricValue(12.5)).toBe(12.5)
+    expect(coerceTooltipMetricValue('12.5')).toBe(12.5)
+    expect(coerceTooltipMetricValue(null)).toBeNull()
+    expect(coerceTooltipMetricValue('')).toBeNull()
+    expect(coerceTooltipMetricValue('not-a-number')).toBeNull()
   })
 })
