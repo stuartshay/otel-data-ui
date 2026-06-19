@@ -67,13 +67,18 @@ function averageMetricValue(
   data: ChartDataPoint[],
   dataKey: MetricKey,
 ): number | null {
-  const values = data
-    .map((point) => activeMetricValue(point, dataKey))
-    .filter((value): value is number => value != null)
+  let sum = 0
+  let count = 0
 
-  if (values.length === 0) return null
+  for (const point of data) {
+    const value = activeMetricValue(point, dataKey)
+    if (value == null) continue
 
-  return values.reduce((sum, value) => sum + value, 0) / values.length
+    sum += value
+    count += 1
+  }
+
+  return count > 0 ? sum / count : null
 }
 
 function formatNumber(value: number | null, precision: number): string {
@@ -237,162 +242,166 @@ export function ActivityCharts({
         </Button>
       </div>
 
-      {activeCharts.map((chart) => (
-        <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2 text-base font-medium">
-                <span
-                  aria-hidden="true"
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: chart.color }}
-                />
-                {chart.title}
-              </CardTitle>
-              <div
-                aria-label={`${chart.title} average ${formatMetricValue(
-                  averageMetricValue(chartData, chart.dataKey),
-                  chart,
-                )}`}
-                className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
-              >
-                Avg:{' '}
-                {formatMetricValue(
-                  averageMetricValue(chartData, chart.dataKey),
-                  chart,
-                )}
+      {activeCharts.map((chart) => {
+        const averageValue = averageMetricValue(chartData, chart.dataKey)
+        const averageLabel = formatMetricValue(averageValue, chart)
+
+        return (
+          <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <span
+                    aria-hidden="true"
+                    className="size-3 rounded-full"
+                    style={{ backgroundColor: chart.color }}
+                  />
+                  {chart.title}
+                </CardTitle>
+                <div
+                  aria-label={`${chart.title} average ${averageLabel}`}
+                  className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
+                >
+                  Avg: {averageLabel}
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart
-                data={chartData}
-                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                syncId="garmin-activity"
-                onMouseMove={(state: {
-                  activeTooltipIndex?: number | string | null
-                }) => {
-                  const point = pointFromTooltipState(state, chartData)
-                  if (point) onActivePointChange?.(point)
-                }}
-                onDoubleClick={(state: {
-                  activeTooltipIndex?: number | string | null
-                }) => {
-                  const point = pointFromTooltipState(state, chartData)
-                  if (point) onPointToggle?.(point)
-                }}
-                onMouseLeave={() => onActivePointChange?.(null)}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                {savedSegments.map((seg) => (
-                  <ReferenceArea
-                    key={`seg-${seg.fromId}-${seg.toId}`}
-                    x1={seg.x1}
-                    x2={seg.x2}
-                    fill={seg.color}
-                    fillOpacity={0.08}
-                    ifOverflow="extendDomain"
-                  />
-                ))}
-                <XAxis
-                  dataKey={xKey}
-                  type="number"
-                  domain={[0, 'dataMax']}
-                  tickFormatter={(v: number) =>
-                    v != null
-                      ? v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
-                      : ''
-                  }
-                  label={{
-                    value: xLabel,
-                    position: 'insideBottomRight',
-                    offset: -5,
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                  syncId="garmin-activity"
+                  onMouseMove={(state: {
+                    activeTooltipIndex?: number | string | null
+                  }) => {
+                    const point = pointFromTooltipState(state, chartData)
+                    if (point) onActivePointChange?.(point)
                   }}
-                  className="text-xs"
-                />
-                <YAxis
-                  tickFormatter={(v: number) => (v != null ? v.toFixed(0) : '')}
-                  className="text-xs"
-                  width={50}
-                />
-                <Tooltip
-                  cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
-                  content={({ label, payload }) => (
-                    <ChartTooltip
-                      label={label}
-                      payload={payload}
-                      chart={chart}
-                      xMode={effectiveXMode}
-                    />
-                  )}
-                />
-                {activeX != null && (
-                  <ReferenceLine
-                    x={activeX}
-                    stroke="currentColor"
-                    strokeOpacity={0.55}
-                    ifOverflow="extendDomain"
+                  onDoubleClick={(state: {
+                    activeTooltipIndex?: number | string | null
+                  }) => {
+                    const point = pointFromTooltipState(state, chartData)
+                    if (point) onPointToggle?.(point)
+                  }}
+                  onMouseLeave={() => onActivePointChange?.(null)}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
                   />
-                )}
-                {activeX != null &&
-                  activeMetricValue(activePoint, chart.dataKey) != null && (
-                    <ReferenceDot
+                  {savedSegments.map((seg) => (
+                    <ReferenceArea
+                      key={`seg-${seg.fromId}-${seg.toId}`}
+                      x1={seg.x1}
+                      x2={seg.x2}
+                      fill={seg.color}
+                      fillOpacity={0.08}
+                      ifOverflow="extendDomain"
+                    />
+                  ))}
+                  <XAxis
+                    dataKey={xKey}
+                    type="number"
+                    domain={[0, 'dataMax']}
+                    tickFormatter={(v: number) =>
+                      v != null
+                        ? v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
+                        : ''
+                    }
+                    label={{
+                      value: xLabel,
+                      position: 'insideBottomRight',
+                      offset: -5,
+                    }}
+                    className="text-xs"
+                  />
+                  <YAxis
+                    tickFormatter={(v: number) =>
+                      v != null ? v.toFixed(0) : ''
+                    }
+                    className="text-xs"
+                    width={50}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
+                    content={({ label, payload }) => (
+                      <ChartTooltip
+                        label={label}
+                        payload={payload}
+                        chart={chart}
+                        xMode={effectiveXMode}
+                      />
+                    )}
+                  />
+                  {activeX != null && (
+                    <ReferenceLine
                       x={activeX}
-                      y={activeMetricValue(activePoint, chart.dataKey) ?? 0}
-                      r={4}
                       stroke="currentColor"
-                      strokeWidth={2}
-                      fill="var(--background)"
+                      strokeOpacity={0.55}
                       ifOverflow="extendDomain"
                     />
                   )}
-                {savedPoints.map((sp) => {
-                  const x = sp[xKey]
-                  if (x == null || !Number.isFinite(x)) return null
-                  return (
-                    <ReferenceLine
-                      key={`saved-line-${sp.id}`}
-                      x={x}
-                      stroke={sp.color}
-                      strokeOpacity={0.8}
-                      strokeDasharray="4 2"
-                      ifOverflow="extendDomain"
-                    />
-                  )
-                })}
-                {savedPoints.map((sp) => {
-                  const x = sp[xKey]
-                  const y = activeMetricValue(sp, chart.dataKey)
-                  if (x == null || !Number.isFinite(x) || y == null) return null
-                  return (
-                    <ReferenceDot
-                      key={`saved-dot-${sp.id}`}
-                      x={x}
-                      y={y}
-                      r={4}
-                      stroke={sp.color}
-                      strokeWidth={2}
-                      fill={sp.color}
-                      ifOverflow="extendDomain"
-                    />
-                  )
-                })}
-                <Area
-                  type="monotone"
-                  dataKey={chart.dataKey}
-                  stroke={chart.color}
-                  fill={chart.color}
-                  fillOpacity={0.15}
-                  strokeWidth={1.5}
-                  dot={false}
-                  connectNulls
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      ))}
+                  {activeX != null &&
+                    activeMetricValue(activePoint, chart.dataKey) != null && (
+                      <ReferenceDot
+                        x={activeX}
+                        y={activeMetricValue(activePoint, chart.dataKey) ?? 0}
+                        r={4}
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        fill="var(--background)"
+                        ifOverflow="extendDomain"
+                      />
+                    )}
+                  {savedPoints.map((sp) => {
+                    const x = sp[xKey]
+                    if (x == null || !Number.isFinite(x)) return null
+                    return (
+                      <ReferenceLine
+                        key={`saved-line-${sp.id}`}
+                        x={x}
+                        stroke={sp.color}
+                        strokeOpacity={0.8}
+                        strokeDasharray="4 2"
+                        ifOverflow="extendDomain"
+                      />
+                    )
+                  })}
+                  {savedPoints.map((sp) => {
+                    const x = sp[xKey]
+                    const y = activeMetricValue(sp, chart.dataKey)
+                    if (x == null || !Number.isFinite(x) || y == null)
+                      return null
+                    return (
+                      <ReferenceDot
+                        key={`saved-dot-${sp.id}`}
+                        x={x}
+                        y={y}
+                        r={4}
+                        stroke={sp.color}
+                        strokeWidth={2}
+                        fill={sp.color}
+                        ifOverflow="extendDomain"
+                      />
+                    )
+                  })}
+                  <Area
+                    type="monotone"
+                    dataKey={chart.dataKey}
+                    stroke={chart.color}
+                    fill={chart.color}
+                    fillOpacity={0.15}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }
