@@ -596,8 +596,13 @@ describe('GarminDetailPage', () => {
         distance_from_start_km: 0.0,
         speed_kmh: 24.5,
         heart_rate: 135,
+        hr_zone: 3,
+        respiration_rate: 22,
         cadence: 80,
         temperature_c: 18,
+        surface_type: 'paved',
+        effort_level: 'steady',
+        created_at: '2026-03-14T10:00:00Z',
         address: {
           display_address: 'Pier 13, Hoboken, NJ',
           street: 'Sinatra Drive',
@@ -654,8 +659,12 @@ describe('GarminDetailPage', () => {
     expect(clickSpy).toHaveBeenCalledTimes(1)
 
     const csvText = exportedBlob ? await exportedBlob.text() : ''
-    expect(csvText).toContain('heart_rate,cadence,temperature_c')
-    expect(csvText).toContain('135,80,18')
+    expect(csvText).toContain(
+      'heart_rate,hr_zone,respiration_rate,cadence,temperature_c,surface_type,effort_level,created_at',
+    )
+    expect(csvText).toContain(
+      '135,3,22,80,18,paved,steady,2026-03-14T10:00:00Z',
+    )
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -675,7 +684,11 @@ describe('GarminDetailPage', () => {
       { loading: false },
     ])
 
-    const createObjectURL = vi.fn(() => 'blob:test')
+    let exportedBlob: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob
+      return 'blob:test'
+    })
     const revokeObjectURL = vi.fn()
     const clickSpy = vi.fn()
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
@@ -693,6 +706,16 @@ describe('GarminDetailPage', () => {
     )
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(clickSpy).toHaveBeenCalledTimes(1)
+
+    if (!exportedBlob) throw new Error('Expected export blob to be created')
+    const geojson = JSON.parse(await exportedBlob.text())
+    expect(geojson.features[0].properties).toMatchObject({
+      hr_zone: 3,
+      respiration_rate: 22,
+      surface_type: 'paved',
+      effort_level: 'steady',
+      created_at: '2026-03-14T10:00:00Z',
+    })
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()

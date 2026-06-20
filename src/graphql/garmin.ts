@@ -226,8 +226,13 @@ export const GARMIN_EXPORT_POINTS_QUERY = gql`
         distance_from_start_km
         speed_kmh
         heart_rate
+        hr_zone
+        respiration_rate
         cadence
         temperature_c
+        surface_type
+        effort_level
+        created_at
         address {
           display_address
           street

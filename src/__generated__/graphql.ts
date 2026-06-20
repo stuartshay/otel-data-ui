@@ -985,7 +985,7 @@ export type GarminExportPointsQueryVariables = Exact<{
 }>;
 
 
-export type GarminExportPointsQuery = { garminTrackPoints: { total: number, items: Array<{ id: number, activity_id: string, timestamp: string, latitude: number, longitude: number, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, cadence: number | null, temperature_c: number | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, waypoint_kind: string | null, status: string, geocoded_at: string | null } | null }> } };
+export type GarminExportPointsQuery = { garminTrackPoints: { total: number, items: Array<{ id: number, activity_id: string, timestamp: string, latitude: number, longitude: number, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, surface_type: string | null, effort_level: string | null, created_at: string | null, address: { display_address: string | null, street: string | null, housenumber: string | null, neighbourhood: string | null, locality: string | null, region: string | null, country: string | null, postalcode: string | null, confidence: number | null, waypoint_kind: string | null, status: string, geocoded_at: string | null } | null }> } };
 
 export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1605,8 +1605,13 @@ export const GarminExportPointsDocument = gql`
       distance_from_start_km
       speed_kmh
       heart_rate
+      hr_zone
+      respiration_rate
       cadence
       temperature_c
+      surface_type
+      effort_level
+      created_at
       address {
         display_address
         street
