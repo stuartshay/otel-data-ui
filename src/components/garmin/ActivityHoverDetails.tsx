@@ -151,6 +151,12 @@ export function ActivityHoverDetails({
             value={point.heartRate != null ? `${point.heartRate} bpm` : '—'}
           />
           <Field
+            label="Heart Rate Zone"
+            value={
+              point.heartRateZone != null ? `Zone ${point.heartRateZone}` : '—'
+            }
+          />
+          <Field
             label="Respiration Rate"
             value={
               point.respirationRate != null

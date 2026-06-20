@@ -259,8 +259,6 @@ export type GarminChartPoint = {
   cadence?: Maybe<Scalars['Int']['output']>;
   /** Cumulative distance from activity start in km */
   distance_from_start_km?: Maybe<Scalars['Float']['output']>;
-  /** Effort classification label */
-  effort_level?: Maybe<Scalars['String']['output']>;
   /** Heart rate in beats per minute */
   heart_rate?: Maybe<Scalars['Int']['output']>;
   /** Heart-rate zone index (1-5) */
@@ -273,8 +271,6 @@ export type GarminChartPoint = {
   respiration_rate?: Maybe<Scalars['Int']['output']>;
   /** Instantaneous speed in km/h */
   speed_kmh?: Maybe<Scalars['Float']['output']>;
-  /** Road or terrain type */
-  surface_type?: Maybe<Scalars['String']['output']>;
   /** Ambient temperature in degrees C */
   temperature_c?: Maybe<Scalars['Float']['output']>;
   /** UTC timestamp of the data point */
@@ -968,7 +964,7 @@ export type GarminChartDataQueryVariables = Exact<{
 }>;
 
 
-export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, latitude: number, longitude: number }> };
+export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, latitude: number, longitude: number }> };
 
 export type TriggerGarminSyncMutationVariables = Exact<{
   window_hours?: number | null | undefined;
@@ -1507,6 +1503,7 @@ export const GarminChartDataDocument = gql`
     distance_from_start_km
     speed_kmh
     heart_rate
+    hr_zone
     respiration_rate
     cadence
     temperature_c

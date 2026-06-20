@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ActivityCharts } from './ActivityCharts'
+import type { ChartDataPoint } from './ActivityChartData'
+import { buildHeartRateZoneSegments } from './heartRateZones'
 import { getActivityYAxisConfig } from './ActivityChartYAxis'
 import {
   coerceTooltipMetricValue,
@@ -59,6 +61,67 @@ describe('ActivityCharts', () => {
 
     expect(screen.getByTestId('chart-heartRate')).toBeInTheDocument()
     expect(screen.getByText('Heart Rate')).toBeInTheDocument()
+  })
+
+  it('renders heart-rate zones as an aligned ribbon and hides it without zone data', () => {
+    const points = [
+      {
+        timestamp: '2026-03-14T09:00:00Z',
+        distance_from_start_km: 0,
+        heart_rate: 118,
+        hr_zone: 2,
+      },
+      {
+        timestamp: '2026-03-14T09:10:00Z',
+        distance_from_start_km: 5,
+        heart_rate: 135,
+        hr_zone: 2,
+      },
+      {
+        timestamp: '2026-03-14T09:20:00Z',
+        distance_from_start_km: 10,
+        heart_rate: 158,
+        hr_zone: 4,
+      },
+      {
+        timestamp: '2026-03-14T09:30:00Z',
+        distance_from_start_km: 15,
+        heart_rate: 148,
+        hr_zone: 3,
+      },
+    ]
+    const { rerender } = render(<ActivityCharts trackPoints={points} />)
+
+    expect(screen.getByTestId('heart-rate-zone-ribbon')).toBeInTheDocument()
+    expect(screen.getByLabelText('Heart rate zone legend')).toHaveTextContent(
+      'Z1Z2Z3Z4Z5',
+    )
+
+    rerender(
+      <ActivityCharts
+        trackPoints={points.map((point) => ({ ...point, hr_zone: null }))}
+      />,
+    )
+    expect(
+      screen.queryByTestId('heart-rate-zone-ribbon'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('consolidates adjacent heart-rate zone samples into ribbon segments', () => {
+    expect(
+      buildHeartRateZoneSegments(
+        [
+          { distance: 0, time: 0, heartRateZone: 2 },
+          { distance: 1, time: 1, heartRateZone: 2 },
+          { distance: 2, time: 2, heartRateZone: 4 },
+          { distance: 4, time: 4, heartRateZone: 3 },
+        ] as ChartDataPoint[],
+        'distance',
+      ),
+    ).toEqual([
+      { zone: 2, startPercent: 0, widthPercent: 50 },
+      { zone: 4, startPercent: 50, widthPercent: 50 },
+    ])
   })
 
   it('renders respiration below heart rate only when samples exist', () => {

@@ -26,6 +26,7 @@ import {
   type XAxisMode,
 } from './ActivityChartTooltip'
 import { getActivityYAxisConfig } from './ActivityChartYAxis'
+import { HeartRateZoneRibbon } from './HeartRateZoneRibbon'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
@@ -472,6 +473,9 @@ export function ActivityCharts({
                 />
               </AreaChart>
             </ResponsiveContainer>
+            {chart.dataKey === 'heartRate' && (
+              <HeartRateZoneRibbon data={chartData} xKey={xKey} />
+            )}
           </CardContent>
         </Card>
       ))}
