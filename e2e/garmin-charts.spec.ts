@@ -8,13 +8,14 @@ fs.mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
 /**
  * Validates that the Garmin activity detail page renders
- * Elevation and Speed charts using Recharts.
+ * Elevation, Speed, Heart Rate, and Respiration Rate charts using Recharts.
  *
  * By default uses activity 9965963574 which has ~2 425 track points
  * with altitude / speed data from a Garmin FIT file.
  *
- * The activity ID can be overridden per-environment via the
- * PLAYWRIGHT_GARMIN_ACTIVITY_ID environment variable.
+ * The activity IDs can be overridden per-environment via the
+ * PLAYWRIGHT_GARMIN_ACTIVITY_ID and
+ * PLAYWRIGHT_GARMIN_RESPIRATION_ACTIVITY_ID environment variables.
  */
 const ACTIVITY_ID = process.env.PLAYWRIGHT_GARMIN_ACTIVITY_ID ?? '9965963574'
 const RESPIRATION_ACTIVITY_ID =
@@ -26,12 +27,11 @@ test.describe('Garmin Activity Charts', () => {
   }) => {
     await page.goto(`/garmin/${RESPIRATION_ACTIVITY_ID}`)
 
-    await expect(page.getByText(/Chart data failed:/i)).toHaveCount(0)
-
     const heartRateCard = page.getByTestId('chart-heartRate')
     const respirationCard = page.getByTestId('chart-respirationRate')
     await expect(heartRateCard).toBeVisible({ timeout: 20_000 })
     await expect(respirationCard).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/Chart data failed:/i)).toHaveCount(0)
     await expect(
       respirationCard.getByLabel(/Respiration Rate average \d+ brpm/i),
     ).toBeVisible()

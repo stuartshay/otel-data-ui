@@ -8,7 +8,7 @@ import {
 } from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
-  it('uses Garmin-style Y-axis ticks only for heart rate', () => {
+  it('uses Garmin-style Y-axis ticks for heart rate and respiration', () => {
     const heartRateAxis = getActivityYAxisConfig('heartRate')
     const [minimumDomain, maximumDomain] = heartRateAxis.domain ?? []
 
