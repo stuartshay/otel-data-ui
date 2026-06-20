@@ -185,6 +185,7 @@ export const GARMIN_CHART_DATA_QUERY = gql`
       distance_from_start_km
       speed_kmh
       heart_rate
+      respiration_rate
       cadence
       temperature_c
       latitude

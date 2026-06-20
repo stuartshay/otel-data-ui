@@ -8,7 +8,7 @@ import {
 } from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
-  it('uses Garmin-style Y-axis ticks only for heart rate', () => {
+  it('uses Garmin-style Y-axis ticks for heart rate and respiration', () => {
     const heartRateAxis = getActivityYAxisConfig('heartRate')
     const [minimumDomain, maximumDomain] = heartRateAxis.domain ?? []
 
@@ -17,6 +17,15 @@ describe('ActivityCharts', () => {
     expect(minimumDomain?.(80)).toBe(80)
     expect(maximumDomain?.(180)).toBe(200)
     expect(maximumDomain?.(220)).toBe(220)
+
+    const respirationAxis = getActivityYAxisConfig('respirationRate')
+    const [minimumRespiration, maximumRespiration] =
+      respirationAxis.domain ?? []
+    expect(respirationAxis.ticks).toEqual([16, 24, 32, 40])
+    expect(minimumRespiration?.(24)).toBe(16)
+    expect(minimumRespiration?.(12)).toBe(12)
+    expect(maximumRespiration?.(32)).toBe(40)
+    expect(maximumRespiration?.(44)).toBe(44)
     expect(getActivityYAxisConfig('elevation')).toEqual({})
     expect(getActivityYAxisConfig('speed')).toEqual({})
   })
@@ -51,6 +60,46 @@ describe('ActivityCharts', () => {
     expect(screen.getByText('Heart Rate')).toBeInTheDocument()
   })
 
+  it('renders respiration below heart rate only when samples exist', () => {
+    const points = [
+      {
+        timestamp: '2026-03-14T09:00:00Z',
+        distance_from_start_km: 0,
+        heart_rate: 118,
+        respiration_rate: 24,
+      },
+      {
+        timestamp: '2026-03-14T09:10:00Z',
+        distance_from_start_km: 5,
+        heart_rate: 152,
+        respiration_rate: 30,
+      },
+    ]
+    const { rerender } = render(<ActivityCharts trackPoints={points} />)
+
+    const heartRateChart = screen.getByTestId('chart-heartRate')
+    const respirationChart = screen.getByTestId('chart-respirationRate')
+    expect(heartRateChart.compareDocumentPosition(respirationChart)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(screen.getByText('Respiration Rate')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Respiration Rate average 27 brpm'),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ActivityCharts
+        trackPoints={points.map((point) => ({
+          ...point,
+          respiration_rate: null,
+        }))}
+      />,
+    )
+    expect(
+      screen.queryByTestId('chart-respirationRate'),
+    ).not.toBeInTheDocument()
+  })
+
   it('renders Garmin-style labels and average values for each chart', () => {
     render(
       <ActivityCharts
@@ -61,6 +110,7 @@ describe('ActivityCharts', () => {
             altitude: 10,
             speed_kmh: 22,
             heart_rate: 118,
+            respiration_rate: 24,
             latitude: 40.7,
             longitude: -74,
           },
@@ -70,6 +120,7 @@ describe('ActivityCharts', () => {
             altitude: 30,
             speed_kmh: 28,
             heart_rate: 152,
+            respiration_rate: 30,
             latitude: 40.71,
             longitude: -74.01,
           },
@@ -81,6 +132,9 @@ describe('ActivityCharts', () => {
     expect(screen.getByLabelText('Speed average 15.5 mph')).toBeInTheDocument()
     expect(
       screen.getByLabelText('Heart Rate average 135 bpm'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Respiration Rate average 27 brpm'),
     ).toBeInTheDocument()
   })
 

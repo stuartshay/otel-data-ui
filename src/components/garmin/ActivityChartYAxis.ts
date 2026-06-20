@@ -1,4 +1,8 @@
-type ActivityChartMetric = 'elevation' | 'speed' | 'heartRate'
+type ActivityChartMetric =
+  | 'elevation'
+  | 'speed'
+  | 'heartRate'
+  | 'respirationRate'
 
 interface ActivityYAxisConfig {
   domain?: [(dataMinimum: number) => number, (dataMaximum: number) => number]
@@ -15,6 +19,16 @@ export function getActivityYAxisConfig(
         (dataMaximum) => Math.max(dataMaximum, 200),
       ],
       ticks: [100, 150, 200],
+    }
+  }
+
+  if (dataKey === 'respirationRate') {
+    return {
+      domain: [
+        (dataMinimum) => Math.min(dataMinimum, 16),
+        (dataMaximum) => Math.max(dataMaximum, 40),
+      ],
+      ticks: [16, 24, 32, 40],
     }
   }
 

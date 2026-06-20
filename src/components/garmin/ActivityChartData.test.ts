@@ -15,6 +15,7 @@ function point(
     distance_from_start_km: index,
     altitude: 100,
     speed_kmh: 16.0934,
+    respiration_rate: 27,
     latitude: 40 + index / 1000,
     longitude: -74 - index / 1000,
     ...overrides,
@@ -34,6 +35,7 @@ describe('ActivityChartData', () => {
     expect(chartPoint.time).toBeCloseTo(5 / 60)
     expect(chartPoint.elevation).toBeCloseTo(328.084)
     expect(chartPoint.speed).toBeCloseTo(10)
+    expect(chartPoint.respirationRate).toBe(27)
     expect(chartPoint.latitude).toBe(40.005)
     expect(chartPoint.longitude).toBe(-74.005)
   })
