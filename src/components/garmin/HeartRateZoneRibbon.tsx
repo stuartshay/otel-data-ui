@@ -1,4 +1,5 @@
 import type { ChartDataPoint } from './ActivityChartData'
+import { CHART_MARGIN_RIGHT, CHART_Y_AXIS_WIDTH } from './chartLayout'
 import { buildHeartRateZoneSegments, ZONE_COLORS } from './heartRateZones'
 
 export function HeartRateZoneRibbon({
@@ -12,7 +13,13 @@ export function HeartRateZoneRibbon({
   if (segments.length === 0) return null
 
   return (
-    <div className="ml-[50px] mr-5 mt-1 space-y-1">
+    <div
+      className="mt-1 space-y-1"
+      style={{
+        marginLeft: CHART_Y_AXIS_WIDTH,
+        marginRight: CHART_MARGIN_RIGHT,
+      }}
+    >
       <div
         aria-label="Heart rate zones across activity"
         className="relative h-2 overflow-hidden rounded-full bg-muted/40"
@@ -21,7 +28,7 @@ export function HeartRateZoneRibbon({
       >
         {segments.map((segment, index) => (
           <span
-            aria-label={`Zone ${segment.zone}`}
+            aria-hidden="true"
             className="absolute inset-y-0"
             data-zone={segment.zone}
             key={`${segment.startPercent}-${segment.zone}-${index}`}

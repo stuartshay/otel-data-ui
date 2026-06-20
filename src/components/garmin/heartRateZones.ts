@@ -35,8 +35,10 @@ export function buildHeartRateZoneSegments(
   }
 
   const domainMax = Math.max(...points.map((point) => point[xKey] as number))
-  if (domainMax <= 0) {
-    const zone = validZone(points[0].heartRateZone)
+  if (domainMax <= 0 || points.length === 1) {
+    const zone = points
+      .map((point) => validZone(point.heartRateZone))
+      .find((value) => value != null)
     return zone == null ? [] : [{ zone, startPercent: 0, widthPercent: 100 }]
   }
 

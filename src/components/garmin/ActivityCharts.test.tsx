@@ -124,6 +124,15 @@ describe('ActivityCharts', () => {
     ])
   })
 
+  it('renders a full-width segment for a single zoned point', () => {
+    expect(
+      buildHeartRateZoneSegments(
+        [{ distance: 3, time: 3, heartRateZone: 2 }] as ChartDataPoint[],
+        'distance',
+      ),
+    ).toEqual([{ zone: 2, startPercent: 0, widthPercent: 100 }])
+  })
+
   it('renders respiration below heart rate only when samples exist', () => {
     const points = [
       {
