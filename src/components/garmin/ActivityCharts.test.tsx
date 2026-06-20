@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ActivityCharts } from './ActivityCharts'
 import { getActivityYAxisConfig } from './ActivityChartYAxis'
@@ -136,6 +137,61 @@ describe('ActivityCharts', () => {
     expect(
       screen.getByLabelText('Respiration Rate average 27 brpm'),
     ).toBeInTheDocument()
+  })
+
+  it('minimizes and restores each chart independently while keeping its header', async () => {
+    const user = userEvent.setup()
+    render(
+      <ActivityCharts
+        trackPoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            distance_from_start_km: 0,
+            altitude: 10,
+            speed_kmh: 22,
+            heart_rate: 118,
+            respiration_rate: 24,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            distance_from_start_km: 5,
+            altitude: 30,
+            speed_kmh: 28,
+            heart_rate: 152,
+            respiration_rate: 30,
+          },
+        ]}
+      />,
+    )
+
+    const minimizeElevation = screen.getByRole('button', {
+      name: 'Minimize Elevation graph',
+    })
+    expect(
+      screen.getAllByRole('button', { name: /^Minimize .* graph$/ }),
+    ).toHaveLength(4)
+    expect(minimizeElevation).toHaveAttribute('aria-expanded', 'true')
+    expect(document.getElementById('chart-content-elevation')).toBeVisible()
+    expect(document.getElementById('chart-content-speed')).toBeInTheDocument()
+
+    await user.click(minimizeElevation)
+
+    expect(
+      screen.getByRole('button', { name: 'Expand Elevation graph' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+    expect(document.getElementById('chart-content-elevation')).not.toBeVisible()
+    expect(document.getElementById('chart-content-speed')).toBeVisible()
+    expect(screen.getByText('Elevation')).toBeInTheDocument()
+    expect(screen.getByLabelText('Elevation average 66 ft')).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Expand Elevation graph' }),
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Minimize Elevation graph' }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(document.getElementById('chart-content-elevation')).toBeVisible()
   })
 
   it('ignores nullish and empty x-axis tooltip labels', () => {

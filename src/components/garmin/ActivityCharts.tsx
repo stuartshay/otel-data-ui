@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -139,6 +140,9 @@ export function ActivityCharts({
   onPointToggle,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
+  const [collapsedCharts, setCollapsedCharts] = useState<Set<MetricKey>>(
+    () => new Set(),
+  )
   const { chartData, hasReliableDistance } = useMemo(
     () => buildActivityChartData(trackPoints),
     [trackPoints],
@@ -259,6 +263,15 @@ export function ActivityCharts({
 
   if (activeCharts.length === 0) return null
 
+  const toggleChart = (dataKey: MetricKey) => {
+    setCollapsedCharts((current) => {
+      const next = new Set(current)
+      if (next.has(dataKey)) next.delete(dataKey)
+      else next.add(dataKey)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Toggle buttons */}
@@ -290,7 +303,9 @@ export function ActivityCharts({
 
       {activeChartLabels.map(({ chart, yAxisConfig, averageLabel }) => (
         <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
-          <CardHeader className="pb-2">
+          <CardHeader
+            className={collapsedCharts.has(chart.dataKey) ? 'pb-6' : 'pb-2'}
+          >
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-base font-medium">
                 <span
@@ -300,15 +315,37 @@ export function ActivityCharts({
                 />
                 {chart.title}
               </CardTitle>
-              <div
-                aria-label={`${chart.title} average ${averageLabel}`}
-                className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
-              >
-                Avg: {averageLabel}
+              <div className="flex items-center gap-2">
+                <div
+                  aria-label={`${chart.title} average ${averageLabel}`}
+                  className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
+                >
+                  Avg: {averageLabel}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  aria-label={`${collapsedCharts.has(chart.dataKey) ? 'Expand' : 'Minimize'} ${chart.title} graph`}
+                  title={`${collapsedCharts.has(chart.dataKey) ? 'Expand' : 'Minimize'} ${chart.title} graph`}
+                  aria-controls={`chart-content-${chart.dataKey}`}
+                  aria-expanded={!collapsedCharts.has(chart.dataKey)}
+                  onClick={() => toggleChart(chart.dataKey)}
+                >
+                  {collapsedCharts.has(chart.dataKey) ? (
+                    <ChevronDown aria-hidden="true" />
+                  ) : (
+                    <ChevronUp aria-hidden="true" />
+                  )}
+                </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent
+            id={`chart-content-${chart.dataKey}`}
+            hidden={collapsedCharts.has(chart.dataKey)}
+          >
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart
                 data={chartData}
