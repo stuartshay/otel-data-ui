@@ -21,6 +21,7 @@ export interface ChartDataPoint {
   heartRate: number | null
   heartRateZone?: number | null
   respirationRate: number | null
+  respirationRateSmoothed?: number | null
   latitude: number | null
   longitude: number | null
   timestamp: string
@@ -127,9 +128,40 @@ export function buildActivityChartData(
   }
 
   const sampled = downsample(trackPoints, 800)
-  const chartData = sampled.map((pt) =>
-    toChartDataPoint(pt, context.startTime, context.hasReliableDistance),
+  const chartData = addRespirationRollingAverage(
+    sampled.map((pt) =>
+      toChartDataPoint(pt, context.startTime, context.hasReliableDistance),
+    ),
   )
 
   return { chartData, hasReliableDistance: context.hasReliableDistance }
+}
+
+/** Add a trailing one-minute rolling average without filling missing samples. */
+export function addRespirationRollingAverage(
+  data: ChartDataPoint[],
+  windowMinutes = 1,
+): ChartDataPoint[] {
+  const window: Array<{ time: number; value: number }> = []
+  let sum = 0
+
+  return data.map((point) => {
+    while (window.length > 0 && point.time - window[0].time > windowMinutes) {
+      sum -= window.shift()?.value ?? 0
+    }
+
+    const value = point.respirationRate
+    if (value != null && Number.isFinite(value)) {
+      window.push({ time: point.time, value })
+      sum += value
+    }
+
+    return {
+      ...point,
+      respirationRateSmoothed:
+        value != null && Number.isFinite(value) && window.length > 0
+          ? sum / window.length
+          : null,
+    }
+  })
 }

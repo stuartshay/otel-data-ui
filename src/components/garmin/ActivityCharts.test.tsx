@@ -157,7 +157,9 @@ describe('ActivityCharts', () => {
     )
     expect(screen.getByText('Respiration Rate')).toBeInTheDocument()
     expect(
-      screen.getByLabelText('Respiration Rate average 27 brpm'),
+      screen.getByLabelText(
+        'Respiration Rate statistics: average 27, minimum 24, maximum 30 breaths per minute',
+      ),
     ).toBeInTheDocument()
 
     rerender(
@@ -207,8 +209,44 @@ describe('ActivityCharts', () => {
       screen.getByLabelText('Heart Rate average 135 bpm'),
     ).toBeInTheDocument()
     expect(
-      screen.getByLabelText('Respiration Rate average 27 brpm'),
+      screen.getByLabelText(
+        'Respiration Rate statistics: average 27, minimum 24, maximum 30 breaths per minute',
+      ),
     ).toBeInTheDocument()
+  })
+
+  it('explains respiration rate and toggles between raw and smoothed data', async () => {
+    const user = userEvent.setup()
+    render(
+      <ActivityCharts
+        trackPoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            distance_from_start_km: 0,
+            respiration_rate: 24,
+          },
+          {
+            timestamp: '2026-03-14T09:01:00Z',
+            distance_from_start_km: 1,
+            respiration_rate: 30,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByLabelText('About respiration rate')).toHaveAttribute(
+      'title',
+      expect.stringContaining('Estimated breaths per minute'),
+    )
+    const raw = screen.getByRole('button', { name: 'Raw' })
+    const smoothed = screen.getByRole('button', { name: 'Smoothed' })
+    expect(raw).toHaveAttribute('aria-pressed', 'true')
+    expect(smoothed).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(smoothed)
+
+    expect(raw).toHaveAttribute('aria-pressed', 'false')
+    expect(smoothed).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('minimizes and restores each chart independently while keeping its header', async () => {

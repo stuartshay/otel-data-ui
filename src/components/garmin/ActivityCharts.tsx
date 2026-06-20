@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { CircleHelp, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -60,6 +60,13 @@ interface ChartConfig {
   unit: string
   hasData: boolean
   precision: number
+  description?: string
+}
+
+interface MetricStatistics {
+  average: number | null
+  minimum: number | null
+  maximum: number | null
 }
 
 function activeMetricValue(
@@ -70,12 +77,14 @@ function activeMetricValue(
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
-function averageMetricValue(
+function metricStatistics(
   data: ChartDataPoint[],
   dataKey: MetricKey,
-): number | null {
+): MetricStatistics {
   let sum = 0
   let count = 0
+  let minimum = Infinity
+  let maximum = -Infinity
 
   for (const point of data) {
     const value = activeMetricValue(point, dataKey)
@@ -83,9 +92,15 @@ function averageMetricValue(
 
     sum += value
     count += 1
+    minimum = Math.min(minimum, value)
+    maximum = Math.max(maximum, value)
   }
 
-  return count > 0 ? sum / count : null
+  return {
+    average: count > 0 ? sum / count : null,
+    minimum: count > 0 ? minimum : null,
+    maximum: count > 0 ? maximum : null,
+  }
 }
 
 function formatNumber(value: number | null, precision: number): string {
@@ -142,6 +157,7 @@ export function ActivityCharts({
   onPointToggle,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
+  const [smoothRespiration, setSmoothRespiration] = useState(false)
   const [collapsedCharts, setCollapsedCharts] = useState<Set<MetricKey>>(
     () => new Set(),
   )
@@ -247,21 +263,24 @@ export function ActivityCharts({
       title: 'Respiration Rate',
       dataKey: 'respirationRate',
       color: '#3fc1d3',
-      unit: 'brpm',
+      unit: 'breaths/min',
       hasData: hasRespirationRate,
       precision: 0,
+      description:
+        'Estimated breaths per minute recorded by Garmin. Higher values often accompany harder effort; brief spikes or drops may reflect sensor noise.',
     },
   ]
 
   const activeCharts = charts.filter((c) => c.hasData)
-  const activeChartLabels = activeCharts.map((chart) => ({
-    chart,
-    yAxisConfig: getActivityYAxisConfig(chart.dataKey),
-    averageLabel: formatMetricValue(
-      averageMetricValue(chartData, chart.dataKey),
+  const activeChartLabels = activeCharts.map((chart) => {
+    const statistics = metricStatistics(chartData, chart.dataKey)
+    return {
       chart,
-    ),
-  }))
+      stats: statistics,
+      yAxisConfig: getActivityYAxisConfig(chart.dataKey),
+      averageLabel: formatMetricValue(statistics.average, chart),
+    }
+  })
 
   if (activeCharts.length === 0) return null
 
@@ -303,7 +322,7 @@ export function ActivityCharts({
         </Button>
       </div>
 
-      {activeChartLabels.map(({ chart, yAxisConfig, averageLabel }) => (
+      {activeChartLabels.map(({ chart, stats, yAxisConfig, averageLabel }) => (
         <Card key={chart.dataKey} data-testid={`chart-${chart.dataKey}`}>
           <CardHeader
             className={collapsedCharts.has(chart.dataKey) ? 'pb-6' : 'pb-2'}
@@ -316,14 +335,62 @@ export function ActivityCharts({
                   style={{ backgroundColor: chart.color }}
                 />
                 {chart.title}
+                {chart.description && (
+                  <span
+                    aria-label="About respiration rate"
+                    className="inline-flex text-muted-foreground"
+                    role="note"
+                    tabIndex={0}
+                    title={chart.description}
+                  >
+                    <CircleHelp aria-hidden="true" className="size-4" />
+                  </span>
+                )}
               </CardTitle>
               <div className="flex items-center gap-2">
-                <div
-                  aria-label={`${chart.title} average ${averageLabel}`}
-                  className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
-                >
-                  Avg: {averageLabel}
-                </div>
+                {chart.dataKey === 'respirationRate' ? (
+                  <>
+                    <div
+                      aria-label={`Respiration Rate statistics: average ${formatNumber(stats.average, 0)}, minimum ${formatNumber(stats.minimum, 0)}, maximum ${formatNumber(stats.maximum, 0)} breaths per minute`}
+                      className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
+                    >
+                      Avg {formatNumber(stats.average, 0)} · Min{' '}
+                      {formatNumber(stats.minimum, 0)} · Max{' '}
+                      {formatNumber(stats.maximum, 0)} breaths/min
+                    </div>
+                    <div
+                      aria-label="Respiration rate display"
+                      className="flex rounded border p-0.5"
+                      role="group"
+                    >
+                      <Button
+                        aria-pressed={!smoothRespiration}
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setSmoothRespiration(false)}
+                        size="sm"
+                        variant={!smoothRespiration ? 'secondary' : 'ghost'}
+                      >
+                        Raw
+                      </Button>
+                      <Button
+                        aria-pressed={smoothRespiration}
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setSmoothRespiration(true)}
+                        size="sm"
+                        variant={smoothRespiration ? 'secondary' : 'ghost'}
+                      >
+                        Smoothed
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    aria-label={`${chart.title} average ${averageLabel}`}
+                    className="rounded bg-neutral-950/70 px-2 py-1 text-xs text-white"
+                  >
+                    Avg: {averageLabel}
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -350,7 +417,14 @@ export function ActivityCharts({
           >
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart
-                data={chartData}
+                data={
+                  chart.dataKey === 'respirationRate' && smoothRespiration
+                    ? chartData.map((point) => ({
+                        ...point,
+                        respirationRate: point.respirationRateSmoothed ?? null,
+                      }))
+                    : chartData
+                }
                 margin={{
                   top: 5,
                   right: CHART_MARGIN_RIGHT,
@@ -416,6 +490,22 @@ export function ActivityCharts({
                     />
                   )}
                 />
+                {chart.dataKey === 'respirationRate' &&
+                  stats.average != null && (
+                    <ReferenceLine
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: `Avg ${formatNumber(stats.average, 0)}`,
+                        position: 'insideTopRight',
+                        fill: chart.color,
+                        fontSize: 10,
+                      }}
+                      stroke={chart.color}
+                      strokeDasharray="5 4"
+                      strokeOpacity={0.8}
+                      y={stats.average}
+                    />
+                  )}
                 {activeX != null && (
                   <ReferenceLine
                     x={activeX}

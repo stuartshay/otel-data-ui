@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addRespirationRollingAverage,
   buildActivityChartData,
   getActivityChartContext,
   toChartDataPoint,
   type ActivityChartTrackPoint,
+  type ChartDataPoint,
 } from './ActivityChartData'
 
 function point(
@@ -79,5 +81,20 @@ describe('ActivityChartData', () => {
 
     expect(result.hasReliableDistance).toBe(false)
     expect(result.chartData.every((p) => p.distance == null)).toBe(true)
+  })
+
+  it('calculates a one-minute respiration average using timestamps and preserves gaps', () => {
+    const data = [
+      { time: 0, respirationRate: 20 },
+      { time: 0.5, respirationRate: 40 },
+      { time: 1.5, respirationRate: 30 },
+      { time: 2, respirationRate: null },
+    ] as ChartDataPoint[]
+
+    expect(
+      addRespirationRollingAverage(data).map(
+        (point) => point.respirationRateSmoothed,
+      ),
+    ).toEqual([20, 30, 35, null])
   })
 })
