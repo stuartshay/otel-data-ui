@@ -160,7 +160,7 @@ export function ActivityHoverDetails({
             label="Respiration Rate"
             value={
               point.respirationRate != null
-                ? `${point.respirationRate} brpm`
+                ? `${point.respirationRate} breaths/min`
                 : '—'
             }
           />

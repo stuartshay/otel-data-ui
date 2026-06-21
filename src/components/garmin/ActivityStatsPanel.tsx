@@ -253,21 +253,21 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
                 label: 'Avg Respiration',
                 value:
                   a.avg_respiration_rate != null
-                    ? `${a.avg_respiration_rate} brpm`
+                    ? `${a.avg_respiration_rate} breaths/min`
                     : '—',
               },
               {
                 label: 'Min Respiration',
                 value:
                   a.min_respiration_rate != null
-                    ? `${a.min_respiration_rate} brpm`
+                    ? `${a.min_respiration_rate} breaths/min`
                     : '—',
               },
               {
                 label: 'Max Respiration',
                 value:
                   a.max_respiration_rate != null
-                    ? `${a.max_respiration_rate} brpm`
+                    ? `${a.max_respiration_rate} breaths/min`
                     : '—',
               },
             ],
