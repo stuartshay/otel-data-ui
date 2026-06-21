@@ -26,6 +26,8 @@ import {
   type XAxisMode,
 } from './ActivityChartTooltip'
 import { getActivityYAxisConfig } from './ActivityChartYAxis'
+import { CHART_MARGIN_RIGHT, CHART_Y_AXIS_WIDTH } from './chartLayout'
+import { HeartRateZoneRibbon } from './HeartRateZoneRibbon'
 
 interface ActivityChartsProps {
   trackPoints: ActivityChartTrackPoint[]
@@ -349,7 +351,12 @@ export function ActivityCharts({
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart
                 data={chartData}
-                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                margin={{
+                  top: 5,
+                  right: CHART_MARGIN_RIGHT,
+                  left: 0,
+                  bottom: 5,
+                }}
                 syncId="garmin-activity"
                 onMouseMove={(state: {
                   activeTooltipIndex?: number | string | null
@@ -396,7 +403,7 @@ export function ActivityCharts({
                   {...yAxisConfig}
                   tickFormatter={(v: number) => (v != null ? v.toFixed(0) : '')}
                   className="text-xs"
-                  width={50}
+                  width={CHART_Y_AXIS_WIDTH}
                 />
                 <Tooltip
                   cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
@@ -472,6 +479,9 @@ export function ActivityCharts({
                 />
               </AreaChart>
             </ResponsiveContainer>
+            {chart.dataKey === 'heartRate' && (
+              <HeartRateZoneRibbon data={chartData} xKey={xKey} />
+            )}
           </CardContent>
         </Card>
       ))}
