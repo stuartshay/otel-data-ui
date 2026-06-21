@@ -234,7 +234,7 @@ describe('ActivityCharts', () => {
       />,
     )
 
-    expect(screen.getByLabelText('About respiration rate')).toHaveAttribute(
+    expect(screen.getByLabelText(/^About Respiration Rate/)).toHaveAttribute(
       'title',
       expect.stringContaining('Estimated breaths per minute'),
     )

@@ -58,7 +58,7 @@ describe('ActivityHoverDetails', () => {
     expect(screen.getByText('120.4 ft')).toBeInTheDocument()
     expect(screen.getByText('9.8 mph')).toBeInTheDocument()
     expect(screen.getByText('Zone 3')).toBeInTheDocument()
-    expect(screen.getByText('27 brpm')).toBeInTheDocument()
+    expect(screen.getByText('27 breaths/min')).toBeInTheDocument()
     expect(screen.getByText('3.14 mi (5.05 km)')).toBeInTheDocument()
     expect(screen.getByText('40.71234, -74.00567')).toBeInTheDocument()
     expect(screen.getByText('Resolving…')).toBeInTheDocument()

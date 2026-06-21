@@ -337,7 +337,7 @@ export function ActivityCharts({
                 {chart.title}
                 {chart.description && (
                   <span
-                    aria-label="About respiration rate"
+                    aria-label={`About ${chart.title}: ${chart.description}`}
                     className="inline-flex text-muted-foreground"
                     role="note"
                     tabIndex={0}
