@@ -31,6 +31,7 @@ export const GARMIN_ACTIVITIES_QUERY = gql`
         max_heart_rate
         avg_cadence
         max_cadence
+        total_strokes
         calories
         avg_speed_kmh
         max_speed_kmh
@@ -78,6 +79,7 @@ export const GARMIN_ACTIVITY_QUERY = gql`
       unpaved_distance_km
       avg_cadence
       max_cadence
+      total_strokes
       calories
       avg_speed_kmh
       max_speed_kmh

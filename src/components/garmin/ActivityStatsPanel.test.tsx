@@ -19,6 +19,7 @@ describe('ActivityStatsPanel', () => {
           max_heart_rate: 176,
           avg_cadence: 88,
           max_cadence: 98,
+          total_strokes: 1793,
           avg_temperature_c: 20,
           min_temperature_c: 18,
           max_temperature_c: 25,
@@ -34,6 +35,7 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText('145 bpm')).toBeInTheDocument()
     expect(screen.getByText('68 °F')).toBeInTheDocument()
     expect(screen.getByText('720 kcal')).toBeInTheDocument()
+    expect(screen.getByText('1,793')).toBeInTheDocument()
   })
 
   it('hides HR-dependent sections when hr data is unavailable', () => {

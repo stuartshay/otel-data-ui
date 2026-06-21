@@ -35,6 +35,7 @@ interface ActivityStatsPanelProps {
     unpaved_distance_km?: number | null
     avg_cadence?: number | null
     max_cadence?: number | null
+    total_strokes?: number | null
     total_ascent_m?: number | null
     total_descent_m?: number | null
     calories?: number | null
@@ -174,6 +175,13 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
         {
           label: 'Max Cadence',
           value: a.max_cadence != null ? `${a.max_cadence} rpm` : '—',
+        },
+        {
+          label: 'Total Strokes',
+          value:
+            a.total_strokes != null
+              ? a.total_strokes.toLocaleString('en-US')
+              : '—',
         },
       ],
     },

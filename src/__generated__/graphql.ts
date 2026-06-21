@@ -169,6 +169,8 @@ export type GarminActivity = {
   total_elapsed_time?: Maybe<Scalars['Float']['output']>;
   /** Total intensity minutes */
   total_intensity_minutes?: Maybe<Scalars['Int']['output']>;
+  /** Total activity strokes */
+  total_strokes?: Maybe<Scalars['Int']['output']>;
   /** Total timer time in seconds (active recording) */
   total_timer_time?: Maybe<Scalars['Float']['output']>;
   /** Number of GPS track points in this activity */
@@ -918,14 +920,14 @@ export type GarminActivitiesQueryVariables = Exact<{
 }>;
 
 
-export type GarminActivitiesQuery = { garminActivities: { total: number, limit: number, offset: number, items: Array<{ activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null }> } };
+export type GarminActivitiesQuery = { garminActivities: { total: number, limit: number, offset: number, items: Array<{ activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, total_strokes: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null }> } };
 
 export type GarminActivityQueryVariables = Exact<{
   activity_id: string;
 }>;
 
 
-export type GarminActivityQuery = { garminActivity: { activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, hr_available: boolean, min_heart_rate: number | null, aerobic_training_effect: number | null, anaerobic_training_effect: number | null, exercise_load: number | null, avg_respiration_rate: number | null, min_respiration_rate: number | null, max_respiration_rate: number | null, sweat_loss_ml: number | null, moderate_intensity_minutes: number | null, vigorous_intensity_minutes: number | null, total_intensity_minutes: number | null, paved_distance_km: number | null, unpaved_distance_km: number | null, avg_cadence: number | null, max_cadence: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, avg_temperature_c: number | null, min_temperature_c: number | null, max_temperature_c: number | null, total_elapsed_time: number | null, total_timer_time: number | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null } | null };
+export type GarminActivityQuery = { garminActivity: { activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, hr_available: boolean, min_heart_rate: number | null, aerobic_training_effect: number | null, anaerobic_training_effect: number | null, exercise_load: number | null, avg_respiration_rate: number | null, min_respiration_rate: number | null, max_respiration_rate: number | null, sweat_loss_ml: number | null, moderate_intensity_minutes: number | null, vigorous_intensity_minutes: number | null, total_intensity_minutes: number | null, paved_distance_km: number | null, unpaved_distance_km: number | null, avg_cadence: number | null, max_cadence: number | null, total_strokes: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, avg_temperature_c: number | null, min_temperature_c: number | null, max_temperature_c: number | null, total_elapsed_time: number | null, total_timer_time: number | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null } | null };
 
 export type GarminTrackPointsQueryVariables = Exact<{
   activity_id: string;
@@ -1139,6 +1141,7 @@ export const GarminActivitiesDocument = gql`
       max_heart_rate
       avg_cadence
       max_cadence
+      total_strokes
       calories
       avg_speed_kmh
       max_speed_kmh
@@ -1227,6 +1230,7 @@ export const GarminActivityDocument = gql`
     unpaved_distance_km
     avg_cadence
     max_cadence
+    total_strokes
     calories
     avg_speed_kmh
     max_speed_kmh
