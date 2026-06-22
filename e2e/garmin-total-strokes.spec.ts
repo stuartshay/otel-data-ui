@@ -6,6 +6,7 @@ const ACTIVITY_ID =
 test.describe('Garmin cadence statistics', () => {
   test('shows cadence and total strokes for an activity', async ({ page }) => {
     await page.goto(`/garmin/${ACTIVITY_ID}`)
+    await page.getByTestId('garmin-tab-stats').click()
 
     await expect(page.getByText('Cadence', { exact: true })).toBeVisible({
       timeout: 20_000,
