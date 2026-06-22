@@ -51,7 +51,12 @@ interface ActivityChartsProps {
   onPointToggle?: (point: ChartDataPoint) => void
 }
 
-type MetricKey = 'elevation' | 'speed' | 'heartRate' | 'respirationRate'
+type MetricKey =
+  | 'elevation'
+  | 'speed'
+  | 'heartRate'
+  | 'respirationRate'
+  | 'cadence'
 
 interface ChartConfig {
   title: string
@@ -217,6 +222,7 @@ export function ActivityCharts({
   const hasSpeed = chartData.some((d) => d.speed != null)
   const hasHeartRate = chartData.some((d) => d.heartRate != null)
   const hasRespirationRate = chartData.some((d) => d.respirationRate != null)
+  const hasCadence = chartData.some((d) => d.cadence != null)
 
   // Shaded regions between consecutive saved points (ordered along the x-axis).
   const savedPointsByX = savedPoints
@@ -257,6 +263,14 @@ export function ActivityCharts({
       color: '#ef4444',
       unit: 'bpm',
       hasData: hasHeartRate,
+      precision: 0,
+    },
+    {
+      title: 'Cadence',
+      dataKey: 'cadence',
+      color: '#f59e0b',
+      unit: 'rpm',
+      hasData: hasCadence,
       precision: 0,
     },
     {

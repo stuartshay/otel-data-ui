@@ -8,6 +8,7 @@ export interface ActivityChartTrackPoint {
   heart_rate?: number | null
   hr_zone?: number | null
   respiration_rate?: number | null
+  cadence?: number | null
   latitude?: number | null
   longitude?: number | null
 }
@@ -22,6 +23,7 @@ export interface ChartDataPoint {
   heartRateZone?: number | null
   respirationRate: number | null
   respirationRateSmoothed?: number | null
+  cadence: number | null
   latitude: number | null
   longitude: number | null
   timestamp: string
@@ -93,6 +95,7 @@ export function toChartDataPoint(
         ? pt.hr_zone
         : null,
     respirationRate: pt.respiration_rate ?? null,
+    cadence: pt.cadence ?? null,
     latitude: pt.latitude ?? null,
     longitude: pt.longitude ?? null,
     timestamp: pt.timestamp,

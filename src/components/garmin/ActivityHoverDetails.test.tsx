@@ -21,6 +21,7 @@ function chartPoint(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
     heartRate: 142,
     heartRateZone: 3,
     respirationRate: 27,
+    cadence: 84,
     latitude: 40.71234,
     longitude: -74.00567,
     ...overrides,
