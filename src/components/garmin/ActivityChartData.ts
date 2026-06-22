@@ -95,7 +95,9 @@ export function toChartDataPoint(
         ? pt.hr_zone
         : null,
     respirationRate: pt.respiration_rate ?? null,
-    cadence: pt.cadence ?? null,
+    // Treat coasting (0 rpm) as a gap so it is excluded from the cadence
+    // chart line and the computed fallback average.
+    cadence: pt.cadence != null && pt.cadence > 0 ? pt.cadence : null,
     latitude: pt.latitude ?? null,
     longitude: pt.longitude ?? null,
     timestamp: pt.timestamp,

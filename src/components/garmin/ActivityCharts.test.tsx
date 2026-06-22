@@ -101,6 +101,37 @@ describe('ActivityCharts', () => {
     expect(screen.queryByTestId('chart-cadence')).not.toBeInTheDocument()
   })
 
+  it('uses Garmin avg cadence for the label and excludes coasting (0 rpm)', () => {
+    const points = [
+      {
+        timestamp: '2026-03-14T09:00:00Z',
+        distance_from_start_km: 0,
+        cadence: 80,
+      },
+      {
+        timestamp: '2026-03-14T09:05:00Z',
+        distance_from_start_km: 2,
+        cadence: 0,
+      },
+      {
+        timestamp: '2026-03-14T09:10:00Z',
+        distance_from_start_km: 5,
+        cadence: 90,
+      },
+    ]
+
+    // When Garmin's activity avg_cadence is supplied, the label uses it.
+    const { rerender } = render(
+      <ActivityCharts trackPoints={points} cadenceAverage={71} />,
+    )
+    expect(screen.getByLabelText('Cadence average 71 rpm')).toBeInTheDocument()
+
+    // Without it, the computed average excludes the 0-rpm coasting point
+    // (mean of 80 and 90 = 85, not 57 if zeros were included).
+    rerender(<ActivityCharts trackPoints={points} />)
+    expect(screen.getByLabelText('Cadence average 85 rpm')).toBeInTheDocument()
+  })
+
   it('renders heart-rate zones as an aligned ribbon and hides it without zone data', () => {
     const points = [
       {
