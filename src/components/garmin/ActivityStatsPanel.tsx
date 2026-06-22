@@ -359,7 +359,7 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
                 <span className="flex items-center gap-1.5 font-medium">
                   {row.value}
                   {row.badge && (
-                    <span className="inline-flex items-center justify-center rounded-full bg-muted-foreground px-1.5 py-0.5 text-[10px] font-bold leading-none text-background">
+                    <span className="inline-flex items-center justify-center rounded-full bg-neutral-950/80 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
                       {row.badge}
                     </span>
                   )}
