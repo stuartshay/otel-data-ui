@@ -3,6 +3,7 @@ type ActivityChartMetric =
   | 'speed'
   | 'heartRate'
   | 'respirationRate'
+  | 'cadence'
 
 interface ActivityYAxisConfig {
   domain?: [(dataMinimum: number) => number, (dataMaximum: number) => number]
@@ -29,6 +30,18 @@ export function getActivityYAxisConfig(
         (dataMaximum) => Math.max(dataMaximum, 40),
       ],
       ticks: [16, 24, 32, 40],
+    }
+  }
+
+  if (dataKey === 'cadence') {
+    return {
+      domain: [
+        // Cadence is non-negative; anchor the floor at 0 like Garmin so bad
+        // data can't expand the domain below the 0 tick.
+        () => 0,
+        (dataMaximum) => Math.max(dataMaximum, 100),
+      ],
+      ticks: [0, 50, 100],
     }
   }
 

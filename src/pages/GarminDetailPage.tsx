@@ -521,6 +521,7 @@ export function GarminDetailPage() {
                 savedPoints={savedPoints}
                 onActivePointChange={setActivePoint}
                 onPointToggle={addOrTogglePoint}
+                cadenceAverage={a?.avg_cadence ?? null}
               />
               <SavedPointsList
                 points={savedPoints}

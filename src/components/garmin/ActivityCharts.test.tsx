@@ -11,7 +11,7 @@ import {
 } from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
-  it('uses Garmin-style Y-axis ticks for heart rate and respiration', () => {
+  it('uses Garmin-style Y-axis ticks for heart rate, respiration, and cadence', () => {
     const heartRateAxis = getActivityYAxisConfig('heartRate')
     const [minimumDomain, maximumDomain] = heartRateAxis.domain ?? []
 
@@ -29,6 +29,14 @@ describe('ActivityCharts', () => {
     expect(minimumRespiration?.(12)).toBe(12)
     expect(maximumRespiration?.(32)).toBe(40)
     expect(maximumRespiration?.(44)).toBe(44)
+
+    const cadenceAxis = getActivityYAxisConfig('cadence')
+    const [minimumCadence, maximumCadence] = cadenceAxis.domain ?? []
+    expect(cadenceAxis.ticks).toEqual([0, 50, 100])
+    expect(minimumCadence?.(40)).toBe(0)
+    expect(minimumCadence?.(-5)).toBe(0)
+    expect(maximumCadence?.(80)).toBe(100)
+    expect(maximumCadence?.(140)).toBe(140)
     expect(getActivityYAxisConfig('elevation')).toEqual({})
     expect(getActivityYAxisConfig('speed')).toEqual({})
   })
@@ -61,6 +69,68 @@ describe('ActivityCharts', () => {
 
     expect(screen.getByTestId('chart-heartRate')).toBeInTheDocument()
     expect(screen.getByText('Heart Rate')).toBeInTheDocument()
+  })
+
+  it('renders a cadence chart with an average label only when cadence data exists', () => {
+    const points = [
+      {
+        timestamp: '2026-03-14T09:00:00Z',
+        distance_from_start_km: 0,
+        heart_rate: 118,
+        cadence: 70,
+      },
+      {
+        timestamp: '2026-03-14T09:10:00Z',
+        distance_from_start_km: 5,
+        heart_rate: 135,
+        cadence: 72,
+      },
+    ]
+    const { rerender } = render(<ActivityCharts trackPoints={points} />)
+
+    const cadenceChart = screen.getByTestId('chart-cadence')
+    expect(cadenceChart).toBeInTheDocument()
+    expect(screen.getByText('Cadence')).toBeInTheDocument()
+    // Cadence counts toward an Avg: N rpm label (mean of 70 and 72 = 71).
+    expect(screen.getByLabelText('Cadence average 71 rpm')).toBeInTheDocument()
+
+    rerender(
+      <ActivityCharts
+        trackPoints={points.map((point) => ({ ...point, cadence: null }))}
+      />,
+    )
+    expect(screen.queryByTestId('chart-cadence')).not.toBeInTheDocument()
+  })
+
+  it('uses Garmin avg cadence for the label and excludes coasting (0 rpm)', () => {
+    const points = [
+      {
+        timestamp: '2026-03-14T09:00:00Z',
+        distance_from_start_km: 0,
+        cadence: 80,
+      },
+      {
+        timestamp: '2026-03-14T09:05:00Z',
+        distance_from_start_km: 2,
+        cadence: 0,
+      },
+      {
+        timestamp: '2026-03-14T09:10:00Z',
+        distance_from_start_km: 5,
+        cadence: 90,
+      },
+    ]
+
+    // When Garmin's activity avg_cadence is supplied, the label uses it.
+    const { rerender } = render(
+      <ActivityCharts trackPoints={points} cadenceAverage={71} />,
+    )
+    expect(screen.getByLabelText('Cadence average 71 rpm')).toBeInTheDocument()
+
+    // Without it, the computed average excludes the 0-rpm coasting point
+    // (mean of 80 and 90 = 85, not 57 if zeros were included).
+    rerender(<ActivityCharts trackPoints={points} />)
+    expect(screen.getByLabelText('Cadence average 85 rpm')).toBeInTheDocument()
   })
 
   it('renders heart-rate zones as an aligned ribbon and hides it without zone data', () => {

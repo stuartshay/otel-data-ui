@@ -49,9 +49,20 @@ interface ActivityChartsProps {
    * saved). Triggered by double-clicking a chart.
    */
   onPointToggle?: (point: ChartDataPoint) => void
+  /**
+   * Garmin's activity-level average cadence (rpm). Used for the Cadence chart's
+   * average label so it matches Garmin (which excludes coasting), instead of
+   * the per-point mean.
+   */
+  cadenceAverage?: number | null
 }
 
-type MetricKey = 'elevation' | 'speed' | 'heartRate' | 'respirationRate'
+type MetricKey =
+  | 'elevation'
+  | 'speed'
+  | 'heartRate'
+  | 'respirationRate'
+  | 'cadence'
 
 interface ChartConfig {
   title: string
@@ -155,6 +166,7 @@ export function ActivityCharts({
   savedPoints = [],
   onActivePointChange,
   onPointToggle,
+  cadenceAverage,
 }: ActivityChartsProps) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
   const [smoothRespiration, setSmoothRespiration] = useState(false)
@@ -217,6 +229,7 @@ export function ActivityCharts({
   const hasSpeed = chartData.some((d) => d.speed != null)
   const hasHeartRate = chartData.some((d) => d.heartRate != null)
   const hasRespirationRate = chartData.some((d) => d.respirationRate != null)
+  const hasCadence = chartData.some((d) => d.cadence != null)
 
   // Shaded regions between consecutive saved points (ordered along the x-axis).
   const savedPointsByX = savedPoints
@@ -260,6 +273,14 @@ export function ActivityCharts({
       precision: 0,
     },
     {
+      title: 'Cadence',
+      dataKey: 'cadence',
+      color: '#f59e0b',
+      unit: 'rpm',
+      hasData: hasCadence,
+      precision: 0,
+    },
+    {
       title: 'Respiration Rate',
       dataKey: 'respirationRate',
       color: '#3fc1d3',
@@ -274,11 +295,17 @@ export function ActivityCharts({
   const activeCharts = charts.filter((c) => c.hasData)
   const activeChartLabels = activeCharts.map((chart) => {
     const statistics = metricStatistics(chartData, chart.dataKey)
+    // Prefer Garmin's activity-level average cadence (excludes coasting) over
+    // the per-point mean so the label matches Garmin Connect.
+    const averageValue =
+      chart.dataKey === 'cadence' && cadenceAverage != null
+        ? cadenceAverage
+        : statistics.average
     return {
       chart,
       stats: statistics,
       yAxisConfig: getActivityYAxisConfig(chart.dataKey),
-      averageLabel: formatMetricValue(statistics.average, chart),
+      averageLabel: formatMetricValue(averageValue, chart),
     }
   })
 
