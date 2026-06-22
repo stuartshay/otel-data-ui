@@ -295,7 +295,10 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
                   a.vigorous_intensity_minutes != null
                     ? `${a.vigorous_intensity_minutes} min`
                     : '—',
-                badge: 'x2',
+                // Only show the x2 multiplier badge when a value is present.
+                ...(a.vigorous_intensity_minutes != null
+                  ? { badge: 'x2' }
+                  : {}),
               },
               {
                 label: 'Total',

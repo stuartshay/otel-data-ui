@@ -85,4 +85,26 @@ describe('ActivityStatsPanel', () => {
     expect(screen.queryByText('34 min')).not.toBeInTheDocument()
     expect(screen.getByText('x2')).toBeInTheDocument()
   })
+
+  it('falls back to the stored total and hides the x2 badge when vigorous minutes are missing', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          distance_km: 10,
+          duration_seconds: 3661,
+          avg_heart_rate: 145,
+          moderate_intensity_minutes: 21,
+          // vigorous_intensity_minutes intentionally omitted.
+          total_intensity_minutes: 30,
+        }}
+      />,
+    )
+
+    expect(screen.getByText('Intensity Minutes')).toBeInTheDocument()
+    expect(screen.getByText('21 min')).toBeInTheDocument()
+    // Total falls back to the stored value when a component is missing.
+    expect(screen.getByText('30 min')).toBeInTheDocument()
+    // No x2 badge when vigorous minutes are absent.
+    expect(screen.queryByText('x2')).not.toBeInTheDocument()
+  })
 })
