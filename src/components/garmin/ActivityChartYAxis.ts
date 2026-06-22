@@ -36,7 +36,9 @@ export function getActivityYAxisConfig(
   if (dataKey === 'cadence') {
     return {
       domain: [
-        (dataMinimum) => Math.min(dataMinimum, 0),
+        // Cadence is non-negative; anchor the floor at 0 like Garmin so bad
+        // data can't expand the domain below the 0 tick.
+        () => 0,
         (dataMaximum) => Math.max(dataMaximum, 100),
       ],
       ticks: [0, 50, 100],

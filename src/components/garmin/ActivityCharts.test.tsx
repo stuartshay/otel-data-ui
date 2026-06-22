@@ -11,7 +11,7 @@ import {
 } from './ActivityChartTooltip'
 
 describe('ActivityCharts', () => {
-  it('uses Garmin-style Y-axis ticks for heart rate and respiration', () => {
+  it('uses Garmin-style Y-axis ticks for heart rate, respiration, and cadence', () => {
     const heartRateAxis = getActivityYAxisConfig('heartRate')
     const [minimumDomain, maximumDomain] = heartRateAxis.domain ?? []
 
@@ -34,6 +34,7 @@ describe('ActivityCharts', () => {
     const [minimumCadence, maximumCadence] = cadenceAxis.domain ?? []
     expect(cadenceAxis.ticks).toEqual([0, 50, 100])
     expect(minimumCadence?.(40)).toBe(0)
+    expect(minimumCadence?.(-5)).toBe(0)
     expect(maximumCadence?.(80)).toBe(100)
     expect(maximumCadence?.(140)).toBe(140)
     expect(getActivityYAxisConfig('elevation')).toEqual({})
