@@ -35,7 +35,14 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText('145 bpm')).toBeInTheDocument()
     expect(screen.getByText('68 °F')).toBeInTheDocument()
     expect(screen.getByText('720 kcal')).toBeInTheDocument()
-    expect(screen.getByText('1,793')).toBeInTheDocument()
+    expect(screen.getByText((1793).toLocaleString())).toBeInTheDocument()
+  })
+
+  it('shows a fallback when total strokes is unavailable', () => {
+    render(<ActivityStatsPanel activity={{ total_strokes: null }} />)
+
+    const totalStrokesLabel = screen.getByText('Total Strokes')
+    expect(totalStrokesLabel.nextElementSibling).toHaveTextContent('—')
   })
 
   it('hides HR-dependent sections when hr data is unavailable', () => {

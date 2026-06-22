@@ -179,9 +179,7 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
         {
           label: 'Total Strokes',
           value:
-            a.total_strokes != null
-              ? a.total_strokes.toLocaleString('en-US')
-              : '—',
+            a.total_strokes != null ? a.total_strokes.toLocaleString() : '—',
         },
       ],
     },
