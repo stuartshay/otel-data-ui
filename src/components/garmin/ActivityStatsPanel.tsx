@@ -49,6 +49,7 @@ interface ActivityStatsPanelProps {
 interface StatRow {
   label: string
   value: string
+  badge?: string
 }
 
 interface StatSection {
@@ -294,13 +295,28 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
                   a.vigorous_intensity_minutes != null
                     ? `${a.vigorous_intensity_minutes} min`
                     : '—',
+                // Only show the x2 multiplier badge when a value is present.
+                ...(a.vigorous_intensity_minutes != null
+                  ? { badge: 'x2' }
+                  : {}),
               },
               {
                 label: 'Total',
-                value:
-                  a.total_intensity_minutes != null
+                value: (() => {
+                  // Garmin counts vigorous intensity minutes as 2x toward the
+                  // total. Compute it from the components when both are present
+                  // (self-consistent with the displayed values); otherwise fall
+                  // back to the stored total.
+                  if (
+                    a.moderate_intensity_minutes != null &&
+                    a.vigorous_intensity_minutes != null
+                  ) {
+                    return `${a.moderate_intensity_minutes + a.vigorous_intensity_minutes * 2} min`
+                  }
+                  return a.total_intensity_minutes != null
                     ? `${a.total_intensity_minutes} min`
-                    : '—',
+                    : '—'
+                })(),
               },
             ],
           } satisfies StatSection,
@@ -340,7 +356,14 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
             {section.rows.map((row, i) => (
               <div key={i} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{row.label}</span>
-                <span className="font-medium">{row.value}</span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  {row.value}
+                  {row.badge && (
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
+                      {row.badge}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </CardContent>
