@@ -218,9 +218,10 @@ export function CyclingInFocus() {
               </ResponsiveContainer>
             </div>
 
-            <div className="flex items-center justify-between border-t pt-2">
+            <div className="space-y-1.5 border-t pt-2">
               <div
-                className="flex flex-1 flex-wrap items-center gap-1"
+                data-testid="in-focus-activity-strip"
+                className="flex items-center justify-between"
                 aria-label={`${recentRideCount} ride${
                   recentRideCount === 1 ? '' : 's'
                 } in the last 4 weeks`}
@@ -229,13 +230,13 @@ export function CyclingInFocus() {
                   <span
                     key={day.key}
                     className={cn(
-                      'h-1.5 w-1.5 rounded-full',
+                      'h-1.5 w-1.5 shrink-0 rounded-full',
                       day.active ? 'bg-foreground' : 'bg-muted-foreground/25',
                     )}
                   />
                 ))}
               </div>
-              <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 {loading
                   ? 'Loading…'
                   : `Last 4w · ${recentRideCount} ${
