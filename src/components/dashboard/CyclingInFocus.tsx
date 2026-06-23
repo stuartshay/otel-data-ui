@@ -18,7 +18,8 @@ import { formatDuration, kmToMi } from '@/lib/units'
 const SPORT = 'cycling'
 const BAR_COLOR = '#2563eb'
 const ACTIVITY_LIMIT = 200
-const RECENT_WEEK_DOTS = 4
+// One dot per day across the last 4 weeks (28 days).
+const RECENT_DAYS = 28
 
 // Weekday initial keyed by Date#getDay() (0 = Sunday).
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -33,13 +34,24 @@ interface DayBucket {
 }
 
 export function CyclingInFocus() {
-  // `today` is fixed at mount so the "Last 4w" dots stay anchored to the
-  // current week regardless of how far the user pages back/forward.
+  // `today` is fixed at mount so the "Last 4w" strip stays anchored to the
+  // current date regardless of how far the user pages back/forward.
   const [today] = useState<Date>(() => new Date())
   // Anchor date for the trailing 7-day window. Defaults to today; Prev/Next
   // pages by 7 days.
   const [weekEnd, setWeekEnd] = useState<Date>(() => new Date())
   const weekStart = useMemo(() => subDays(weekEnd, 6), [weekEnd])
+
+  // Trailing 4-week (28-day) window for the activity strip + ride count.
+  const recentStart = useMemo(() => subDays(today, RECENT_DAYS - 1), [today])
+  const { data: recentData } = useGarminActivitiesQuery({
+    variables: {
+      sport: SPORT,
+      date_from: format(recentStart, 'yyyy-MM-dd'),
+      date_to: format(today, 'yyyy-MM-dd'),
+      limit: ACTIVITY_LIMIT,
+    },
+  })
 
   const dateFrom = format(weekStart, 'yyyy-MM-dd')
   const dateTo = format(weekEnd, 'yyyy-MM-dd')
@@ -53,7 +65,7 @@ export function CyclingInFocus() {
     },
   })
 
-  const { days, totalDistanceMi, totalSeconds, activityCount } = useMemo(() => {
+  const { days, totalDistanceMi, totalSeconds } = useMemo(() => {
     const buckets: DayBucket[] = []
     for (let i = 0; i < 7; i += 1) {
       const day = addDays(weekStart, i)
@@ -67,7 +79,6 @@ export function CyclingInFocus() {
 
     let totalKm = 0
     let seconds = 0
-    let count = 0
     for (const activity of data?.garminActivities?.items ?? []) {
       if (!activity.start_time) continue
       const bucket = byKey.get(activity.start_time.slice(0, 10))
@@ -76,14 +87,12 @@ export function CyclingInFocus() {
       bucket.distance_mi += kmToMi(km)
       totalKm += km
       seconds += activity.duration_seconds ?? 0
-      count += 1
     }
 
     return {
       days: buckets,
       totalDistanceMi: kmToMi(totalKm),
       totalSeconds: seconds,
-      activityCount: count,
     }
   }, [data, weekStart])
 
@@ -97,6 +106,23 @@ export function CyclingInFocus() {
     () => Math.round(differenceInCalendarDays(today, weekEnd) / 7),
     [today, weekEnd],
   )
+
+  // One dot per day across the last 4 weeks; filled when a ride was completed.
+  const { recentDays, recentRideCount } = useMemo(() => {
+    const activeDays = new Set<string>()
+    let count = 0
+    for (const activity of recentData?.garminActivities?.items ?? []) {
+      if (!activity.start_time) continue
+      activeDays.add(activity.start_time.slice(0, 10))
+      count += 1
+    }
+    const strip = Array.from({ length: RECENT_DAYS }).map((_, i) => {
+      const day = addDays(recentStart, i)
+      const key = format(day, 'yyyy-MM-dd')
+      return { key, active: activeDays.has(key) }
+    })
+    return { recentDays: strip, recentRideCount: count }
+  }, [recentData, recentStart])
 
   return (
     <Card data-testid="cycling-in-focus-card">
@@ -140,17 +166,17 @@ export function CyclingInFocus() {
               </div>
             </div>
 
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-start gap-3">
               <span
                 data-testid="in-focus-total-distance"
-                className="text-3xl font-bold tabular-nums"
+                className="text-3xl font-bold leading-none tabular-nums"
               >
                 {totalDistanceMi.toFixed(2)}
                 <span className="ml-1 text-base font-normal text-muted-foreground">
                   mi
                 </span>
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs leading-tight text-muted-foreground">
                 <span className="block font-semibold tabular-nums text-foreground">
                   {formatDuration(totalSeconds)}
                 </span>
@@ -194,39 +220,26 @@ export function CyclingInFocus() {
 
             <div className="flex items-center justify-between border-t pt-2">
               <div
-                className="flex items-center gap-1.5"
-                aria-label="Recent weeks"
+                className="flex flex-1 flex-wrap items-center gap-1"
+                aria-label={`${recentRideCount} ride${
+                  recentRideCount === 1 ? '' : 's'
+                } in the last 4 weeks`}
               >
-                {Array.from({ length: RECENT_WEEK_DOTS }).map((_, idx) => {
-                  // Dots run oldest → newest (left → right); newest = offset 0.
-                  const dotOffset = RECENT_WEEK_DOTS - 1 - idx
-                  const active = dotOffset === weekOffset
-                  return (
-                    <button
-                      key={dotOffset}
-                      type="button"
-                      aria-label={
-                        dotOffset === 0
-                          ? 'This week'
-                          : `${dotOffset} week${dotOffset > 1 ? 's' : ''} ago`
-                      }
-                      aria-current={active ? 'true' : undefined}
-                      onClick={() => setWeekEnd(subDays(today, dotOffset * 7))}
-                      className={cn(
-                        'h-2 w-2 rounded-full transition-colors',
-                        active
-                          ? 'bg-foreground'
-                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/60',
-                      )}
-                    />
-                  )
-                })}
+                {recentDays.map((day) => (
+                  <span
+                    key={day.key}
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      day.active ? 'bg-foreground' : 'bg-muted-foreground/25',
+                    )}
+                  />
+                ))}
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                 {loading
                   ? 'Loading…'
-                  : `Last 4w · ${activityCount} ${
-                      activityCount === 1 ? 'ride' : 'rides'
+                  : `Last 4w · ${recentRideCount} ${
+                      recentRideCount === 1 ? 'ride' : 'rides'
                     }`}
               </span>
             </div>
