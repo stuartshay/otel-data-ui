@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { addDays, format, subDays } from 'date-fns'
+import { addDays, differenceInCalendarDays, format, subDays } from 'date-fns'
 import {
   Bar,
   BarChart,
@@ -10,14 +10,15 @@ import {
 } from 'recharts'
 import { Bike, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useGarminActivitiesQuery } from '@/__generated__/graphql'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { cn } from '@/lib/utils'
 import { formatDuration, kmToMi } from '@/lib/units'
 
 const SPORT = 'cycling'
 const BAR_COLOR = '#2563eb'
 const ACTIVITY_LIMIT = 200
+const RECENT_WEEK_DOTS = 4
 
 // Weekday initial keyed by Date#getDay() (0 = Sunday).
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -32,8 +33,11 @@ interface DayBucket {
 }
 
 export function CyclingInFocus() {
+  // `today` is fixed at mount so the "Last 4w" dots stay anchored to the
+  // current week regardless of how far the user pages back/forward.
+  const [today] = useState<Date>(() => new Date())
   // Anchor date for the trailing 7-day window. Defaults to today; Prev/Next
-  // pages by 7 days. Mirrors the weekly navigation in GarminActivityTotals.
+  // pages by 7 days.
   const [weekEnd, setWeekEnd] = useState<Date>(() => new Date())
   const weekStart = useMemo(() => subDays(weekEnd, 6), [weekEnd])
 
@@ -88,71 +92,75 @@ export function CyclingInFocus() {
     [weekStart, weekEnd],
   )
 
+  // How many whole weeks back from today the current window sits (0 = current).
+  const weekOffset = useMemo(
+    () => Math.round(differenceInCalendarDays(today, weekEnd) / 7),
+    [today, weekEnd],
+  )
+
   return (
-    <Card data-testid="cycling-in-focus-card">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Bike className="h-4 w-4 text-green-600" />
-            Cycling
-            <span
-              data-testid="in-focus-week-range"
-              className="text-sm font-normal text-muted-foreground"
-            >
-              · {weekRangeLabel}
-            </span>
-          </CardTitle>
-          <div
-            className="inline-flex items-center gap-1"
-            aria-label="Week range navigation"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              aria-label="Previous week"
-              onClick={() => setWeekEnd((d) => subDays(d, 7))}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              aria-label="Next week"
-              onClick={() => setWeekEnd((d) => addDays(d, 7))}
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <Card
+      data-testid="cycling-in-focus-card"
+      className="border-slate-200 bg-white text-slate-900 shadow-sm"
+    >
+      <CardContent className="space-y-3 p-4">
         {error ? (
           <ErrorState message={error.message} onRetry={() => refetch()} />
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-baseline gap-4">
+          <>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Bike className="h-4 w-4 text-green-600" />
+                Cycling
+                <span
+                  data-testid="in-focus-week-range"
+                  className="font-normal text-slate-500"
+                >
+                  · {weekRangeLabel}
+                </span>
+              </div>
+              <div
+                className="inline-flex items-center gap-1"
+                aria-label="Week range navigation"
+              >
+                <button
+                  type="button"
+                  aria-label="Previous week"
+                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => setWeekEnd((d) => subDays(d, 7))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next week"
+                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => setWeekEnd((d) => addDays(d, 7))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-3">
               <span
                 data-testid="in-focus-total-distance"
                 className="text-3xl font-bold tabular-nums"
               >
                 {totalDistanceMi.toFixed(2)}
-                <span className="ml-1 text-base font-normal text-muted-foreground">
+                <span className="ml-1 text-base font-normal text-slate-500">
                   mi
                 </span>
               </span>
-              <span className="text-sm text-muted-foreground">
-                <span className="font-medium tabular-nums text-foreground">
+              <span className="text-xs text-slate-500">
+                <span className="block font-semibold tabular-nums text-slate-900">
                   {formatDuration(totalSeconds)}
                 </span>
-                <span className="ml-1">Total Time</span>
+                Total Time
               </span>
             </div>
 
-            <div className="h-28 w-full">
+            <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={days}
@@ -163,12 +171,13 @@ export function CyclingInFocus() {
                     tickLine={false}
                     axisLine={false}
                     interval={0}
-                    tick={{ fontSize: 12, fill: 'currentColor' }}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
                   />
                   <Tooltip
                     cursor={{ fill: 'transparent' }}
                     formatter={(value) => {
-                      const num = typeof value === 'number' ? value : Number(value)
+                      const num =
+                        typeof value === 'number' ? value : Number(value)
                       return [`${num.toFixed(2)} mi`, 'Distance']
                     }}
                   />
@@ -177,7 +186,7 @@ export function CyclingInFocus() {
                       <Cell
                         key={day.key}
                         fill={BAR_COLOR}
-                        fillOpacity={day.distance_mi > 0 ? 1 : 0.25}
+                        fillOpacity={day.distance_mi > 0 ? 1 : 0.2}
                       />
                     ))}
                   </Bar>
@@ -185,14 +194,45 @@ export function CyclingInFocus() {
               </ResponsiveContainer>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              {loading
-                ? 'Loading cycling activity…'
-                : `${activityCount} ${
-                    activityCount === 1 ? 'ride' : 'rides'
-                  } this week`}
-            </p>
-          </div>
+            <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+              <div
+                className="flex items-center gap-1.5"
+                aria-label="Recent weeks"
+              >
+                {Array.from({ length: RECENT_WEEK_DOTS }).map((_, idx) => {
+                  // Dots run oldest → newest (left → right); newest = offset 0.
+                  const dotOffset = RECENT_WEEK_DOTS - 1 - idx
+                  const active = dotOffset === weekOffset
+                  return (
+                    <button
+                      key={dotOffset}
+                      type="button"
+                      aria-label={
+                        dotOffset === 0
+                          ? 'This week'
+                          : `${dotOffset} week${dotOffset > 1 ? 's' : ''} ago`
+                      }
+                      aria-current={active ? 'true' : undefined}
+                      onClick={() => setWeekEnd(subDays(today, dotOffset * 7))}
+                      className={cn(
+                        'h-2 w-2 rounded-full transition-colors',
+                        active
+                          ? 'bg-slate-700'
+                          : 'bg-slate-300 hover:bg-slate-400',
+                      )}
+                    />
+                  )
+                })}
+              </div>
+              <span className="text-xs text-slate-500">
+                {loading
+                  ? 'Loading…'
+                  : `Last 4w · ${activityCount} ${
+                      activityCount === 1 ? 'ride' : 'rides'
+                    }`}
+              </span>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

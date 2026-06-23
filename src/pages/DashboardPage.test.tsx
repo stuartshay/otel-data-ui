@@ -137,8 +137,6 @@ describe('DashboardPage', () => {
     expect(screen.getByText('16')).toBeInTheDocument()
     expect(screen.getByText('healthy')).toBeInTheDocument()
     expect(screen.getByText('v1.2.3')).toBeInTheDocument()
-    expect(screen.getByText('watch')).toBeInTheDocument()
-    expect(screen.getByText('phone')).toBeInTheDocument()
     expect(screen.getByText('running')).toBeInTheDocument()
     expect(screen.getByText('cycling')).toBeInTheDocument()
   })

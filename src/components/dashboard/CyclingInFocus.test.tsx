@@ -108,7 +108,7 @@ describe('CyclingInFocus', () => {
     )
     // 3600 + 7200 = 10800s => 3:00:00
     expect(screen.getByText('3:00:00')).toBeInTheDocument()
-    expect(screen.getByText('2 rides this week')).toBeInTheDocument()
+    expect(screen.getByText('Last 4w · 2 rides')).toBeInTheDocument()
   })
 
   it('builds seven daily buckets with weekday initials and per-day distance', () => {

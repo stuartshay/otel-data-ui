@@ -23,7 +23,7 @@ export function DashboardPage() {
     error: countError,
     refetch: refetchCount,
   } = useLocationCountQuery()
-  const { data: devicesData, loading: devicesLoading } = useDevicesQuery()
+  const { loading: devicesLoading } = useDevicesQuery()
   const { data: sportsData, loading: sportsLoading } = useGarminSportsQuery()
 
   if (countLoading && devicesLoading && sportsLoading && healthLoading) {
@@ -37,7 +37,6 @@ export function DashboardPage() {
   }
 
   const totalLocations = countData?.locationCount?.count ?? 0
-  const totalDevices = devicesData?.devices?.length ?? 0
   const totalSports = sportsData?.garminSports?.length ?? 0
   const totalActivities =
     sportsData?.garminSports?.reduce(
@@ -75,28 +74,8 @@ export function DashboardPage() {
         />
       </div>
 
-      <CyclingInFocus />
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Devices</CardTitle>
-            <Badge variant="secondary">{totalDevices}</Badge>
-          </CardHeader>
-          <CardContent>
-            {devicesData?.devices?.length ? (
-              <div className="flex flex-wrap gap-2">
-                {devicesData.devices.map((d: { device_id: string }) => (
-                  <Badge key={d.device_id} variant="secondary">
-                    {d.device_id}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No devices found</p>
-            )}
-          </CardContent>
-        </Card>
+        <CyclingInFocus />
 
         <Card>
           <CardHeader>
