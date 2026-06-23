@@ -169,4 +169,22 @@ describe('CyclingInFocus', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
   })
+
+  it('disables the Next week arrow on the current week and re-enables it after paging back', async () => {
+    const user = userEvent.setup()
+    mockActivities(SAMPLE_ITEMS)
+
+    render(<CyclingInFocus />)
+
+    const nextButton = screen.getByRole('button', { name: 'Next week' })
+    expect(nextButton).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Previous week' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Next week' }),
+      ).not.toBeDisabled()
+    })
+  })
 })

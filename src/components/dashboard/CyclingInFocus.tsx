@@ -99,10 +99,7 @@ export function CyclingInFocus() {
   )
 
   return (
-    <Card
-      data-testid="cycling-in-focus-card"
-      className="border-slate-200 bg-white text-slate-900 shadow-sm"
-    >
+    <Card data-testid="cycling-in-focus-card">
       <CardContent className="space-y-3 p-4">
         {error ? (
           <ErrorState message={error.message} onRetry={() => refetch()} />
@@ -114,7 +111,7 @@ export function CyclingInFocus() {
                 Cycling
                 <span
                   data-testid="in-focus-week-range"
-                  className="font-normal text-slate-500"
+                  className="font-normal text-muted-foreground"
                 >
                   · {weekRangeLabel}
                 </span>
@@ -126,7 +123,7 @@ export function CyclingInFocus() {
                 <button
                   type="button"
                   aria-label="Previous week"
-                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                   onClick={() => setWeekEnd((d) => subDays(d, 7))}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -134,7 +131,8 @@ export function CyclingInFocus() {
                 <button
                   type="button"
                   aria-label="Next week"
-                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  disabled={weekOffset <= 0}
+                  className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => setWeekEnd((d) => addDays(d, 7))}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -148,12 +146,12 @@ export function CyclingInFocus() {
                 className="text-3xl font-bold tabular-nums"
               >
                 {totalDistanceMi.toFixed(2)}
-                <span className="ml-1 text-base font-normal text-slate-500">
+                <span className="ml-1 text-base font-normal text-muted-foreground">
                   mi
                 </span>
               </span>
-              <span className="text-xs text-slate-500">
-                <span className="block font-semibold tabular-nums text-slate-900">
+              <span className="text-xs text-muted-foreground">
+                <span className="block font-semibold tabular-nums text-foreground">
                   {formatDuration(totalSeconds)}
                 </span>
                 Total Time
@@ -171,7 +169,7 @@ export function CyclingInFocus() {
                     tickLine={false}
                     axisLine={false}
                     interval={0}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'currentColor' }}
                   />
                   <Tooltip
                     cursor={{ fill: 'transparent' }}
@@ -194,7 +192,7 @@ export function CyclingInFocus() {
               </ResponsiveContainer>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+            <div className="flex items-center justify-between border-t pt-2">
               <div
                 className="flex items-center gap-1.5"
                 aria-label="Recent weeks"
@@ -217,14 +215,14 @@ export function CyclingInFocus() {
                       className={cn(
                         'h-2 w-2 rounded-full transition-colors',
                         active
-                          ? 'bg-slate-700'
-                          : 'bg-slate-300 hover:bg-slate-400',
+                          ? 'bg-foreground'
+                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/60',
                       )}
                     />
                   )
                 })}
               </div>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 {loading
                   ? 'Loading…'
                   : `Last 4w · ${activityCount} ${
