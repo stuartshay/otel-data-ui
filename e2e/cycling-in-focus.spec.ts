@@ -68,4 +68,32 @@ test.describe('Cycling In Focus card', () => {
       fullPage: true,
     })
   })
+
+  test('chart tooltip matches the heatmap popover style', async ({ page }) => {
+    const prefix = `cycling-in-focus-${test.info().project.name}`
+
+    const card = page.locator('[data-testid="cycling-in-focus-card"]')
+    await expect(card).toBeVisible({ timeout: 15_000 })
+
+    // Hover a chart bar to surface the Recharts tooltip.
+    const bar = card.locator('.recharts-bar-rectangle').first()
+    await expect(bar).toBeVisible()
+    await bar.hover({ force: true })
+
+    // Tooltip should use the heatmap day-popover layout: a date header plus a
+    // Sport / Distance / Duration table.
+    const tooltip = card.locator('.recharts-tooltip-wrapper')
+    await expect(tooltip).toBeVisible()
+    await expect(tooltip.getByText('Sport')).toBeVisible()
+    await expect(tooltip.getByText('Distance')).toBeVisible()
+    await expect(tooltip.getByText('Duration')).toBeVisible()
+    await expect(tooltip.getByText('Cycling')).toBeVisible()
+    await expect(
+      tooltip.getByText(/^\w{3}, \w{3} \d{1,2}, \d{4}$/),
+    ).toBeVisible()
+
+    await card.screenshot({
+      path: path.join(SCREENSHOT_DIR, `${prefix}-03-tooltip.png`),
+    })
+  })
 })

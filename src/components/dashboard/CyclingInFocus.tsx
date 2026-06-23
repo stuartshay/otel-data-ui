@@ -13,7 +13,7 @@ import { useGarminActivitiesQuery } from '@/__generated__/graphql'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { cn } from '@/lib/utils'
-import { formatDuration, kmToMi } from '@/lib/units'
+import { formatDuration, formatDurationShort, kmToMi } from '@/lib/units'
 
 const SPORT = 'cycling'
 const BAR_COLOR = '#2563eb'
@@ -31,6 +31,70 @@ interface DayBucket {
   label: string
   /** Total distance for the day, in miles. */
   distance_mi: number
+  /** Total moving time for the day, in seconds. */
+  duration_seconds: number
+  /** Number of rides completed that day. */
+  count: number
+}
+
+// Recharts tooltip styled to match the Garmin Activity heatmap day popover.
+function ActivityTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload: DayBucket }>
+}) {
+  const day = payload?.[0]?.payload
+  if (!active || !day) return null
+
+  const formattedDate = format(
+    new Date(`${day.key}T00:00:00`),
+    'EEE, MMM d, yyyy',
+  )
+
+  return (
+    <div className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
+      <div className="border-b px-3 py-1.5">
+        <p className="text-xs font-semibold">{formattedDate}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {day.count} {day.count === 1 ? 'activity' : 'activities'}
+        </p>
+      </div>
+      {day.count > 0 ? (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b">
+              <th className="px-3 py-1 text-left font-medium text-muted-foreground">
+                Sport
+              </th>
+              <th className="px-2 py-1 text-right font-medium text-muted-foreground">
+                Distance
+              </th>
+              <th className="px-3 py-1 text-right font-medium text-muted-foreground">
+                Duration
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-3 py-1">Cycling</td>
+              <td className="px-2 py-1 text-right tabular-nums">
+                {day.distance_mi.toFixed(2)} mi
+              </td>
+              <td className="px-3 py-1 text-right tabular-nums">
+                {formatDurationShort(day.duration_seconds)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
+        <p className="px-3 py-2 text-[11px] text-muted-foreground">
+          No activities.
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function CyclingInFocus() {
@@ -73,6 +137,8 @@ export function CyclingInFocus() {
         key: format(day, 'yyyy-MM-dd'),
         label: DAY_INITIALS[day.getDay()],
         distance_mi: 0,
+        duration_seconds: 0,
+        count: 0,
       })
     }
     const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]))
@@ -84,9 +150,12 @@ export function CyclingInFocus() {
       const bucket = byKey.get(activity.start_time.slice(0, 10))
       if (!bucket) continue
       const km = activity.distance_km ?? 0
+      const dur = activity.duration_seconds ?? 0
       bucket.distance_mi += kmToMi(km)
+      bucket.duration_seconds += dur
+      bucket.count += 1
       totalKm += km
-      seconds += activity.duration_seconds ?? 0
+      seconds += dur
     }
 
     return {
@@ -199,11 +268,7 @@ export function CyclingInFocus() {
                   />
                   <Tooltip
                     cursor={{ fill: 'transparent' }}
-                    formatter={(value) => {
-                      const num =
-                        typeof value === 'number' ? value : Number(value)
-                      return [`${num.toFixed(2)} mi`, 'Distance']
-                    }}
+                    content={<ActivityTooltip />}
                   />
                   <Bar dataKey="distance_mi" radius={[4, 4, 0, 0]}>
                     {days.map((day) => (
