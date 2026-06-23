@@ -4,7 +4,7 @@ import {
   useDevicesQuery,
   useGarminSportsQuery,
 } from '@/__generated__/graphql'
-import { MapPin, Activity, Database, Heart } from 'lucide-react'
+import { MapPin, Activity, Heart } from 'lucide-react'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GarminSyncCard } from '@/components/dashboard/GarminSyncCard'
 import { GarminActivityHeatmap } from '@/components/dashboard/GarminActivityHeatmap'
 import { GarminActivityTotals } from '@/components/dashboard/GarminActivityTotals'
+import { CyclingInFocus } from '@/components/dashboard/CyclingInFocus'
 
 export function DashboardPage() {
   const { data: healthData, loading: healthLoading } = useHealthQuery()
@@ -53,18 +54,12 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatsCard
           title="Total Locations"
           value={totalLocations.toLocaleString()}
           icon={<MapPin className="h-4 w-4" />}
           description="OwnTracks GPS points"
-        />
-        <StatsCard
-          title="Devices"
-          value={totalDevices}
-          icon={<Database className="h-4 w-4" />}
-          description="Tracked devices"
         />
         <StatsCard
           title="Garmin Activities"
@@ -80,10 +75,13 @@ export function DashboardPage() {
         />
       </div>
 
+      <CyclingInFocus />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Devices</CardTitle>
+            <Badge variant="secondary">{totalDevices}</Badge>
           </CardHeader>
           <CardContent>
             {devicesData?.devices?.length ? (
