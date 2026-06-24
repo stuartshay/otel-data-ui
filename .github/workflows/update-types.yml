@@ -65,6 +65,7 @@ jobs:
           echo "Updated @stuartshay/otel-graphql-types to ${VERSION}"
 
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITOPS_PAT }}
@@ -100,6 +101,17 @@ jobs:
             automated
             types-update
             otel-graphql-types
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+        run: |
+          gh pr merge --auto --squash \
+            --repo "${{ github.repository }}" \
+            "${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Auto-merge enabled for PR #${{ steps.cpr.outputs.pull-request-number }} (merges once required checks pass)"
 
       - name: Summary
         run: |
