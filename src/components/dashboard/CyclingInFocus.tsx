@@ -108,19 +108,21 @@ export function CyclingInFocus() {
 
   // Trailing 4-week (28-day) window for the activity strip + ride count.
   const recentStart = useMemo(() => subDays(today, RECENT_DAYS - 1), [today])
-  const { data: recentData } = useGarminActivitiesQuery({
-    variables: {
-      sport: SPORT,
-      date_from: format(recentStart, 'yyyy-MM-dd'),
-      date_to: format(today, 'yyyy-MM-dd'),
-      limit: ACTIVITY_LIMIT,
+  const { data: recentData, loading: recentLoading } = useGarminActivitiesQuery(
+    {
+      variables: {
+        sport: SPORT,
+        date_from: format(recentStart, 'yyyy-MM-dd'),
+        date_to: format(today, 'yyyy-MM-dd'),
+        limit: ACTIVITY_LIMIT,
+      },
     },
-  })
+  )
 
   const dateFrom = format(weekStart, 'yyyy-MM-dd')
   const dateTo = format(weekEnd, 'yyyy-MM-dd')
 
-  const { data, loading, error, refetch } = useGarminActivitiesQuery({
+  const { data, error, refetch } = useGarminActivitiesQuery({
     variables: {
       sport: SPORT,
       date_from: dateFrom,
@@ -302,7 +304,7 @@ export function CyclingInFocus() {
                 ))}
               </div>
               <span className="block text-xs text-muted-foreground">
-                {loading
+                {recentLoading
                   ? 'Loading…'
                   : `Last 4w · ${recentRideCount} ${
                       recentRideCount === 1 ? 'ride' : 'rides'

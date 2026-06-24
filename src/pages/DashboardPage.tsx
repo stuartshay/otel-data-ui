@@ -1,7 +1,6 @@
 import {
   useHealthQuery,
   useLocationCountQuery,
-  useDevicesQuery,
   useGarminSportsQuery,
 } from '@/__generated__/graphql'
 import { MapPin, Activity, Heart } from 'lucide-react'
@@ -23,10 +22,9 @@ export function DashboardPage() {
     error: countError,
     refetch: refetchCount,
   } = useLocationCountQuery()
-  const { loading: devicesLoading } = useDevicesQuery()
   const { data: sportsData, loading: sportsLoading } = useGarminSportsQuery()
 
-  if (countLoading && devicesLoading && sportsLoading && healthLoading) {
+  if (countLoading && sportsLoading && healthLoading) {
     return <LoadingState message="Loading dashboard..." />
   }
 
