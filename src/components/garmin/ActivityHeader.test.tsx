@@ -27,4 +27,47 @@ describe('ActivityHeader', () => {
       '/garmin?page=2',
     )
   })
+
+  it('renders the device model and firmware when device metadata is present', () => {
+    render(
+      <MemoryRouter>
+        <ActivityHeader
+          sport="cycling"
+          startTime="2026-03-14T09:00:00Z"
+          deviceManufacturer="garmin"
+          device={{
+            manufacturer: 'garmin',
+            model: 'Edge 540 Solar',
+            software_version: '31.30',
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    const badge = screen.getByTestId('device-badge')
+    expect(badge).toHaveTextContent('Edge 540 Solar')
+    expect(badge).toHaveTextContent('v31.30')
+    expect(badge).toHaveAttribute(
+      'title',
+      'Edge 540 Solar \u00b7 firmware 31.30',
+    )
+    // The raw manufacturer badge is superseded by the richer device badge.
+    expect(screen.queryByText('garmin')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the manufacturer badge when no device model is available', () => {
+    render(
+      <MemoryRouter>
+        <ActivityHeader
+          sport="cycling"
+          startTime="2026-03-14T09:00:00Z"
+          deviceManufacturer="garmin"
+          device={null}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByTestId('device-badge')).not.toBeInTheDocument()
+    expect(screen.getByText('garmin')).toBeInTheDocument()
+  })
 })

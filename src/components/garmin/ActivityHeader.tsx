@@ -22,6 +22,11 @@ interface ActivityHeaderProps {
   subSport?: string | null
   startTime?: string | null
   deviceManufacturer?: string | null
+  device?: {
+    model?: string | null
+    software_version?: string | null
+    manufacturer?: string | null
+  } | null
   backTo?: string
 }
 
@@ -30,9 +35,14 @@ export function ActivityHeader({
   subSport,
   startTime,
   deviceManufacturer,
+  device,
   backTo = '/garmin',
 }: ActivityHeaderProps) {
   const icon = sportIcons[sport] ?? <Activity className="h-6 w-6" />
+
+  const deviceModel = device?.model
+  const deviceFirmware = device?.software_version
+  const deviceLabel = deviceManufacturer ?? device?.manufacturer
 
   return (
     <div className="flex items-center gap-4">
@@ -65,10 +75,29 @@ export function ActivityHeader({
             {subSport.replace(/_/g, ' ')}
           </Badge>
         )}
-        {deviceManufacturer && (
-          <Badge variant="outline" className="capitalize">
-            {deviceManufacturer}
+        {deviceModel ? (
+          <Badge
+            variant="outline"
+            data-testid="device-badge"
+            title={
+              deviceFirmware
+                ? `${deviceModel} \u00b7 firmware ${deviceFirmware}`
+                : deviceModel
+            }
+          >
+            {deviceModel}
+            {deviceFirmware && (
+              <span className="ml-1 text-muted-foreground">
+                v{deviceFirmware}
+              </span>
+            )}
           </Badge>
+        ) : (
+          deviceLabel && (
+            <Badge variant="outline" className="capitalize">
+              {deviceLabel}
+            </Badge>
+          )
         )}
       </div>
     </div>
