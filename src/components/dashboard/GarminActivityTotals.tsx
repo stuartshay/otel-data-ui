@@ -197,6 +197,21 @@ function formatBucketLabel(period_start: string, period: Period): string {
   }
 }
 
+function hasBucketData(bucket: ChartBucket): boolean {
+  return (
+    bucket.activity_count > 0 ||
+    bucket.distance_km > 0 ||
+    bucket.duration_hours > 0 ||
+    bucket.total_ascent_m > 0 ||
+    bucket.total_calories > 0
+  )
+}
+
+function trimLeadingEmptyBuckets(buckets: ChartBucket[]): ChartBucket[] {
+  const firstDataIndex = buckets.findIndex(hasBucketData)
+  return firstDataIndex === -1 ? [] : buckets.slice(firstDataIndex)
+}
+
 export function GarminActivityTotals() {
   const [period, setPeriod] = useState<Period>('month')
   const [metric, setMetric] = useState<Metric>('distance')
@@ -349,7 +364,11 @@ export function GarminActivityTotals() {
           })
         }
         if (cancelled) return
-        setWeeklyByYear(results.sort((a, b) => a.label.localeCompare(b.label)))
+        setWeeklyByYear(
+          trimLeadingEmptyBuckets(
+            results.sort((a, b) => a.label.localeCompare(b.label)),
+          ),
+        )
         setWeeklyLoading(false)
       } catch (err) {
         if (cancelled) return
@@ -414,9 +433,15 @@ export function GarminActivityTotals() {
     // Date-range metadata can predate the first real activity. Start at the
     // earliest returned bucket, then zero-fill subsequent years so the chart
     // remains continuous without rendering empty leading years.
-    const earliestDataYear = Math.min(
-      ...relevantBuckets.map(({ year }) => Number(year)),
-    )
+    const dataYears = relevantBuckets
+      .filter(({ bucket }) => hasBucketData(bucket))
+      .map(({ year }) => Number(year))
+
+    if (dataYears.length === 0) {
+      return []
+    }
+
+    const earliestDataYear = Math.min(...dataYears)
     const byYear = new Map<string, ChartBucket>()
     for (const year of yearList) {
       if (year < earliestDataYear) {
@@ -439,6 +464,10 @@ export function GarminActivityTotals() {
     }
 
     for (const { bucket, year } of relevantBuckets) {
+      if (Number(year) < earliestDataYear) {
+        continue
+      }
+
       const existing = byYear.get(year)
 
       if (!existing) {
