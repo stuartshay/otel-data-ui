@@ -83,7 +83,6 @@ function main() {
     const deduped = dedupeExportedTypes(original)
     if (deduped !== original) {
       fs.writeFileSync(file, deduped)
-      // eslint-disable-next-line no-console
       console.log(`[dedupe-generated-types] removed duplicate type declarations in ${file}`)
     }
   }

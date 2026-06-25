@@ -47,7 +47,10 @@ describe('ActivityHeader', () => {
     const badge = screen.getByTestId('device-badge')
     expect(badge).toHaveTextContent('Edge 540 Solar')
     expect(badge).toHaveTextContent('v31.30')
-    expect(badge).toHaveAttribute('title', 'Edge 540 Solar \u00b7 firmware 31.30')
+    expect(badge).toHaveAttribute(
+      'title',
+      'Edge 540 Solar \u00b7 firmware 31.30',
+    )
     // The raw manufacturer badge is superseded by the richer device badge.
     expect(screen.queryByText('garmin')).not.toBeInTheDocument()
   })
