@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-const GRAPHQL_ENDPOINT_PATTERN = '**/*'
+const GRAPHQL_ENDPOINT_PATTERN =
+  /^https:\/\/gateway\.lab\.informationcart\.com\/(?:\?.*)?$|^http:\/\/(?:localhost|127\.0\.0\.1):4000\/(?:\?.*)?$/
 
 const CYCLING_ACTIVITIES = [
   {
@@ -58,8 +59,7 @@ const CYCLING_ACTIVITIES = [
 async function mockDashboardGraphql(page: Page) {
   await page.route(GRAPHQL_ENDPOINT_PATTERN, async (route) => {
     const request = route.request()
-    const url = request.url()
-    if (request.method() !== 'POST' || !url.includes('gateway')) {
+    if (request.method() !== 'POST') {
       await route.continue()
       return
     }

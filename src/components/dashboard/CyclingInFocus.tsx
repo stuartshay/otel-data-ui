@@ -25,7 +25,7 @@ const RECENT_DAYS = 28
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 interface DayBucket {
-  /** ISO day key (yyyy-MM-dd). */
+  /** ISO date for the bucket (yyyy-MM-dd). */
   date: string
   /** Single-letter weekday label. */
   label: string
