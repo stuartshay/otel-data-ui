@@ -347,6 +347,134 @@ describe('GarminActivityTotals', () => {
     )
   })
 
+  it('yearly mode omits leading zero buckets from the API but preserves later gaps', async () => {
+    hooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: { min_date: '1999-01-01', max_date: '2026-12-31' },
+      },
+      loading: false,
+    })
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: {
+        garminActivityTotals: [
+          {
+            period_start: '1999-01-01',
+            activity_count: 0,
+            total_distance_km: 0,
+            total_duration_seconds: 0,
+            total_ascent_m: 0,
+            total_calories: 0,
+          },
+          {
+            period_start: '2009-01-01',
+            activity_count: 0,
+            total_distance_km: 0,
+            total_duration_seconds: 0,
+            total_ascent_m: 0,
+            total_calories: 0,
+          },
+          {
+            period_start: '2010-01-01',
+            activity_count: 1,
+            total_distance_km: 10,
+            total_duration_seconds: 3600,
+            total_ascent_m: 100,
+            total_calories: 500,
+          },
+          {
+            period_start: '2012-01-01',
+            activity_count: 1,
+            total_distance_km: 12,
+            total_duration_seconds: 3600,
+            total_ascent_m: 120,
+            total_calories: 600,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Yearly' }))
+
+    await waitFor(() => {
+      expect(latestBarChartData[0]).toEqual(
+        expect.objectContaining({ label: '2010', distance_km: 10 }),
+      )
+    })
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('1999')
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('2009')
+    expect(latestBarChartData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '2011', distance_km: 0 }),
+        expect.objectContaining({ label: '2012', distance_km: 12 }),
+      ]),
+    )
+  })
+
+  it('weekly mode omits leading zero projected years but preserves later gaps', async () => {
+    hooks.useGarminDateRangeQuery.mockReturnValue({
+      data: {
+        garminDateRange: { min_date: '1999-01-01', max_date: '2026-12-31' },
+      },
+      loading: false,
+    })
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    apolloMocks.query.mockImplementation(({ variables }) => {
+      const year = Number(variables.date_to.slice(0, 4))
+      const distanceByYear = new Map([
+        [2010, 10],
+        [2012, 12],
+      ])
+      const distance = distanceByYear.get(year) ?? 0
+      return Promise.resolve({
+        data: {
+          garminActivityTotals:
+            distance > 0
+              ? [
+                  {
+                    period_start: variables.date_from,
+                    activity_count: 1,
+                    total_distance_km: distance,
+                    total_duration_seconds: 3600,
+                    total_ascent_m: 100,
+                    total_calories: 500,
+                  },
+                ]
+              : [],
+        },
+      })
+    })
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    await waitFor(() => {
+      expect(latestBarChartData[0]).toEqual(
+        expect.objectContaining({ label: '2010', distance_km: 10 }),
+      )
+    })
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('1999')
+    expect(latestBarChartData.map(({ label }) => label)).not.toContain('2009')
+    expect(latestBarChartData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '2011', distance_km: 0 }),
+        expect.objectContaining({ label: '2012', distance_km: 12 }),
+      ]),
+    )
+  })
+
   it('weekly mode renders default 7-day window pill and projects per year', async () => {
     hooks.useGarminActivityTotalsQuery.mockReturnValue({
       data: undefined,
