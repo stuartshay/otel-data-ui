@@ -416,6 +416,7 @@ export function GarminDetailPage() {
         subSport={a.sub_sport}
         startTime={a.start_time}
         deviceManufacturer={a.device_manufacturer}
+        device={a.device}
         backTo={backTo}
       />
 

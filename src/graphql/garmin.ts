@@ -88,6 +88,13 @@ export const GARMIN_ACTIVITY_QUERY = gql`
       total_distance
       avg_pace
       device_manufacturer
+      device {
+        device_id
+        manufacturer
+        garmin_product
+        model
+        software_version
+      }
       avg_temperature_c
       min_temperature_c
       max_temperature_c
