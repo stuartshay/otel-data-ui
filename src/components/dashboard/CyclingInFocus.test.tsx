@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const FROZEN_NOW = new Date('2026-06-23T12:00:00Z')
 
 let latestBarChartData: Array<Record<string, unknown>> = []
+let latestXAxisProps: Record<string, unknown> = {}
 
 const hooks = vi.hoisted(() => ({
   useGarminActivitiesQuery: vi.fn(),
@@ -31,7 +32,10 @@ vi.mock('recharts', () => ({
   },
   Bar: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Cell: () => null,
-  XAxis: () => null,
+  XAxis: (props: Record<string, unknown>) => {
+    latestXAxisProps = props
+    return null
+  },
   Tooltip: () => null,
 }))
 
@@ -71,6 +75,7 @@ describe('CyclingInFocus', () => {
       toFake: ['Date'],
     })
     latestBarChartData = []
+    latestXAxisProps = {}
     hooks.useGarminActivitiesQuery.mockReset()
   })
 
@@ -126,8 +131,24 @@ describe('CyclingInFocus', () => {
       'M',
       'T',
     ])
-    const jun18 = latestBarChartData.find((d) => d.key === '2026-06-18')
+    const jun18 = latestBarChartData.find((d) => d.date === '2026-06-18')
     expect(jun18?.distance_mi).toBeCloseTo(31.07, 1)
+  })
+
+  it('uses unique date keys for the chart axis while rendering one-letter ticks', () => {
+    mockActivities(SAMPLE_ITEMS)
+
+    render(<CyclingInFocus />)
+
+    expect(latestXAxisProps.dataKey).toBe('date')
+    const tickFormatter = latestXAxisProps.tickFormatter as (
+      value: unknown,
+      index: number,
+    ) => string
+    expect(tickFormatter('2026-06-18', 0)).toBe('W')
+    expect(tickFormatter('2026-06-18', 1)).toBe('T')
+    expect(tickFormatter('2026-06-21', 4)).toBe('S')
+    expect(new Set(latestBarChartData.map((d) => d.date)).size).toBe(7)
   })
 
   it('navigates to the previous week and re-queries', async () => {
