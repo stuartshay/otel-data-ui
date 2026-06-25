@@ -25,8 +25,8 @@ const RECENT_DAYS = 28
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 interface DayBucket {
-  /** ISO day key (yyyy-MM-dd). */
-  key: string
+  /** ISO date for the bucket (yyyy-MM-dd). */
+  date: string
   /** Single-letter weekday label. */
   label: string
   /** Total distance for the day, in miles. */
@@ -49,7 +49,7 @@ function ActivityTooltip({
   if (!active || !day) return null
 
   const formattedDate = format(
-    new Date(`${day.key}T00:00:00`),
+    new Date(`${day.date}T00:00:00`),
     'EEE, MMM d, yyyy',
   )
 
@@ -136,20 +136,20 @@ export function CyclingInFocus() {
     for (let i = 0; i < 7; i += 1) {
       const day = addDays(weekStart, i)
       buckets.push({
-        key: format(day, 'yyyy-MM-dd'),
+        date: format(day, 'yyyy-MM-dd'),
         label: DAY_INITIALS[day.getDay()],
         distance_mi: 0,
         duration_seconds: 0,
         count: 0,
       })
     }
-    const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]))
+    const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]))
 
     let totalKm = 0
     let seconds = 0
     for (const activity of data?.garminActivities?.items ?? []) {
       if (!activity.start_time) continue
-      const bucket = byKey.get(activity.start_time.slice(0, 10))
+      const bucket = byDate.get(activity.start_time.slice(0, 10))
       if (!bucket) continue
       const km = activity.distance_km ?? 0
       const dur = activity.duration_seconds ?? 0
@@ -255,17 +255,20 @@ export function CyclingInFocus() {
               </span>
             </div>
 
-            <div className="h-24 w-full">
+            <div data-testid="cycling-week-chart" className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={days}
                   margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
                 >
                   <XAxis
-                    dataKey="label"
+                    dataKey="date"
                     tickLine={false}
                     axisLine={false}
                     interval={0}
+                    tickFormatter={(_, index: number) =>
+                      days[index]?.label ?? ''
+                    }
                     tick={{ fontSize: 11, fill: 'currentColor' }}
                   />
                   <Tooltip
@@ -275,7 +278,7 @@ export function CyclingInFocus() {
                   <Bar dataKey="distance_mi" radius={[4, 4, 0, 0]}>
                     {days.map((day) => (
                       <Cell
-                        key={day.key}
+                        key={day.date}
                         fill={BAR_COLOR}
                         fillOpacity={day.distance_mi > 0 ? 1 : 0.2}
                       />
