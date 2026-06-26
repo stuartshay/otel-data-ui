@@ -937,7 +937,7 @@ export type GarminActivitiesQueryVariables = Exact<{
 }>;
 
 
-export type GarminActivitiesQuery = { garminActivities: { total: number, limit: number, offset: number, items: Array<{ activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, total_strokes: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null }> } };
+export type GarminActivitiesQuery = { garminActivities: { total: number, limit: number, offset: number, items: Array<{ activity_id: string, sport: string, sub_sport: string | null, start_time: string | null, end_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, avg_cadence: number | null, max_cadence: number | null, total_strokes: number | null, calories: number | null, avg_speed_kmh: number | null, max_speed_kmh: number | null, total_ascent_m: number | null, total_descent_m: number | null, total_distance: number | null, avg_pace: number | null, device_manufacturer: string | null, created_at: string | null, uploaded_at: string | null, track_point_count: number | null, device: { device_id: number | null, manufacturer: string | null, garmin_product: number | null, model: string | null } | null }> } };
 
 export type GarminActivityQueryVariables = Exact<{
   activity_id: string;
@@ -1167,6 +1167,12 @@ export const GarminActivitiesDocument = gql`
       total_distance
       avg_pace
       device_manufacturer
+      device {
+        device_id
+        manufacturer
+        garmin_product
+        model
+      }
       created_at
       uploaded_at
       track_point_count

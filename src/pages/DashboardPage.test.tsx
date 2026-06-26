@@ -48,7 +48,14 @@ describe('DashboardPage', () => {
       loading: false,
     })
     dashboardHooks.useGarminActivitiesQuery.mockReturnValue({
-      data: undefined,
+      data: {
+        garminActivities: {
+          total: 0,
+          limit: 1000,
+          offset: 0,
+          items: [],
+        },
+      },
       loading: false,
     })
     dashboardHooks.useGarminActivityTotalsQuery.mockReturnValue({
@@ -130,6 +137,38 @@ describe('DashboardPage', () => {
       },
       loading: false,
     })
+    dashboardHooks.useGarminActivitiesQuery.mockReturnValue({
+      data: {
+        garminActivities: {
+          total: 4,
+          limit: 1000,
+          offset: 0,
+          items: [
+            {
+              activity_id: '1',
+              sport: 'cycling',
+              device: { model: 'Edge 540 Solar' },
+            },
+            {
+              activity_id: '2',
+              sport: 'cycling',
+              device: { model: 'Edge 540 Solar' },
+            },
+            {
+              activity_id: '3',
+              sport: 'running',
+              device: { model: 'Forerunner 955' },
+            },
+            {
+              activity_id: '4',
+              sport: 'running',
+              device: null,
+            },
+          ],
+        },
+      },
+      loading: false,
+    })
 
     render(<DashboardPage />)
 
@@ -139,5 +178,9 @@ describe('DashboardPage', () => {
     expect(screen.getByText('v1.2.3')).toBeInTheDocument()
     expect(screen.getByText('running')).toBeInTheDocument()
     expect(screen.getByText('cycling')).toBeInTheDocument()
+    expect(screen.getByText('Devices')).toBeInTheDocument()
+    expect(screen.getByText('Edge 540 Solar')).toBeInTheDocument()
+    expect(screen.getByText('Forerunner 955')).toBeInTheDocument()
+    expect(screen.getByText('Manual')).toBeInTheDocument()
   })
 })
