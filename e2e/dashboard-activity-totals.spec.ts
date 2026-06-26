@@ -181,6 +181,62 @@ test.describe('Dashboard Activity Totals', () => {
     })
   })
 
+  test('yearly x-axis respects the 2010 display floor', async ({ page }) => {
+    const prefix = `activity-totals-${test.info().project.name}`
+
+    const card = page.locator('[data-testid="activity-totals-card"]')
+    await expect(card).toBeVisible({ timeout: 15_000 })
+
+    await card.getByRole('radio', { name: 'Yearly' }).click()
+    await expect(card.getByRole('radio', { name: 'Yearly' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    await expect(card.getByText(/loading activity totals/i)).toBeHidden({
+      timeout: 15_000,
+    })
+
+    await page.screenshot({
+      path: path.join(
+        SCREENSHOT_DIR,
+        `${prefix}-09-yearly-axis-investigation-full.png`,
+      ),
+      fullPage: true,
+    })
+    await card.screenshot({
+      path: path.join(
+        SCREENSHOT_DIR,
+        `${prefix}-10-yearly-axis-investigation-card.png`,
+      ),
+    })
+
+    const xAxisLabels = card.locator('.recharts-xAxis-tick-labels text')
+
+    await expect
+      .poll(
+        async () =>
+          xAxisLabels.evaluateAll(
+            (nodes) =>
+              nodes
+                .map((node) => node.textContent?.trim() ?? '')
+                .filter((text) => /^\d{4}$/.test(text)).length,
+          ),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0)
+
+    const axisLabels = await xAxisLabels.evaluateAll((nodes) =>
+      nodes
+        .map((node) => node.textContent?.trim() ?? '')
+        .filter((text) => /^\d{4}$/.test(text)),
+    )
+    const visibleYears = axisLabels.map((label) => Number(label))
+    console.log(`Visible yearly x-axis labels: ${axisLabels.join(', ')}`)
+
+    expect(visibleYears.length).toBeGreaterThan(0)
+    expect(Math.min(...visibleYears)).toBeGreaterThanOrEqual(2010)
+  })
+
   test('metric toggle works in monthly mode', async ({ page }) => {
     const prefix = `activity-totals-${test.info().project.name}`
 

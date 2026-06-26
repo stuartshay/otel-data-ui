@@ -347,7 +347,7 @@ describe('GarminActivityTotals', () => {
     )
   })
 
-  it('yearly mode omits leading zero buckets from the API but preserves later gaps', async () => {
+  it('yearly mode omits imported pre-2010 buckets but preserves later gaps', async () => {
     hooks.useGarminDateRangeQuery.mockReturnValue({
       data: {
         garminDateRange: { min_date: '1999-01-01', max_date: '2026-12-31' },
@@ -359,11 +359,11 @@ describe('GarminActivityTotals', () => {
         garminActivityTotals: [
           {
             period_start: '1999-01-01',
-            activity_count: 3,
-            total_distance_km: 0,
-            total_duration_seconds: 0,
-            total_ascent_m: 0,
-            total_calories: 0,
+            activity_count: 1,
+            total_distance_km: 9.52,
+            total_duration_seconds: 3132,
+            total_ascent_m: 31,
+            total_calories: 172,
           },
           {
             period_start: '2009-01-01',
