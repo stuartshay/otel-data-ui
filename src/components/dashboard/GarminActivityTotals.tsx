@@ -112,6 +112,8 @@ const MONTH_FULL_NAMES = [
   'December',
 ]
 
+const ACTIVITY_TOTALS_START_YEAR = 2010
+
 interface MetricConfig {
   key: Metric
   label: string
@@ -276,7 +278,13 @@ export function GarminActivityTotals() {
       currentYear
     const maxYear = Math.max(currentYear, weekEnd.getFullYear())
     const years: number[] = []
-    for (let y = minYear; y <= maxYear; y += 1) years.push(y)
+    for (
+      let y = Math.max(minYear, ACTIVITY_TOTALS_START_YEAR);
+      y <= maxYear;
+      y += 1
+    ) {
+      years.push(y)
+    }
     return years
   }, [dateRangeData, weekEnd])
 
@@ -429,11 +437,14 @@ export function GarminActivityTotals() {
       return []
     }
 
-    // Date-range metadata can predate the first real activity. Start at the
-    // earliest returned bucket, then zero-fill subsequent years so the chart
-    // remains continuous without rendering empty leading years.
+    // Date-range metadata and imported outliers can predate the intended
+    // dashboard history. Start at the first activity bucket from the display
+    // floor onward, then zero-fill later years so the chart remains continuous.
     const dataYears = relevantBuckets
-      .filter(({ bucket }) => hasBucketData(bucket))
+      .filter(
+        ({ bucket, year }) =>
+          Number(year) >= ACTIVITY_TOTALS_START_YEAR && hasBucketData(bucket),
+      )
       .map(({ year }) => Number(year))
 
     if (dataYears.length === 0) {
