@@ -40,6 +40,12 @@ export const GARMIN_ACTIVITIES_QUERY = gql`
         total_distance
         avg_pace
         device_manufacturer
+        device {
+          device_id
+          manufacturer
+          garmin_product
+          model
+        }
         created_at
         uploaded_at
         track_point_count
@@ -158,6 +164,15 @@ export const GARMIN_SPORTS_QUERY = gql`
   query GarminSports {
     garminSports {
       sport
+      activity_count
+    }
+  }
+`
+
+export const GARMIN_DEVICE_COUNTS_QUERY = gql`
+  query GarminDeviceCounts {
+    garminDeviceCounts {
+      label
       activity_count
     }
   }

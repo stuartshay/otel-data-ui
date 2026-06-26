@@ -1,6 +1,7 @@
 import {
   useHealthQuery,
   useLocationCountQuery,
+  useGarminDeviceCountsQuery,
   useGarminSportsQuery,
 } from '@/__generated__/graphql'
 import { MapPin, Activity, Heart } from 'lucide-react'
@@ -14,6 +15,8 @@ import { GarminActivityHeatmap } from '@/components/dashboard/GarminActivityHeat
 import { GarminActivityTotals } from '@/components/dashboard/GarminActivityTotals'
 import { CyclingInFocus } from '@/components/dashboard/CyclingInFocus'
 
+const MANUAL_DEVICE_LABEL = 'Manual'
+
 export function DashboardPage() {
   const { data: healthData, loading: healthLoading } = useHealthQuery()
   const {
@@ -23,15 +26,23 @@ export function DashboardPage() {
     refetch: refetchCount,
   } = useLocationCountQuery()
   const { data: sportsData, loading: sportsLoading } = useGarminSportsQuery()
-
-  if (countLoading && sportsLoading && healthLoading) {
-    return <LoadingState message="Loading dashboard..." />
-  }
+  const { data: deviceCountsData, loading: deviceCountsLoading } =
+    useGarminDeviceCountsQuery()
 
   if (countError) {
     return (
       <ErrorState message={countError.message} onRetry={() => refetchCount()} />
     )
+  }
+
+  const initialDashboardLoading =
+    (healthLoading && !healthData) ||
+    (countLoading && !countData) ||
+    (sportsLoading && !sportsData) ||
+    (deviceCountsLoading && !deviceCountsData)
+
+  if (initialDashboardLoading) {
+    return <LoadingState message="Loading dashboard..." />
   }
 
   const totalLocations = countData?.locationCount?.count ?? 0
@@ -41,6 +52,13 @@ export function DashboardPage() {
       (sum: number, s: { activity_count: number }) => sum + s.activity_count,
       0,
     ) ?? 0
+  const deviceMetrics = deviceCountsData?.garminDeviceCounts ?? []
+  const physicalDeviceMetrics = deviceMetrics.filter(
+    (metric) => metric.label !== MANUAL_DEVICE_LABEL,
+  )
+  const manualDeviceMetric = deviceMetrics.find(
+    (metric) => metric.label === MANUAL_DEVICE_LABEL,
+  )
 
   return (
     <div className="space-y-6">
@@ -75,13 +93,16 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <CyclingInFocus />
 
-        <Card>
+        <Card data-testid="garmin-sports-card">
           <CardHeader>
             <CardTitle>Garmin Sports</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {sportsData?.garminSports?.length ? (
               <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Sports
+                </p>
                 {sportsData.garminSports.map(
                   (s: { sport: string; activity_count: number }) => (
                     <div
@@ -99,6 +120,36 @@ export function DashboardPage() {
                 No activities found
               </p>
             )}
+            {deviceMetrics.length ? (
+              <div className="space-y-2 border-t pt-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Devices
+                </p>
+                {physicalDeviceMetrics.map((device) => (
+                  <div
+                    key={device.label}
+                    data-testid="garmin-device-row"
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="truncate text-sm">{device.label}</span>
+                    <Badge variant="outline">{device.activity_count}</Badge>
+                  </div>
+                ))}
+                {manualDeviceMetric ? (
+                  <div
+                    data-testid="garmin-manual-row"
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="truncate text-sm">
+                      {manualDeviceMetric.label}
+                    </span>
+                    <Badge variant="outline">
+                      {manualDeviceMetric.activity_count}
+                    </Badge>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
