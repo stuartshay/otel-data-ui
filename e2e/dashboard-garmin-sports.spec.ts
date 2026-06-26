@@ -85,7 +85,7 @@ test.describe('Dashboard Garmin Sports tile', () => {
     const card = page.getByTestId('garmin-sports-card')
     await expect(card).toBeVisible({ timeout: 15_000 })
     await expect(card.getByText('Sports', { exact: true })).toBeVisible()
-    await expect(card.getByText('Cycling')).toBeVisible()
+    await expect(card.getByText(/^cycling$/i)).toBeVisible()
     await expect(card.getByText('Devices')).toBeVisible({ timeout: 30_000 })
     await expect
       .poll(async () => card.getByTestId('garmin-device-row').count())

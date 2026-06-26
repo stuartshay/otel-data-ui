@@ -29,14 +29,20 @@ export function DashboardPage() {
   const { data: deviceCountsData, loading: deviceCountsLoading } =
     useGarminDeviceCountsQuery()
 
-  if (countLoading && sportsLoading && healthLoading && deviceCountsLoading) {
-    return <LoadingState message="Loading dashboard..." />
-  }
-
   if (countError) {
     return (
       <ErrorState message={countError.message} onRetry={() => refetchCount()} />
     )
+  }
+
+  const initialDashboardLoading =
+    (healthLoading && !healthData) ||
+    (countLoading && !countData) ||
+    (sportsLoading && !sportsData) ||
+    (deviceCountsLoading && !deviceCountsData)
+
+  if (initialDashboardLoading) {
+    return <LoadingState message="Loading dashboard..." />
   }
 
   const totalLocations = countData?.locationCount?.count ?? 0

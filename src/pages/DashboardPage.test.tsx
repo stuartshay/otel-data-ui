@@ -90,6 +90,32 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
   })
 
+  it('keeps loading while a dashboard metric query has no data yet', () => {
+    dashboardHooks.useHealthQuery.mockReturnValue({
+      data: { health: { status: 'healthy', version: '1.0.0' } },
+      loading: false,
+    })
+    dashboardHooks.useLocationCountQuery.mockReturnValue({
+      data: { locationCount: { count: 4321 } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    dashboardHooks.useGarminSportsQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+    })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
+      loading: false,
+    })
+
+    render(<DashboardPage />)
+
+    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
+    expect(screen.queryByText('4,321')).not.toBeInTheDocument()
+  })
+
   it('shows an error state and retries the count query', async () => {
     const user = userEvent.setup()
     const refetch = vi.fn()
