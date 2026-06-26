@@ -7,6 +7,7 @@ const dashboardHooks = vi.hoisted(() => ({
   useLocationCountQuery: vi.fn(),
   useDevicesQuery: vi.fn(),
   useGarminSportsQuery: vi.fn(),
+  useGarminDeviceCountsQuery: vi.fn(),
   useDailySummaryQuery: vi.fn(),
   useGarminActivitiesQuery: vi.fn(),
   useGarminActivityTotalsQuery: vi.fn(),
@@ -48,7 +49,18 @@ describe('DashboardPage', () => {
       loading: false,
     })
     dashboardHooks.useGarminActivitiesQuery.mockReturnValue({
-      data: undefined,
+      data: {
+        garminActivities: {
+          total: 0,
+          limit: 1000,
+          offset: 0,
+          items: [],
+        },
+      },
+      loading: false,
+    })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
       loading: false,
     })
     dashboardHooks.useGarminActivityTotalsQuery.mockReturnValue({
@@ -69,10 +81,39 @@ describe('DashboardPage', () => {
     dashboardHooks.useLocationCountQuery.mockReturnValue({ loading: true })
     dashboardHooks.useDevicesQuery.mockReturnValue({ loading: true })
     dashboardHooks.useGarminSportsQuery.mockReturnValue({ loading: true })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      loading: true,
+    })
 
     render(<DashboardPage />)
 
     expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
+  })
+
+  it('keeps loading while a dashboard metric query has no data yet', () => {
+    dashboardHooks.useHealthQuery.mockReturnValue({
+      data: { health: { status: 'healthy', version: '1.0.0' } },
+      loading: false,
+    })
+    dashboardHooks.useLocationCountQuery.mockReturnValue({
+      data: { locationCount: { count: 4321 } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    dashboardHooks.useGarminSportsQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+    })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
+      loading: false,
+    })
+
+    render(<DashboardPage />)
+
+    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
+    expect(screen.queryByText('4,321')).not.toBeInTheDocument()
   })
 
   it('shows an error state and retries the count query', async () => {
@@ -94,6 +135,10 @@ describe('DashboardPage', () => {
     })
     dashboardHooks.useGarminSportsQuery.mockReturnValue({
       data: undefined,
+      loading: false,
+    })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
       loading: false,
     })
 
@@ -130,6 +175,16 @@ describe('DashboardPage', () => {
       },
       loading: false,
     })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: {
+        garminDeviceCounts: [
+          { label: 'Edge 540 Solar', activity_count: 2 },
+          { label: 'Forerunner 955', activity_count: 1 },
+          { label: 'Manual', activity_count: 1 },
+        ],
+      },
+      loading: false,
+    })
 
     render(<DashboardPage />)
 
@@ -139,5 +194,9 @@ describe('DashboardPage', () => {
     expect(screen.getByText('v1.2.3')).toBeInTheDocument()
     expect(screen.getByText('running')).toBeInTheDocument()
     expect(screen.getByText('cycling')).toBeInTheDocument()
+    expect(screen.getByText('Devices')).toBeInTheDocument()
+    expect(screen.getByText('Edge 540 Solar')).toBeInTheDocument()
+    expect(screen.getByText('Forerunner 955')).toBeInTheDocument()
+    expect(screen.getByText('Manual')).toBeInTheDocument()
   })
 })
