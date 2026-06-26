@@ -359,7 +359,7 @@ describe('GarminActivityTotals', () => {
         garminActivityTotals: [
           {
             period_start: '1999-01-01',
-            activity_count: 0,
+            activity_count: 3,
             total_distance_km: 0,
             total_duration_seconds: 0,
             total_ascent_m: 0,
@@ -367,7 +367,7 @@ describe('GarminActivityTotals', () => {
           },
           {
             period_start: '2009-01-01',
-            activity_count: 0,
+            activity_count: 4,
             total_distance_km: 0,
             total_duration_seconds: 0,
             total_ascent_m: 0,

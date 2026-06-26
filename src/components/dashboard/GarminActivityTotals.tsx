@@ -199,7 +199,6 @@ function formatBucketLabel(period_start: string, period: Period): string {
 
 function hasBucketData(bucket: ChartBucket): boolean {
   return (
-    bucket.activity_count > 0 ||
     bucket.distance_km > 0 ||
     bucket.duration_hours > 0 ||
     bucket.total_ascent_m > 0 ||
