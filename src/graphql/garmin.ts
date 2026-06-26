@@ -169,6 +169,15 @@ export const GARMIN_SPORTS_QUERY = gql`
   }
 `
 
+export const GARMIN_DEVICE_COUNTS_QUERY = gql`
+  query GarminDeviceCounts {
+    garminDeviceCounts {
+      label
+      activity_count
+    }
+  }
+`
+
 export const GARMIN_ACTIVITY_TOTALS_QUERY = gql`
   query GarminActivityTotals(
     $period: String!

@@ -7,6 +7,7 @@ const dashboardHooks = vi.hoisted(() => ({
   useLocationCountQuery: vi.fn(),
   useDevicesQuery: vi.fn(),
   useGarminSportsQuery: vi.fn(),
+  useGarminDeviceCountsQuery: vi.fn(),
   useDailySummaryQuery: vi.fn(),
   useGarminActivitiesQuery: vi.fn(),
   useGarminActivityTotalsQuery: vi.fn(),
@@ -58,6 +59,10 @@ describe('DashboardPage', () => {
       },
       loading: false,
     })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
+      loading: false,
+    })
     dashboardHooks.useGarminActivityTotalsQuery.mockReturnValue({
       data: undefined,
       loading: false,
@@ -76,6 +81,9 @@ describe('DashboardPage', () => {
     dashboardHooks.useLocationCountQuery.mockReturnValue({ loading: true })
     dashboardHooks.useDevicesQuery.mockReturnValue({ loading: true })
     dashboardHooks.useGarminSportsQuery.mockReturnValue({ loading: true })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      loading: true,
+    })
 
     render(<DashboardPage />)
 
@@ -101,6 +109,10 @@ describe('DashboardPage', () => {
     })
     dashboardHooks.useGarminSportsQuery.mockReturnValue({
       data: undefined,
+      loading: false,
+    })
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
+      data: { garminDeviceCounts: [] },
       loading: false,
     })
 
@@ -137,35 +149,13 @@ describe('DashboardPage', () => {
       },
       loading: false,
     })
-    dashboardHooks.useGarminActivitiesQuery.mockReturnValue({
+    dashboardHooks.useGarminDeviceCountsQuery.mockReturnValue({
       data: {
-        garminActivities: {
-          total: 4,
-          limit: 1000,
-          offset: 0,
-          items: [
-            {
-              activity_id: '1',
-              sport: 'cycling',
-              device: { model: 'Edge 540 Solar' },
-            },
-            {
-              activity_id: '2',
-              sport: 'cycling',
-              device: { model: 'Edge 540 Solar' },
-            },
-            {
-              activity_id: '3',
-              sport: 'running',
-              device: { model: 'Forerunner 955' },
-            },
-            {
-              activity_id: '4',
-              sport: 'running',
-              device: null,
-            },
-          ],
-        },
+        garminDeviceCounts: [
+          { label: 'Edge 540 Solar', activity_count: 2 },
+          { label: 'Forerunner 955', activity_count: 1 },
+          { label: 'Manual', activity_count: 1 },
+        ],
       },
       loading: false,
     })

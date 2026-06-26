@@ -305,6 +305,15 @@ export type GarminDevice = {
   software_version?: Maybe<Scalars['String']['output']>;
 };
 
+/** Garmin activity count grouped by recording device model. */
+export type GarminDeviceCount = {
+  __typename?: 'GarminDeviceCount';
+  /** Number of activities for this device label. */
+  activity_count: Scalars['Int']['output'];
+  /** Device model label, or Manual when an activity has no recording device. */
+  label: Scalars['String']['output'];
+};
+
 /** Result payload returned when triggering an on-demand Garmin sync. */
 export type GarminSyncTriggerResult = {
   __typename?: 'GarminSyncTriggerResult';
@@ -680,6 +689,8 @@ export type Query = {
   garminChartData: Array<GarminChartPoint>;
   /** Get the earliest and latest Garmin activity timestamps. */
   garminDateRange: GarminDateRange;
+  /** List Garmin recording device labels with activity counts. */
+  garminDeviceCounts: Array<GarminDeviceCount>;
   /** List all distinct sport types with activity counts. */
   garminSports: Array<SportInfo>;
   /** Retrieve paginated GPS track points for a Garmin activity. */
@@ -967,6 +978,11 @@ export type GarminSportsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GarminSportsQuery = { garminSports: Array<{ sport: string, activity_count: number }> };
+
+export type GarminDeviceCountsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GarminDeviceCountsQuery = { garminDeviceCounts: Array<{ label: string, activity_count: number }> };
 
 export type GarminActivityTotalsQueryVariables = Exact<{
   period: string;
@@ -1473,6 +1489,49 @@ export type GarminSportsQueryHookResult = ReturnType<typeof useGarminSportsQuery
 export type GarminSportsLazyQueryHookResult = ReturnType<typeof useGarminSportsLazyQuery>;
 export type GarminSportsSuspenseQueryHookResult = ReturnType<typeof useGarminSportsSuspenseQuery>;
 export type GarminSportsQueryResult = ApolloReactCommon.QueryResult<GarminSportsQuery, GarminSportsQueryVariables>;
+export const GarminDeviceCountsDocument = gql`
+    query GarminDeviceCounts {
+  garminDeviceCounts {
+    label
+    activity_count
+  }
+}
+    `;
+
+/**
+ * __useGarminDeviceCountsQuery__
+ *
+ * To run a query within a React component, call `useGarminDeviceCountsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminDeviceCountsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminDeviceCountsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGarminDeviceCountsQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>(GarminDeviceCountsDocument, options);
+      }
+export function useGarminDeviceCountsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>(GarminDeviceCountsDocument, options);
+        }
+// @ts-ignore
+export function useGarminDeviceCountsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>;
+export function useGarminDeviceCountsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminDeviceCountsQuery | undefined, GarminDeviceCountsQueryVariables>;
+export function useGarminDeviceCountsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>(GarminDeviceCountsDocument, options);
+        }
+export type GarminDeviceCountsQueryHookResult = ReturnType<typeof useGarminDeviceCountsQuery>;
+export type GarminDeviceCountsLazyQueryHookResult = ReturnType<typeof useGarminDeviceCountsLazyQuery>;
+export type GarminDeviceCountsSuspenseQueryHookResult = ReturnType<typeof useGarminDeviceCountsSuspenseQuery>;
+export type GarminDeviceCountsQueryResult = ApolloReactCommon.QueryResult<GarminDeviceCountsQuery, GarminDeviceCountsQueryVariables>;
 export const GarminActivityTotalsDocument = gql`
     query GarminActivityTotals($period: String!, $date_from: String, $date_to: String, $sport: String) {
   garminActivityTotals(
