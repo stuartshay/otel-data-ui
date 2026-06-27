@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   kmToMi,
@@ -144,8 +145,10 @@ export function ActivityStatsPanel({
 }: ActivityStatsPanelProps) {
   const hrAvailable =
     a.hr_available ?? (a.avg_heart_rate != null || a.max_heart_rate != null)
-  const heartRateZoneSummaries =
-    buildHeartRateZoneSummaries(heartRateZonePoints)
+  const heartRateZoneSummaries = useMemo(
+    () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
+    [heartRateZonePoints, hrAvailable],
+  )
 
   const sections: StatSection[] = [
     {

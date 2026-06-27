@@ -25,10 +25,12 @@ export function buildHeartRateZoneSummaries(
     const zone = validZone(point.hr_zone)
     if (zone == null || point.heart_rate == null) continue
 
-    zoneHeartRates.set(zone, [
-      ...(zoneHeartRates.get(zone) ?? []),
-      point.heart_rate,
-    ])
+    const heartRates = zoneHeartRates.get(zone)
+    if (heartRates) {
+      heartRates.push(point.heart_rate)
+    } else {
+      zoneHeartRates.set(zone, [point.heart_rate])
+    }
   }
 
   for (let index = 0; index < points.length - 1; index += 1) {
