@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   kmToMi,
@@ -7,6 +8,12 @@ import {
   formatDuration,
   formatPace,
 } from '@/lib/units'
+import type { ActivityChartTrackPoint } from './ActivityChartData'
+import { ZONE_COLORS } from './heartRateZones'
+import {
+  buildHeartRateZoneSummaries,
+  type HeartRateZoneSummary,
+} from './heartRateZoneSummary'
 
 interface ActivityStatsPanelProps {
   activity: {
@@ -44,6 +51,7 @@ interface ActivityStatsPanelProps {
     max_temperature_c?: number | null
     avg_pace?: number | null
   }
+  heartRateZonePoints?: ActivityChartTrackPoint[]
 }
 
 interface StatRow {
@@ -66,9 +74,81 @@ function fmt(
   return `${val.toFixed(decimals)} ${unit}`
 }
 
-export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
+function HeartRateZoneBreakdown({
+  summaries,
+}: {
+  summaries: HeartRateZoneSummary[]
+}) {
+  const hasZoneTime = summaries.some((summary) => summary.seconds > 0)
+  if (!hasZoneTime) return null
+
+  return (
+    <Card data-testid="heart-rate-zone-breakdown" className="lg:col-span-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">
+          Heart Rate Zones
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {summaries.map((summary) => {
+          const observedRange =
+            summary.minHeartRate != null && summary.maxHeartRate != null
+              ? summary.minHeartRate === summary.maxHeartRate
+                ? `${summary.minHeartRate} bpm`
+                : `${summary.minHeartRate} - ${summary.maxHeartRate} bpm`
+              : null
+
+          return (
+            <div
+              className="grid gap-2 text-sm sm:grid-cols-[minmax(10rem,16rem)_1fr_auto]"
+              key={summary.zone}
+            >
+              <div>
+                <span className="font-semibold">Zone {summary.zone}</span>
+                {observedRange && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    · {observedRange}
+                  </span>
+                )}
+              </div>
+              <div
+                aria-label={`Zone ${summary.zone}: ${formatDuration(summary.seconds)} (${summary.percent}%)`}
+                className="h-6 overflow-hidden rounded-sm bg-muted"
+                role="img"
+              >
+                <div
+                  className="h-full"
+                  style={{
+                    backgroundColor: ZONE_COLORS[summary.zone],
+                    width: `${summary.percent}%`,
+                  }}
+                />
+              </div>
+              <div className="flex min-w-24 justify-end gap-3 font-medium tabular-nums">
+                <span>{formatDuration(summary.seconds)}</span>
+                <span className="w-9 text-right text-muted-foreground">
+                  {summary.percent}%
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
+export function ActivityStatsPanel({
+  activity: a,
+  heartRateZonePoints = [],
+}: ActivityStatsPanelProps) {
   const hrAvailable =
     a.hr_available ?? (a.avg_heart_rate != null || a.max_heart_rate != null)
+  const heartRateZoneSummaries = useMemo(
+    () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
+    [heartRateZonePoints, hrAvailable],
+  )
 
   const sections: StatSection[] = [
     {
@@ -345,6 +425,9 @@ export function ActivityStatsPanel({ activity: a }: ActivityStatsPanelProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {hrAvailable && (
+        <HeartRateZoneBreakdown summaries={heartRateZoneSummaries} />
+      )}
       {sections.map((section) => (
         <Card key={section.title}>
           <CardHeader className="pb-2">

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ActivityStatsPanel } from './ActivityStatsPanel'
+import { buildHeartRateZoneSummaries } from './heartRateZoneSummary'
 
 describe('ActivityStatsPanel', () => {
   it('renders converted metrics across activity sections', () => {
@@ -106,5 +107,136 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText('30 min')).toBeInTheDocument()
     // No x2 badge when vigorous minutes are absent.
     expect(screen.queryByText('x2')).not.toBeInTheDocument()
+  })
+
+  it('renders heart-rate zone time totals when zoned chart points are available', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: 145,
+          max_heart_rate: 176,
+          hr_available: true,
+        }}
+        heartRateZonePoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            heart_rate: 118,
+            hr_zone: 2,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            heart_rate: 135,
+            hr_zone: 2,
+          },
+          {
+            timestamp: '2026-03-14T09:20:00Z',
+            heart_rate: 158,
+            hr_zone: 4,
+          },
+          {
+            timestamp: '2026-03-14T09:30:00Z',
+            heart_rate: 148,
+            hr_zone: 3,
+          },
+          {
+            timestamp: '2026-03-14T09:40:00Z',
+            heart_rate: 149,
+            hr_zone: 3,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByTestId('heart-rate-zone-breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Zone 4')).toBeInTheDocument()
+    expect(screen.getByText(/158 bpm/)).toBeInTheDocument()
+    expect(screen.getByText(/148 - 149 bpm/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Zone 2: 20:00 (50%)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Zone 4: 10:00 (25%)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Zone 3: 10:00 (25%)')).toBeInTheDocument()
+  })
+
+  it('does not render heart-rate zone totals without valid zone durations', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{ avg_heart_rate: 145, hr_available: true }}
+        heartRateZonePoints={[
+          { timestamp: '2026-03-14T09:00:00Z', heart_rate: 118 },
+          { timestamp: '2026-03-14T09:10:00Z', heart_rate: 135 },
+        ]}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId('heart-rate-zone-breakdown'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('builds heart-rate zone summaries from consecutive timestamp deltas', () => {
+    expect(
+      buildHeartRateZoneSummaries([
+        {
+          timestamp: '2026-03-14T09:00:00Z',
+          heart_rate: 100,
+          hr_zone: 1,
+        },
+        {
+          timestamp: '2026-03-14T09:05:00Z',
+          heart_rate: 120,
+          hr_zone: 2,
+        },
+        {
+          timestamp: '2026-03-14T09:15:00Z',
+          heart_rate: 130,
+          hr_zone: 2,
+        },
+        {
+          timestamp: '2026-03-14T09:15:00Z',
+          heart_rate: 170,
+          hr_zone: 5,
+        },
+        {
+          timestamp: '2026-03-14T09:20:00Z',
+          heart_rate: 180,
+          hr_zone: 8,
+        },
+      ]),
+    ).toEqual([
+      {
+        zone: 5,
+        seconds: 300,
+        percent: 25,
+        minHeartRate: 170,
+        maxHeartRate: 170,
+      },
+      {
+        zone: 4,
+        seconds: 0,
+        percent: 0,
+        minHeartRate: null,
+        maxHeartRate: null,
+      },
+      {
+        zone: 3,
+        seconds: 0,
+        percent: 0,
+        minHeartRate: null,
+        maxHeartRate: null,
+      },
+      {
+        zone: 2,
+        seconds: 600,
+        percent: 50,
+        minHeartRate: 120,
+        maxHeartRate: 130,
+      },
+      {
+        zone: 1,
+        seconds: 300,
+        percent: 25,
+        minHeartRate: 100,
+        maxHeartRate: 100,
+      },
+    ])
   })
 })
