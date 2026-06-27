@@ -442,7 +442,10 @@ export function GarminDetailPage() {
         </TabsList>
 
         <TabsContent value="stats" className="space-y-4">
-          <ActivityStatsPanel activity={{ ...a, hr_available: hasHrData }} />
+          <ActivityStatsPanel
+            activity={{ ...a, hr_available: hasHrData }}
+            heartRateZonePoints={chartPoints}
+          />
         </TabsContent>
 
         <TabsContent value="charts" className="space-y-4">
