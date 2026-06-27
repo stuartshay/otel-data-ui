@@ -75,7 +75,11 @@ function fmt(
 }
 
 function formatHeartRate(value: number | null | undefined): string {
-  return value != null && value > 0 ? `${value} bpm` : '—'
+  return isValidHeartRate(value) ? `${value} bpm` : '—'
+}
+
+function isValidHeartRate(value: number | null | undefined): value is number {
+  return value != null && value > 0
 }
 
 function HeartRateZoneBreakdown({
@@ -148,10 +152,11 @@ export function ActivityStatsPanel({
   heartRateZonePoints = [],
 }: ActivityStatsPanelProps) {
   const hrAvailable =
-    a.hr_available ??
-    (formatHeartRate(a.avg_heart_rate) !== '—' ||
-      formatHeartRate(a.max_heart_rate) !== '—' ||
-      formatHeartRate(a.min_heart_rate) !== '—')
+    a.hr_available === false
+      ? false
+      : isValidHeartRate(a.avg_heart_rate) ||
+        isValidHeartRate(a.max_heart_rate) ||
+        isValidHeartRate(a.min_heart_rate)
   const heartRateZoneSummaries = useMemo(
     () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
     [heartRateZonePoints, hrAvailable],

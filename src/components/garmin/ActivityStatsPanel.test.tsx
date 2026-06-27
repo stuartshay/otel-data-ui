@@ -63,6 +63,24 @@ describe('ActivityStatsPanel', () => {
     expect(minHeartRateLabel.nextElementSibling).toHaveTextContent('—')
   })
 
+  it('hides heart-rate sections when only sentinel heart-rate values are present', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: 0,
+          max_heart_rate: -1,
+          min_heart_rate: 0,
+          hr_available: true,
+        }}
+      />,
+    )
+
+    expect(screen.queryByText('Heart Rate')).not.toBeInTheDocument()
+    expect(screen.queryByText('Training Effect')).not.toBeInTheDocument()
+    expect(screen.queryByText('Respiration')).not.toBeInTheDocument()
+    expect(screen.queryByText('Intensity Minutes')).not.toBeInTheDocument()
+  })
+
   it('hides HR-dependent sections when hr data is unavailable', () => {
     render(
       <ActivityStatsPanel
