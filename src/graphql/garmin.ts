@@ -219,6 +219,36 @@ export const GARMIN_CHART_DATA_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_CLIMBS_QUERY = gql`
+  query GarminActivityClimbs($activity_id: String!) {
+    garminActivityClimbs(activity_id: $activity_id) {
+      id
+      activity_id
+      source_split_index
+      message_index
+      climb_type
+      start_time
+      end_time
+      duration_seconds
+      elapsed_duration_seconds
+      moving_duration_seconds
+      distance_meters
+      elevation_gain_meters
+      elevation_loss_meters
+      start_elevation_meters
+      average_grade_percent
+      max_grade_percent
+      average_speed_mps
+      max_speed_mps
+      start_latitude
+      start_longitude
+      end_latitude
+      end_longitude
+      climb_pro_difficulty
+    }
+  }
+`
+
 export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
   mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
     triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {

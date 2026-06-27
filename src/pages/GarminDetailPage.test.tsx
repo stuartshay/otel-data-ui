@@ -8,6 +8,7 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminActivityQuery: vi.fn(),
   useGarminTrackPointsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
+  useGarminActivityClimbsQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
 }))
 const toastMocks = vi.hoisted(() => ({
@@ -121,6 +122,7 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityQuery.mockReset()
     garminDetailHooks.useGarminTrackPointsQuery.mockReset()
     garminDetailHooks.useGarminChartDataQuery.mockReset()
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
     toastMocks.error.mockReset()
     toastMocks.warning.mockReset()
@@ -130,6 +132,11 @@ describe('GarminDetailPage', () => {
       vi.fn(),
       { loading: false },
     ])
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
+      loading: false,
+      data: { garminActivityClimbs: [] },
+      error: undefined,
+    })
   })
 
   function renderPage(
