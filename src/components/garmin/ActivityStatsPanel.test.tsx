@@ -46,6 +46,23 @@ describe('ActivityStatsPanel', () => {
     expect(totalStrokesLabel.nextElementSibling).toHaveTextContent('—')
   })
 
+  it('treats zero heart-rate values as unavailable', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: 113,
+          max_heart_rate: 136,
+          min_heart_rate: 0,
+        }}
+      />,
+    )
+
+    expect(screen.getByText('113 bpm')).toBeInTheDocument()
+    expect(screen.getByText('136 bpm')).toBeInTheDocument()
+    const minHeartRateLabel = screen.getByText('Min Heart Rate')
+    expect(minHeartRateLabel.nextElementSibling).toHaveTextContent('—')
+  })
+
   it('hides HR-dependent sections when hr data is unavailable', () => {
     render(
       <ActivityStatsPanel
