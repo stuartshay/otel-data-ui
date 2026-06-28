@@ -255,6 +255,47 @@ describe('GarminDetailPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows the Climbs tab empty state when an activity has no ClimbPro climbs', async () => {
+    const user = userEvent.setup()
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'cycling',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 32,
+          duration_seconds: 5400,
+          avg_speed_kmh: 21,
+          total_ascent_m: 220,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: {
+        garminTrackPoints: {
+          items: [{ latitude: 40.7, longitude: -74.0 }],
+        },
+      },
+    })
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-climbs'))
+
+    expect(
+      screen.getByText('No Garmin ClimbPro climbs found for this activity.'),
+    ).toBeInTheDocument()
+  })
+
   it('selects the nearest chart point when the route map is clicked', async () => {
     const user = userEvent.setup()
     garminDetailHooks.useGarminActivityQuery.mockReturnValue({
