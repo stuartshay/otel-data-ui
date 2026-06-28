@@ -81,6 +81,36 @@ describe('ActivityStatsPanel', () => {
     expect(screen.queryByText('Intensity Minutes')).not.toBeInTheDocument()
   })
 
+  it('shows heart-rate sections when chart points contain valid heart-rate samples', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: null,
+          max_heart_rate: 0,
+          min_heart_rate: 0,
+          hr_available: true,
+        }}
+        heartRateZonePoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            heart_rate: 118,
+            hr_zone: 2,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            heart_rate: 135,
+            hr_zone: 2,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('Heart Rate')).toBeInTheDocument()
+    const avgHeartRateLabel = screen.getByText('Avg Heart Rate')
+    expect(avgHeartRateLabel.nextElementSibling).toHaveTextContent('—')
+    expect(screen.getByTestId('heart-rate-zone-breakdown')).toBeInTheDocument()
+  })
+
   it('hides HR-dependent sections when hr data is unavailable', () => {
     render(
       <ActivityStatsPanel

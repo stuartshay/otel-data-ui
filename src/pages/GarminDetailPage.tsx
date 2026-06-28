@@ -6,7 +6,9 @@ import {
   useGarminActivityQuery,
   useGarminTrackPointsQuery,
   useGarminChartDataQuery,
+  useGarminActivityClimbsQuery,
   useGarminExportPointsLazyQuery,
+  type GarminActivityClimbsQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -28,14 +30,27 @@ import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 import { escapeCsvValue, triggerDownload } from '@/lib/export'
+import { formatDurationShort, metersToFeet } from '@/lib/units'
 
 /** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
 const SIMPLIFY_TOLERANCE = 0.00001
 /** Maximum track points fetched per page when exporting. */
 const EXPORT_PAGE_SIZE = 10000
 const EARTH_RADIUS_M = 6_371_000
+const METERS_PER_MILE = 1609.344
+const MAIN_CLIMB_TYPE = 'CLIMB_PRO_CYCLING_CLIMB'
+
+type ActivityClimb = GarminActivityClimbsQuery['garminActivityClimbs'][number]
 
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180
@@ -87,6 +102,69 @@ function findNearestTrackPoint(
   }
 
   return nearest
+}
+
+function formatDistanceMiles(meters: number | null | undefined): string {
+  return meters != null ? `${(meters / METERS_PER_MILE).toFixed(2)} mi` : '—'
+}
+
+function formatFeet(meters: number | null | undefined): string {
+  return meters != null ? `${metersToFeet(meters).toFixed(0)} ft` : '—'
+}
+
+function formatPercent(value: number | null | undefined): string {
+  return value != null ? `${value.toFixed(2)} %` : '—'
+}
+
+function ActivityClimbsTable({ climbs }: { climbs: ActivityClimb[] }) {
+  const mainClimbs = climbs.filter(
+    (climb) => climb.climb_type === MAIN_CLIMB_TYPE,
+  )
+
+  if (mainClimbs.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+        No Garmin ClimbPro climbs found for this activity.
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Climb</TableHead>
+            <TableHead>Time</TableHead>
+            <TableHead>Distance</TableHead>
+            <TableHead>Ascent</TableHead>
+            <TableHead>Grade</TableHead>
+            <TableHead>Max Grade</TableHead>
+            <TableHead>Difficulty</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {mainClimbs.map((climb, index) => (
+            <TableRow key={climb.id}>
+              <TableCell className="font-medium">Climb {index + 1}</TableCell>
+              <TableCell>
+                {formatDurationShort(climb.duration_seconds ?? null)}
+              </TableCell>
+              <TableCell>
+                {formatDistanceMiles(climb.distance_meters)}
+              </TableCell>
+              <TableCell>{formatFeet(climb.elevation_gain_meters)}</TableCell>
+              <TableCell>
+                {formatPercent(climb.average_grade_percent)}
+              </TableCell>
+              <TableCell>{formatPercent(climb.max_grade_percent)}</TableCell>
+              <TableCell>{climb.climb_pro_difficulty ?? '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
 }
 
 export function GarminDetailPage() {
@@ -339,6 +417,14 @@ export function GarminDetailPage() {
     skip: !activityId,
     fetchPolicy: 'no-cache',
   })
+  const {
+    data: climbsData,
+    loading: climbsLoading,
+    error: climbsError,
+  } = useGarminActivityClimbsQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+  })
   // Resolve map clicks against the *full-resolution* track series (not the
   // downsampled chart series) so the selected point is the true nearest
   // location, then convert it into the chart/display shape using the same
@@ -385,6 +471,7 @@ export function GarminDetailPage() {
 
   const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
   const chartPoints = chartData?.garminChartData ?? []
+  const climbs = climbsData?.garminActivityClimbs ?? []
   const hasHrData =
     a.avg_heart_rate != null ||
     a.max_heart_rate != null ||
@@ -438,6 +525,9 @@ export function GarminDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="charts" data-testid="garmin-tab-charts">
             Charts
+          </TabsTrigger>
+          <TabsTrigger value="climbs" data-testid="garmin-tab-climbs">
+            Climbs
           </TabsTrigger>
         </TabsList>
 
@@ -534,6 +624,16 @@ export function GarminDetailPage() {
               />
               <SegmentAnalysis points={savedPoints} />
             </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="climbs" className="space-y-4">
+          {climbsLoading && <LoadingState message="Loading climbs..." />}
+          {climbsError && (
+            <ErrorState message={`Climbs failed: ${climbsError.message}`} />
+          )}
+          {!climbsLoading && !climbsError && (
+            <ActivityClimbsTable climbs={climbs} />
           )}
         </TabsContent>
       </Tabs>

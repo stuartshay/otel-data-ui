@@ -224,6 +224,81 @@ export type GarminActivityAddress = {
   waypoint_kind: Scalars['String']['output'];
 };
 
+/** Garmin-native ClimbPro typed split for an activity. */
+export type GarminActivityClimb = {
+  __typename?: 'GarminActivityClimb';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** Average elapsed vertical speed in meters per second */
+  average_elapsed_vertical_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** Average climb grade percent */
+  average_grade_percent?: Maybe<Scalars['Float']['output']>;
+  /** Average moving speed in meters per second */
+  average_moving_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** Average speed in meters per second */
+  average_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** Average temperature in degrees C */
+  average_temperature_c?: Maybe<Scalars['Float']['output']>;
+  /** Average vertical speed in meters per second */
+  average_vertical_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** BMR calories recorded for this climb */
+  bmr_calories?: Maybe<Scalars['Float']['output']>;
+  /** Calories recorded for this climb */
+  calories?: Maybe<Scalars['Float']['output']>;
+  /** Garmin ClimbPro difficulty */
+  climb_pro_difficulty?: Maybe<Scalars['String']['output']>;
+  /** Garmin ClimbPro typed split type */
+  climb_type?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when the row was inserted */
+  created_at?: Maybe<Scalars['String']['output']>;
+  /** Climb distance in meters */
+  distance_meters?: Maybe<Scalars['Float']['output']>;
+  /** Climb duration in seconds */
+  duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** Elapsed climb duration in seconds */
+  elapsed_duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** Climb elevation gain in meters */
+  elevation_gain_meters?: Maybe<Scalars['Float']['output']>;
+  /** Climb elevation loss in meters */
+  elevation_loss_meters?: Maybe<Scalars['Float']['output']>;
+  /** Climb end latitude */
+  end_latitude?: Maybe<Scalars['Float']['output']>;
+  /** Climb end longitude */
+  end_longitude?: Maybe<Scalars['Float']['output']>;
+  /** UTC climb end time */
+  end_time?: Maybe<Scalars['String']['output']>;
+  /** Unique climb row identifier */
+  id: Scalars['Float']['output'];
+  /** Maximum climb grade percent */
+  max_grade_percent?: Maybe<Scalars['Float']['output']>;
+  /** Maximum speed in meters per second */
+  max_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** Maximum temperature in degrees C */
+  max_temperature_c?: Maybe<Scalars['Float']['output']>;
+  /** Garmin message index */
+  message_index?: Maybe<Scalars['Int']['output']>;
+  /** Minimum temperature in degrees C */
+  min_temperature_c?: Maybe<Scalars['Float']['output']>;
+  /** Moving climb duration in seconds */
+  moving_duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** Zero-based Garmin typed split order */
+  source_split_index: Scalars['Int']['output'];
+  /** Garmin split type label when provided */
+  split_type?: Maybe<Scalars['String']['output']>;
+  /** Climb start elevation in meters */
+  start_elevation_meters?: Maybe<Scalars['Float']['output']>;
+  /** Climb start latitude */
+  start_latitude?: Maybe<Scalars['Float']['output']>;
+  /** Climb start longitude */
+  start_longitude?: Maybe<Scalars['Float']['output']>;
+  /** UTC climb start time */
+  start_time?: Maybe<Scalars['String']['output']>;
+  /** Local climb start time from Garmin */
+  start_time_local?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when the row was last updated */
+  updated_at?: Maybe<Scalars['String']['output']>;
+};
+
 /** Paginated list of Garmin activities. */
 export type GarminActivityConnection = {
   __typename?: 'GarminActivityConnection';
@@ -683,6 +758,8 @@ export type Query = {
   garminActivity?: Maybe<GarminActivity>;
   /** Retrieve all reverse-geocoded addresses for a Garmin activity (start, mid-route waypoints, and end). */
   garminActivityAddresses: Array<GarminActivityAddress>;
+  /** Retrieve Garmin-native ClimbPro typed splits for a Garmin activity. */
+  garminActivityClimbs: Array<GarminActivityClimb>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
@@ -755,6 +832,11 @@ export type QueryGarminActivityArgs = {
 
 
 export type QueryGarminActivityAddressesArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivityClimbsArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -1000,6 +1082,13 @@ export type GarminChartDataQueryVariables = Exact<{
 
 
 export type GarminChartDataQuery = { garminChartData: Array<{ timestamp: string, altitude: number | null, distance_from_start_km: number | null, speed_kmh: number | null, heart_rate: number | null, hr_zone: number | null, respiration_rate: number | null, cadence: number | null, temperature_c: number | null, latitude: number, longitude: number }> };
+
+export type GarminActivityClimbsQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminActivityClimbsQuery = { garminActivityClimbs: Array<{ id: number, activity_id: string, source_split_index: number, message_index: number | null, climb_type: string | null, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, elevation_gain_meters: number | null, elevation_loss_meters: number | null, start_elevation_meters: number | null, average_grade_percent: number | null, max_grade_percent: number | null, average_speed_mps: number | null, max_speed_mps: number | null, start_latitude: number | null, start_longitude: number | null, end_latitude: number | null, end_longitude: number | null, climb_pro_difficulty: string | null }> };
 
 export type TriggerGarminSyncMutationVariables = Exact<{
   window_hours?: number | null | undefined;
@@ -1641,6 +1730,71 @@ export type GarminChartDataQueryHookResult = ReturnType<typeof useGarminChartDat
 export type GarminChartDataLazyQueryHookResult = ReturnType<typeof useGarminChartDataLazyQuery>;
 export type GarminChartDataSuspenseQueryHookResult = ReturnType<typeof useGarminChartDataSuspenseQuery>;
 export type GarminChartDataQueryResult = ApolloReactCommon.QueryResult<GarminChartDataQuery, GarminChartDataQueryVariables>;
+export const GarminActivityClimbsDocument = gql`
+    query GarminActivityClimbs($activity_id: String!) {
+  garminActivityClimbs(activity_id: $activity_id) {
+    id
+    activity_id
+    source_split_index
+    message_index
+    climb_type
+    start_time
+    end_time
+    duration_seconds
+    elapsed_duration_seconds
+    moving_duration_seconds
+    distance_meters
+    elevation_gain_meters
+    elevation_loss_meters
+    start_elevation_meters
+    average_grade_percent
+    max_grade_percent
+    average_speed_mps
+    max_speed_mps
+    start_latitude
+    start_longitude
+    end_latitude
+    end_longitude
+    climb_pro_difficulty
+  }
+}
+    `;
+
+/**
+ * __useGarminActivityClimbsQuery__
+ *
+ * To run a query within a React component, call `useGarminActivityClimbsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivityClimbsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivityClimbsQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminActivityClimbsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables> & ({ variables: GarminActivityClimbsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>(GarminActivityClimbsDocument, options);
+      }
+export function useGarminActivityClimbsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>(GarminActivityClimbsDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivityClimbsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>;
+export function useGarminActivityClimbsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityClimbsQuery | undefined, GarminActivityClimbsQueryVariables>;
+export function useGarminActivityClimbsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>(GarminActivityClimbsDocument, options);
+        }
+export type GarminActivityClimbsQueryHookResult = ReturnType<typeof useGarminActivityClimbsQuery>;
+export type GarminActivityClimbsLazyQueryHookResult = ReturnType<typeof useGarminActivityClimbsLazyQuery>;
+export type GarminActivityClimbsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityClimbsSuspenseQuery>;
+export type GarminActivityClimbsQueryResult = ApolloReactCommon.QueryResult<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>;
 export const TriggerGarminSyncDocument = gql`
     mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
   triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {

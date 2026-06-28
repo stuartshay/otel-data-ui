@@ -151,12 +151,16 @@ export function ActivityStatsPanel({
   activity: a,
   heartRateZonePoints = [],
 }: ActivityStatsPanelProps) {
+  const hasHeartRateSamples = heartRateZonePoints.some((point) =>
+    isValidHeartRate(point.heart_rate),
+  )
   const hrAvailable =
     a.hr_available === false
       ? false
       : isValidHeartRate(a.avg_heart_rate) ||
         isValidHeartRate(a.max_heart_rate) ||
-        isValidHeartRate(a.min_heart_rate)
+        isValidHeartRate(a.min_heart_rate) ||
+        hasHeartRateSamples
   const heartRateZoneSummaries = useMemo(
     () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
     [heartRateZonePoints, hrAvailable],

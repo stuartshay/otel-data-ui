@@ -8,6 +8,7 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminActivityQuery: vi.fn(),
   useGarminTrackPointsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
+  useGarminActivityClimbsQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
 }))
 const toastMocks = vi.hoisted(() => ({
@@ -121,6 +122,7 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityQuery.mockReset()
     garminDetailHooks.useGarminTrackPointsQuery.mockReset()
     garminDetailHooks.useGarminChartDataQuery.mockReset()
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
     toastMocks.error.mockReset()
     toastMocks.warning.mockReset()
@@ -130,6 +132,11 @@ describe('GarminDetailPage', () => {
       vi.fn(),
       { loading: false },
     ])
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
+      loading: false,
+      data: { garminActivityClimbs: [] },
+      error: undefined,
+    })
   })
 
   function renderPage(
@@ -245,6 +252,47 @@ describe('GarminDetailPage', () => {
     expect(screen.getByTestId('activity-charts')).toBeInTheDocument()
     expect(
       screen.getByText('Chart data failed: chart fetch failed'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the Climbs tab empty state when an activity has no ClimbPro climbs', async () => {
+    const user = userEvent.setup()
+    garminDetailHooks.useGarminActivityQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+      data: {
+        garminActivity: {
+          sport: 'cycling',
+          sub_sport: 'road',
+          start_time: '2026-03-14T09:00:00Z',
+          device_manufacturer: 'Garmin',
+          distance_km: 32,
+          duration_seconds: 5400,
+          avg_speed_kmh: 21,
+          total_ascent_m: 220,
+        },
+      },
+    })
+    garminDetailHooks.useGarminTrackPointsQuery.mockReturnValue({
+      loading: false,
+      data: {
+        garminTrackPoints: {
+          items: [{ latitude: 40.7, longitude: -74.0 }],
+        },
+      },
+    })
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-climbs'))
+
+    expect(
+      screen.getByText('No Garmin ClimbPro climbs found for this activity.'),
     ).toBeInTheDocument()
   })
 
