@@ -184,6 +184,40 @@ describe('ClimbDetailsPanel', () => {
       screen.getByText('No map points available for this climb.'),
     ).toBeInTheDocument()
   })
+
+  it('removes an existing climb map when the selected climb has no map points', async () => {
+    const { rerender } = render(
+      <ClimbDetailsPanel
+        climb={mockClimb()}
+        climbIndex={0}
+        totalClimbs={1}
+        chartPoints={mockChartPoints()}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+        canPrevious={false}
+        canNext={false}
+      />,
+    )
+    await waitFor(() => expect(leafletMocks.map).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <ClimbDetailsPanel
+        climb={mockClimb()}
+        climbIndex={0}
+        totalClimbs={1}
+        chartPoints={mockChartPointsWithoutCoordinates()}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+        canPrevious={false}
+        canNext={false}
+      />,
+    )
+
+    expect(leafletMocks.mapInstance.remove).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByText('No map points available for this climb.'),
+    ).toBeInTheDocument()
+  })
 })
 
 function mockClimb(

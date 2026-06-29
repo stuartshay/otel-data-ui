@@ -276,12 +276,12 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   useEffect(() => {
-    if (!mapRef.current || points.length < 2) return
-
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove()
       mapInstanceRef.current = null
     }
+
+    if (!mapRef.current || points.length < 2) return
 
     const first = points[0]
     const last = points[points.length - 1]

@@ -503,30 +503,21 @@ export function GarminDetailPage() {
           mainClimbs.some((climb) => climb.id === selectedClimbId)
         ? selectedClimbId
         : mainClimbs[0].id
-  if (selectedClimbId !== effectiveSelectedClimbId) {
-    setSelectedClimbId(effectiveSelectedClimbId)
-  }
   const selectedClimbIndex = mainClimbs.findIndex(
     (climb) => climb.id === effectiveSelectedClimbId,
   )
   const selectedClimb =
     selectedClimbIndex >= 0 ? mainClimbs[selectedClimbIndex] : null
   const selectPreviousClimb = useCallback(() => {
-    setSelectedClimbId((current) => {
-      const currentIndex = mainClimbs.findIndex((climb) => climb.id === current)
-      if (currentIndex <= 0) return current
-      return mainClimbs[currentIndex - 1].id
-    })
-  }, [mainClimbs])
+    if (selectedClimbIndex <= 0) return
+    setSelectedClimbId(mainClimbs[selectedClimbIndex - 1].id)
+  }, [mainClimbs, selectedClimbIndex])
   const selectNextClimb = useCallback(() => {
-    setSelectedClimbId((current) => {
-      const currentIndex = mainClimbs.findIndex((climb) => climb.id === current)
-      if (currentIndex < 0 || currentIndex >= mainClimbs.length - 1) {
-        return current
-      }
-      return mainClimbs[currentIndex + 1].id
-    })
-  }, [mainClimbs])
+    if (selectedClimbIndex < 0 || selectedClimbIndex >= mainClimbs.length - 1) {
+      return
+    }
+    setSelectedClimbId(mainClimbs[selectedClimbIndex + 1].id)
+  }, [mainClimbs, selectedClimbIndex])
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
