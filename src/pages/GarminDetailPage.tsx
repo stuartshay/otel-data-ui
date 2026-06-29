@@ -25,6 +25,7 @@ import {
 import { nextSavedPointColor } from '@/components/garmin/savedPointColors'
 import { ActivityCharts } from '@/components/garmin/ActivityCharts'
 import { ActivityHoverDetails } from '@/components/garmin/ActivityHoverDetails'
+import { ClimbDetailsPanel } from '@/components/garmin/ClimbDetailsPanel'
 import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
@@ -41,6 +42,7 @@ import {
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 import { escapeCsvValue, triggerDownload } from '@/lib/export'
 import { formatDurationShort, metersToFeet } from '@/lib/units'
+import { cn } from '@/lib/utils'
 
 /** Douglas-Peucker tolerance in degrees (~1.1 m) for PostGIS ST_Simplify */
 const SIMPLIFY_TOLERANCE = 0.00001
@@ -116,12 +118,16 @@ function formatPercent(value: number | null | undefined): string {
   return value != null ? `${value.toFixed(2)} %` : '—'
 }
 
-function ActivityClimbsTable({ climbs }: { climbs: ActivityClimb[] }) {
-  const mainClimbs = climbs.filter(
-    (climb) => climb.climb_type === MAIN_CLIMB_TYPE,
-  )
-
-  if (mainClimbs.length === 0) {
+function ActivityClimbsTable({
+  climbs,
+  selectedClimbId,
+  onSelectClimb,
+}: {
+  climbs: ActivityClimb[]
+  selectedClimbId: number | null
+  onSelectClimb: (climbId: number) => void
+}) {
+  if (climbs.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
         No Garmin ClimbPro climbs found for this activity.
@@ -144,8 +150,27 @@ function ActivityClimbsTable({ climbs }: { climbs: ActivityClimb[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mainClimbs.map((climb, index) => (
-            <TableRow key={climb.id}>
+          {climbs.map((climb, index) => (
+            <TableRow
+              key={climb.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selectedClimbId === climb.id}
+              data-testid={`climb-row-${index + 1}`}
+              className={cn(
+                'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                selectedClimbId === climb.id
+                  ? 'bg-muted hover:bg-muted'
+                  : 'hover:bg-muted/50',
+              )}
+              onClick={() => onSelectClimb(climb.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onSelectClimb(climb.id)
+                }
+              }}
+            >
               <TableCell className="font-medium">Climb {index + 1}</TableCell>
               <TableCell>
                 {formatDurationShort(climb.duration_seconds ?? null)}
@@ -172,6 +197,7 @@ export function GarminDetailPage() {
   const location = useLocation()
   const [activePoint, setActivePoint] = useState<ChartDataPoint | null>(null)
   const [savedPoints, setSavedPoints] = useState<SavedPoint[]>([])
+  const [selectedClimbId, setSelectedClimbId] = useState<number | null>(null)
 
   // Reset hover state when switching activities so the shared details
   // panel and map marker don't briefly show stale coordinates from the
@@ -461,6 +487,46 @@ export function GarminDetailPage() {
     },
     [rawChartPoints, chartContext, addOrTogglePoint],
   )
+  const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
+  const chartPoints = rawChartPoints
+  const mainClimbs = useMemo(
+    () =>
+      (climbsData?.garminActivityClimbs ?? []).filter(
+        (climb) => climb.climb_type === MAIN_CLIMB_TYPE,
+      ),
+    [climbsData?.garminActivityClimbs],
+  )
+  const effectiveSelectedClimbId =
+    mainClimbs.length === 0
+      ? null
+      : selectedClimbId != null &&
+          mainClimbs.some((climb) => climb.id === selectedClimbId)
+        ? selectedClimbId
+        : mainClimbs[0].id
+  if (selectedClimbId !== effectiveSelectedClimbId) {
+    setSelectedClimbId(effectiveSelectedClimbId)
+  }
+  const selectedClimbIndex = mainClimbs.findIndex(
+    (climb) => climb.id === effectiveSelectedClimbId,
+  )
+  const selectedClimb =
+    selectedClimbIndex >= 0 ? mainClimbs[selectedClimbIndex] : null
+  const selectPreviousClimb = useCallback(() => {
+    setSelectedClimbId((current) => {
+      const currentIndex = mainClimbs.findIndex((climb) => climb.id === current)
+      if (currentIndex <= 0) return current
+      return mainClimbs[currentIndex - 1].id
+    })
+  }, [mainClimbs])
+  const selectNextClimb = useCallback(() => {
+    setSelectedClimbId((current) => {
+      const currentIndex = mainClimbs.findIndex((climb) => climb.id === current)
+      if (currentIndex < 0 || currentIndex >= mainClimbs.length - 1) {
+        return current
+      }
+      return mainClimbs[currentIndex + 1].id
+    })
+  }, [mainClimbs])
 
   if (loading) return <LoadingState message="Loading activity..." />
   if (error)
@@ -469,9 +535,6 @@ export function GarminDetailPage() {
   const a = data?.garminActivity
   if (!a) return <ErrorState message="Activity not found" />
 
-  const mapTrackPoints = mapTrackData?.garminTrackPoints?.items ?? []
-  const chartPoints = chartData?.garminChartData ?? []
-  const climbs = climbsData?.garminActivityClimbs ?? []
   const hasHrData =
     a.avg_heart_rate != null ||
     a.max_heart_rate != null ||
@@ -633,7 +696,25 @@ export function GarminDetailPage() {
             <ErrorState message={`Climbs failed: ${climbsError.message}`} />
           )}
           {!climbsLoading && !climbsError && (
-            <ActivityClimbsTable climbs={climbs} />
+            <>
+              <ActivityClimbsTable
+                climbs={mainClimbs}
+                selectedClimbId={effectiveSelectedClimbId}
+                onSelectClimb={setSelectedClimbId}
+              />
+              {selectedClimb && (
+                <ClimbDetailsPanel
+                  climb={selectedClimb}
+                  climbIndex={selectedClimbIndex}
+                  totalClimbs={mainClimbs.length}
+                  chartPoints={chartPoints}
+                  onPrevious={selectPreviousClimb}
+                  onNext={selectNextClimb}
+                  canPrevious={selectedClimbIndex > 0}
+                  canNext={selectedClimbIndex < mainClimbs.length - 1}
+                />
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
