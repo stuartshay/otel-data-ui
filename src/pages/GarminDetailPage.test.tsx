@@ -109,6 +109,46 @@ vi.mock('@/components/garmin/ActivityCharts', () => ({
   ),
 }))
 
+vi.mock('@/components/garmin/ClimbDetailsPanel', () => ({
+  ClimbDetailsPanel: ({
+    climb,
+    climbIndex,
+    totalClimbs,
+    onPrevious,
+    onNext,
+    canPrevious,
+    canNext,
+  }: {
+    climb: { id: number }
+    climbIndex: number
+    totalClimbs: number
+    onPrevious: () => void
+    onNext: () => void
+    canPrevious: boolean
+    canNext: boolean
+  }) => (
+    <div data-testid="climb-details-panel">
+      Climb {climbIndex + 1} of {totalClimbs} id:{climb.id}
+      <button
+        type="button"
+        aria-label="Previous climb"
+        disabled={!canPrevious}
+        onClick={onPrevious}
+      >
+        previous
+      </button>
+      <button
+        type="button"
+        aria-label="Next climb"
+        disabled={!canNext}
+        onClick={onNext}
+      >
+        next
+      </button>
+    </div>
+  ),
+}))
+
 vi.mock('@/components/garmin/ActivityStatsPanel', () => ({
   ActivityStatsPanel: () => (
     <div data-testid="activity-stats-panel">stats-panel</div>
@@ -294,6 +334,138 @@ describe('GarminDetailPage', () => {
     expect(
       screen.getByText('No Garmin ClimbPro climbs found for this activity.'),
     ).toBeInTheDocument()
+  })
+
+  it('renders ClimbPro rows and auto-selects the first climb', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminActivityClimbs: [
+          mockClimb({ id: 1, source_split_index: 0 }),
+          mockClimb({
+            id: 2,
+            source_split_index: 1,
+            start_time: '2026-03-14T09:20:00Z',
+            end_time: '2026-03-14T09:25:00Z',
+          }),
+          mockClimb({
+            id: 3,
+            climb_type: 'CLIMB_PRO_CYCLING_CLIMB_SECTION',
+          }),
+        ],
+      },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-climbs'))
+
+    expect(screen.getByTestId('climb-row-1')).toHaveTextContent('Climb 1')
+    expect(screen.getByTestId('climb-row-2')).toHaveTextContent('Climb 2')
+    expect(screen.queryByText('Climb 3')).not.toBeInTheDocument()
+    expect(screen.getByTestId('climb-row-1')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByTestId('climb-details-panel')).toHaveTextContent(
+      'Climb 1 of 2 id:1',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Previous climb' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Next climb' }),
+    ).not.toBeDisabled()
+  })
+
+  it('updates the inline climb detail when another climb row is selected', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminActivityClimbs: [
+          mockClimb({ id: 1, source_split_index: 0 }),
+          mockClimb({
+            id: 2,
+            source_split_index: 1,
+            start_time: '2026-03-14T09:20:00Z',
+            end_time: '2026-03-14T09:25:00Z',
+          }),
+        ],
+      },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-climbs'))
+    await user.click(screen.getByTestId('climb-row-2'))
+
+    expect(screen.getByTestId('climb-row-1')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByTestId('climb-row-2')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByTestId('climb-details-panel')).toHaveTextContent(
+      'Climb 2 of 2 id:2',
+    )
+  })
+
+  it('changes selected climbs with previous and next controls', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+    garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminActivityClimbs: [
+          mockClimb({ id: 1, source_split_index: 0 }),
+          mockClimb({
+            id: 2,
+            source_split_index: 1,
+            start_time: '2026-03-14T09:20:00Z',
+            end_time: '2026-03-14T09:25:00Z',
+          }),
+        ],
+      },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-climbs'))
+
+    await user.click(screen.getByRole('button', { name: 'Next climb' }))
+    expect(screen.getByTestId('climb-details-panel')).toHaveTextContent(
+      'Climb 2 of 2 id:2',
+    )
+    expect(screen.getByRole('button', { name: 'Next climb' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Previous climb' }))
+    expect(screen.getByTestId('climb-details-panel')).toHaveTextContent(
+      'Climb 1 of 2 id:1',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Previous climb' }),
+    ).toBeDisabled()
   })
 
   it('selects the nearest chart point when the route map is clicked', async () => {
@@ -630,6 +802,42 @@ describe('GarminDetailPage', () => {
       error: undefined,
       data: { garminChartData: [] },
     })
+  }
+
+  function mockClimb(
+    overrides: Partial<{
+      id: number
+      source_split_index: number
+      climb_type: string
+      start_time: string
+      end_time: string
+    }> = {},
+  ) {
+    return {
+      id: overrides.id ?? 1,
+      activity_id: '42',
+      source_split_index: overrides.source_split_index ?? 0,
+      message_index: null,
+      climb_type: overrides.climb_type ?? 'CLIMB_PRO_CYCLING_CLIMB',
+      start_time: overrides.start_time ?? '2026-03-14T09:05:00Z',
+      end_time: overrides.end_time ?? '2026-03-14T09:10:00Z',
+      duration_seconds: 300,
+      elapsed_duration_seconds: 300,
+      moving_duration_seconds: 300,
+      distance_meters: 500,
+      elevation_gain_meters: 25,
+      elevation_loss_meters: 0,
+      start_elevation_meters: 100,
+      average_grade_percent: 5,
+      max_grade_percent: 8,
+      average_speed_mps: 3,
+      max_speed_mps: 5,
+      start_latitude: 40.7,
+      start_longitude: -74,
+      end_latitude: 40.71,
+      end_longitude: -74.01,
+      climb_pro_difficulty: 'NONE',
+    }
   }
 
   function mockExportPoints() {
