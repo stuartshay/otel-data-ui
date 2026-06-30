@@ -127,48 +127,59 @@ interface ClimbExportMarker {
   climbDifficulty: string | null
 }
 
+interface ClimbExportWindow extends ClimbExportMarker {
+  startTime: number
+  endTime: number
+}
+
 function parseTimestamp(value: string | null | undefined): number | null {
   if (!value) return null
   const timestamp = new Date(value).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
-function getClimbExportMarker(
-  timestamp: string,
-  climbs: ActivityClimb[],
-): ClimbExportMarker {
-  const pointTime = parseTimestamp(timestamp)
-  if (pointTime == null) {
-    return {
-      isClimbPoint: false,
-      climbId: null,
-      climbIndex: null,
-      climbLabel: null,
-      climbType: null,
-      climbDifficulty: null,
-    }
-  }
+const EMPTY_CLIMB_EXPORT_MARKER: ClimbExportMarker = {
+  isClimbPoint: false,
+  climbId: null,
+  climbIndex: null,
+  climbLabel: null,
+  climbType: null,
+  climbDifficulty: null,
+}
 
-  const climbIndex = climbs.findIndex((climb) => {
+function buildClimbExportWindows(climbs: ActivityClimb[]): ClimbExportWindow[] {
+  return climbs.flatMap((climb, index) => {
     const startTime = parseTimestamp(climb.start_time)
     const endTime = parseTimestamp(climb.end_time)
-    return (
-      startTime != null &&
-      endTime != null &&
-      pointTime >= startTime &&
-      pointTime <= endTime
-    )
-  })
-  const climb = climbIndex >= 0 ? climbs[climbIndex] : null
+    if (startTime == null || endTime == null) return []
 
-  return {
-    isClimbPoint: climb != null,
-    climbId: climb?.id ?? null,
-    climbIndex: climb != null ? climbIndex + 1 : null,
-    climbLabel: climb != null ? `Climb ${climbIndex + 1}` : null,
-    climbType: climb?.climb_type ?? null,
-    climbDifficulty: climb?.climb_pro_difficulty ?? null,
-  }
+    return [
+      {
+        startTime,
+        endTime,
+        isClimbPoint: true,
+        climbId: climb.id,
+        climbIndex: index + 1,
+        climbLabel: `Climb ${index + 1}`,
+        climbType: climb.climb_type ?? null,
+        climbDifficulty: climb.climb_pro_difficulty ?? null,
+      },
+    ]
+  })
+}
+
+function getClimbExportMarker(
+  timestamp: string,
+  climbWindows: ClimbExportWindow[],
+): ClimbExportMarker {
+  const pointTime = parseTimestamp(timestamp)
+  if (pointTime == null) return EMPTY_CLIMB_EXPORT_MARKER
+
+  return (
+    climbWindows.find(
+      (climb) => pointTime >= climb.startTime && pointTime <= climb.endTime,
+    ) ?? EMPTY_CLIMB_EXPORT_MARKER
+  )
 }
 
 function ActivityClimbsTable({
@@ -338,10 +349,11 @@ export function GarminDetailPage() {
       }
 
       const points = allPoints
+      const climbWindows = buildClimbExportWindows(mainClimbsRef.current)
       const climbMarkers = new Map(
         points.map((point) => [
           point.id,
-          getClimbExportMarker(point.timestamp, mainClimbsRef.current),
+          getClimbExportMarker(point.timestamp, climbWindows),
         ]),
       )
       if (points.length === 0) {

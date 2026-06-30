@@ -941,6 +941,43 @@ describe('GarminDetailPage', () => {
     vi.restoreAllMocks()
   })
 
+  it('exports empty climb marker fields in CSV when an activity has no climbs', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+
+    const fetchExport = vi.fn().mockResolvedValue({
+      data: {
+        garminTrackPoints: { total: 1, items: mockExportPoints() },
+      },
+    })
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    let exportedBlob: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob
+      return 'blob:test'
+    })
+    const revokeObjectURL = vi.fn()
+    const clickSpy = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
+    await user.click(screen.getByRole('button', { name: /Export CSV/i }))
+
+    const csvText = exportedBlob ? await exportedBlob.text() : ''
+    expect(csvText).toContain(
+      '135,3,22,80,18,false,,,,,,paved,steady,2026-03-14T10:00:00Z',
+    )
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
   it('clicking Export GeoJSON calls the lazy query and triggers a GeoJSON download', async () => {
     const user = userEvent.setup()
     mockLoadedActivity()
@@ -999,6 +1036,56 @@ describe('GarminDetailPage', () => {
       surface_type: 'paved',
       effort_level: 'steady',
       created_at: '2026-03-14T10:00:00Z',
+    })
+
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('exports empty climb marker properties in GeoJSON for points outside climbs', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+    mockLoadedClimbs([
+      mockClimb({
+        id: 7,
+        start_time: '2026-03-14T09:05:00Z',
+        end_time: '2026-03-14T09:10:00Z',
+      }),
+    ])
+
+    const fetchExport = vi.fn().mockResolvedValue({
+      data: {
+        garminTrackPoints: { total: 1, items: mockExportPoints() },
+      },
+    })
+    garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
+      fetchExport,
+      { loading: false },
+    ])
+
+    let exportedBlob: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob
+      return 'blob:test'
+    })
+    const revokeObjectURL = vi.fn()
+    const clickSpy = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy)
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-charts'))
+    await user.click(screen.getByRole('button', { name: /Export GeoJSON/i }))
+
+    if (!exportedBlob) throw new Error('Expected export blob to be created')
+    const geojson = JSON.parse(await exportedBlob.text())
+    expect(geojson.features[0].properties).toMatchObject({
+      is_climb_point: false,
+      climb_id: null,
+      climb_index: null,
+      climb_label: null,
+      climb_type: null,
+      climb_difficulty: null,
     })
 
     vi.unstubAllGlobals()
