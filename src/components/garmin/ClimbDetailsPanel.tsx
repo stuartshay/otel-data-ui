@@ -643,7 +643,7 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="z-[2000]">
+            <SelectContent>
               {availableMetrics.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
