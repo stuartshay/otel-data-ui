@@ -15,6 +15,7 @@ const leafletMocks = vi.hoisted(() => {
     remove: vi.fn(),
   }
   const layer = {
+    bindTooltip: vi.fn().mockReturnThis(),
     addTo: vi.fn().mockReturnThis(),
   }
   const marker = {
@@ -54,6 +55,8 @@ describe('ClimbDetailsPanel', () => {
     leafletMocks.map.mockClear()
     leafletMocks.tileLayer.mockClear()
     leafletMocks.polyline.mockClear()
+    leafletMocks.layer.bindTooltip.mockClear()
+    leafletMocks.layer.addTo.mockClear()
     leafletMocks.circleMarker.mockClear()
     leafletMocks.latLngBounds.mockClear()
     leafletMocks.mapInstance.setView.mockClear()
@@ -93,11 +96,23 @@ describe('ClimbDetailsPanel', () => {
       [
         [40.1, -73.1],
         [40.2, -73.2],
+      ],
+      expect.objectContaining({ color: '#22c55e' }),
+    )
+    expect(leafletMocks.polyline).toHaveBeenCalledWith(
+      [
+        [40.2, -73.2],
         [40.3, -73.3],
       ],
-      expect.objectContaining({ color: '#2563eb' }),
+      expect.objectContaining({ color: '#22c55e' }),
+    )
+    expect(leafletMocks.layer.bindTooltip).toHaveBeenCalledWith(
+      expect.stringContaining('Grade'),
     )
     expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2)
+    expect(
+      screen.getByRole('combobox', { name: 'Color climb map route by metric' }),
+    ).toBeInTheDocument()
   })
 
   it('filters chart points to the selected climb time window', () => {
@@ -268,6 +283,11 @@ function mockChartPoints(): ActivityChartTrackPoint[] {
       distance_from_start_km: 19.5,
       latitude: 40.1,
       longitude: -73.1,
+      speed_kmh: 14,
+      heart_rate: 128,
+      hr_zone: 2,
+      respiration_rate: 22,
+      temperature_c: 18,
     },
     {
       timestamp: '2026-03-14T09:07:00Z',
@@ -275,6 +295,11 @@ function mockChartPoints(): ActivityChartTrackPoint[] {
       distance_from_start_km: 19.75,
       latitude: 40.2,
       longitude: -73.2,
+      speed_kmh: 16,
+      heart_rate: 142,
+      hr_zone: 3,
+      respiration_rate: 24,
+      temperature_c: 19,
     },
     {
       timestamp: '2026-03-14T09:10:00Z',
@@ -282,6 +307,11 @@ function mockChartPoints(): ActivityChartTrackPoint[] {
       distance_from_start_km: 20,
       latitude: 40.3,
       longitude: -73.3,
+      speed_kmh: 17,
+      heart_rate: 151,
+      hr_zone: 3,
+      respiration_rate: 26,
+      temperature_c: 20,
     },
     {
       timestamp: '2026-03-14T09:11:00Z',

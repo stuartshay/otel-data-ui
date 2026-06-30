@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -6,6 +6,13 @@ import type { GarminActivityClimbsQuery } from '@/__generated__/graphql'
 import type { ActivityChartTrackPoint } from '@/components/garmin/ActivityChartData'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatDurationShort, metersToFeet } from '@/lib/units'
 import {
   getClimbSegmentPoints,
@@ -46,6 +53,30 @@ interface ClimbGraphPoint {
 interface ClimbMapPoint {
   latitude: number
   longitude: number
+  altitude: number | null
+  distanceFromStartKm: number | null
+  speedKmh: number | null
+  heartRate: number | null
+  heartRateZone: number | null
+  respirationRate: number | null
+  temperatureC: number | null
+}
+
+type ClimbMapMetric =
+  | 'grade'
+  | 'heart-rate-zone'
+  | 'heart-rate'
+  | 'respiration'
+  | 'speed'
+  | 'temperature'
+
+interface ClimbMapMetricOption {
+  value: ClimbMapMetric
+  label: string
+  available: (points: ClimbMapPoint[]) => boolean
+  color: (point: ClimbMapPoint, nextPoint: ClimbMapPoint) => string
+  tooltip: (point: ClimbMapPoint, nextPoint: ClimbMapPoint) => string
+  legend: Array<{ label: string; color: string }>
 }
 
 function formatDistanceMiles(meters: number | null | undefined): string {
@@ -97,6 +128,16 @@ function toMapPoints(points: ActivityChartTrackPoint[]): ClimbMapPoint[] {
     .map((point) => ({
       latitude: point.latitude as number,
       longitude: point.longitude as number,
+      altitude: point.altitude ?? null,
+      distanceFromStartKm: point.distance_from_start_km ?? null,
+      speedKmh: point.speed_kmh ?? null,
+      heartRate: point.heart_rate ?? null,
+      heartRateZone:
+        point.hr_zone != null && point.hr_zone >= 1 && point.hr_zone <= 5
+          ? point.hr_zone
+          : null,
+      respirationRate: point.respiration_rate ?? null,
+      temperatureC: point.temperature_c ?? null,
     }))
 }
 
@@ -114,6 +155,172 @@ function ClimbStat({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
+function hasFiniteMetric<T extends keyof ClimbMapPoint>(
+  points: ClimbMapPoint[],
+  key: T,
+): boolean {
+  return points.some((point) => {
+    const value = point[key]
+    return typeof value === 'number' && Number.isFinite(value)
+  })
+}
+
+function valueToBucketColor(
+  value: number | null,
+  stops: Array<{ max: number; color: string }>,
+  fallback = '#6b7280',
+): string {
+  if (value == null || !Number.isFinite(value)) return fallback
+  return (
+    stops.find((stop) => value < stop.max)?.color ??
+    stops[stops.length - 1].color
+  )
+}
+
+function segmentGrade(point: ClimbMapPoint, nextPoint: ClimbMapPoint): number {
+  if (
+    point.altitude == null ||
+    nextPoint.altitude == null ||
+    point.distanceFromStartKm == null ||
+    nextPoint.distanceFromStartKm == null
+  ) {
+    return 0
+  }
+
+  const distanceMeters =
+    (nextPoint.distanceFromStartKm - point.distanceFromStartKm) * 1000
+  if (distanceMeters <= 0) return 0
+
+  return ((nextPoint.altitude - point.altitude) / distanceMeters) * 100
+}
+
+function formatMetric(value: number | null, suffix: string): string {
+  return value != null && Number.isFinite(value)
+    ? `${value.toFixed(0)} ${suffix}`
+    : '-'
+}
+
+const METRIC_OPTIONS: ClimbMapMetricOption[] = [
+  {
+    value: 'grade',
+    label: 'Grade',
+    available: (points) => points.length >= 2,
+    color: (point, nextPoint) =>
+      getGradeBucket(segmentGrade(point, nextPoint)).color,
+    tooltip: (point, nextPoint) =>
+      `Grade ${segmentGrade(point, nextPoint).toFixed(1)}%`,
+    legend: GRADE_BUCKETS.map((bucket) => ({
+      label: bucket.label,
+      color: bucket.color,
+    })),
+  },
+  {
+    value: 'heart-rate-zone',
+    label: 'HR zone',
+    available: (points) => hasFiniteMetric(points, 'heartRateZone'),
+    color: (point) =>
+      ['#9ca3af', '#3b82f6', '#22c55e', '#facc15', '#f97316', '#ef4444'][
+        point.heartRateZone ?? 0
+      ] ?? '#6b7280',
+    tooltip: (point) =>
+      point.heartRateZone != null
+        ? `HR zone ${point.heartRateZone}`
+        : 'HR zone -',
+    legend: [
+      { label: 'Z1', color: '#3b82f6' },
+      { label: 'Z2', color: '#22c55e' },
+      { label: 'Z3', color: '#facc15' },
+      { label: 'Z4', color: '#f97316' },
+      { label: 'Z5', color: '#ef4444' },
+    ],
+  },
+  {
+    value: 'heart-rate',
+    label: 'Heart rate',
+    available: (points) => hasFiniteMetric(points, 'heartRate'),
+    color: (point) =>
+      valueToBucketColor(point.heartRate, [
+        { max: 120, color: '#3b82f6' },
+        { max: 140, color: '#22c55e' },
+        { max: 160, color: '#facc15' },
+        { max: 175, color: '#f97316' },
+        { max: Infinity, color: '#ef4444' },
+      ]),
+    tooltip: (point) => `Heart rate ${formatMetric(point.heartRate, 'bpm')}`,
+    legend: [
+      { label: '<120', color: '#3b82f6' },
+      { label: '120-139', color: '#22c55e' },
+      { label: '140-159', color: '#facc15' },
+      { label: '160-174', color: '#f97316' },
+      { label: '175+', color: '#ef4444' },
+    ],
+  },
+  {
+    value: 'respiration',
+    label: 'Respiration',
+    available: (points) => hasFiniteMetric(points, 'respirationRate'),
+    color: (point) =>
+      valueToBucketColor(point.respirationRate, [
+        { max: 20, color: '#3b82f6' },
+        { max: 24, color: '#22c55e' },
+        { max: 28, color: '#facc15' },
+        { max: 32, color: '#f97316' },
+        { max: Infinity, color: '#ef4444' },
+      ]),
+    tooltip: (point) =>
+      `Respiration ${formatMetric(point.respirationRate, 'br/min')}`,
+    legend: [
+      { label: '<20', color: '#3b82f6' },
+      { label: '20-23', color: '#22c55e' },
+      { label: '24-27', color: '#facc15' },
+      { label: '28-31', color: '#f97316' },
+      { label: '32+', color: '#ef4444' },
+    ],
+  },
+  {
+    value: 'speed',
+    label: 'Speed',
+    available: (points) => hasFiniteMetric(points, 'speedKmh'),
+    color: (point) =>
+      valueToBucketColor(point.speedKmh, [
+        { max: 10, color: '#3b82f6' },
+        { max: 18, color: '#22c55e' },
+        { max: 26, color: '#facc15' },
+        { max: 34, color: '#f97316' },
+        { max: Infinity, color: '#ef4444' },
+      ]),
+    tooltip: (point) => `Speed ${formatMetric(point.speedKmh, 'km/h')}`,
+    legend: [
+      { label: '<10', color: '#3b82f6' },
+      { label: '10-17', color: '#22c55e' },
+      { label: '18-25', color: '#facc15' },
+      { label: '26-33', color: '#f97316' },
+      { label: '34+', color: '#ef4444' },
+    ],
+  },
+  {
+    value: 'temperature',
+    label: 'Temperature',
+    available: (points) => hasFiniteMetric(points, 'temperatureC'),
+    color: (point) =>
+      valueToBucketColor(point.temperatureC, [
+        { max: 5, color: '#2563eb' },
+        { max: 15, color: '#06b6d4' },
+        { max: 24, color: '#22c55e' },
+        { max: 30, color: '#f97316' },
+        { max: Infinity, color: '#ef4444' },
+      ]),
+    tooltip: (point) => `Temperature ${formatMetric(point.temperatureC, 'C')}`,
+    legend: [
+      { label: '<5', color: '#2563eb' },
+      { label: '5-14', color: '#06b6d4' },
+      { label: '15-23', color: '#22c55e' },
+      { label: '24-29', color: '#f97316' },
+      { label: '30+', color: '#ef4444' },
+    ],
+  },
+]
 
 function ClimbElevationGradeChart({ points }: { points: ClimbGraphPoint[] }) {
   if (points.length < 2) {
@@ -274,6 +481,15 @@ function ClimbElevationGradeChart({ points }: { points: ClimbGraphPoint[] }) {
 function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const [selectedMetric, setSelectedMetric] = useState<ClimbMapMetric>('grade')
+  const availableMetrics = useMemo(
+    () => METRIC_OPTIONS.filter((option) => option.available(points)),
+    [points],
+  )
+  const activeMetric =
+    availableMetrics.find((option) => option.value === selectedMetric) ??
+    availableMetrics[0] ??
+    METRIC_OPTIONS[0]
 
   useEffect(() => {
     if (mapInstanceRef.current) {
@@ -300,12 +516,23 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
       bounds.extend([point.latitude, point.longitude])
     }
 
-    L.polyline(
-      points.map(
-        (point) => [point.latitude, point.longitude] as [number, number],
-      ),
-      { color: '#2563eb', weight: 5, opacity: 0.9 },
-    ).addTo(map)
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const point = points[index]
+      const nextPoint = points[index + 1]
+      L.polyline(
+        [
+          [point.latitude, point.longitude],
+          [nextPoint.latitude, nextPoint.longitude],
+        ],
+        {
+          color: activeMetric.color(point, nextPoint),
+          weight: 5,
+          opacity: 0.9,
+        },
+      )
+        .bindTooltip(activeMetric.tooltip(point, nextPoint))
+        .addTo(map)
+    }
 
     L.circleMarker([first.latitude, first.longitude], {
       radius: 7,
@@ -335,7 +562,7 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
       map.remove()
       mapInstanceRef.current = null
     }
-  }, [points])
+  }, [points, activeMetric])
 
   if (points.length < 2) {
     return (
@@ -346,11 +573,48 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
   }
 
   return (
-    <div
-      ref={mapRef}
-      data-testid="climb-segment-map"
-      className="h-[320px] w-full overflow-hidden rounded-md"
-    />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm font-medium text-muted-foreground">
+          Color route by
+        </div>
+        <Select
+          value={activeMetric.value}
+          onValueChange={(value) => setSelectedMetric(value as ClimbMapMetric)}
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-44"
+            aria-label="Color climb map route by metric"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {availableMetrics.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div
+        ref={mapRef}
+        data-testid="climb-segment-map"
+        className="h-[320px] w-full overflow-hidden rounded-md"
+      />
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-muted-foreground">
+        {activeMetric.legend.map((item) => (
+          <div key={item.label} className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            {item.label}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
