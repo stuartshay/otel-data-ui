@@ -660,7 +660,7 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
       <div
         ref={mapRef}
         data-testid="climb-segment-map"
-        className="h-[320px] w-full overflow-hidden rounded-md"
+        className="relative z-0 h-[320px] w-full overflow-hidden rounded-md"
       />
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-muted-foreground">
         {activeMetric.legend.map((item) => (
