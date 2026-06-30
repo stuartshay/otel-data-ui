@@ -63,6 +63,7 @@ interface ClimbMapPoint {
 }
 
 type ClimbMapMetric =
+  | 'route'
   | 'grade'
   | 'heart-rate-zone'
   | 'heart-rate'
@@ -178,21 +179,42 @@ function valueToBucketColor(
   )
 }
 
-function segmentGrade(point: ClimbMapPoint, nextPoint: ClimbMapPoint): number {
+function finiteNumber(value: number | null): value is number {
+  return value != null && Number.isFinite(value)
+}
+
+function segmentGrade(
+  point: ClimbMapPoint,
+  nextPoint: ClimbMapPoint,
+): number | null {
+  if (!hasSegmentGrade(point, nextPoint)) return null
+
+  const altitude = point.altitude as number
+  const nextAltitude = nextPoint.altitude as number
+  const distanceFromStartKm = point.distanceFromStartKm as number
+  const nextDistanceFromStartKm = nextPoint.distanceFromStartKm as number
+  const distanceMeters = (nextDistanceFromStartKm - distanceFromStartKm) * 1000
+  return ((nextAltitude - altitude) / distanceMeters) * 100
+}
+
+function hasSegmentGrade(point: ClimbMapPoint, nextPoint: ClimbMapPoint) {
   if (
-    point.altitude == null ||
-    nextPoint.altitude == null ||
-    point.distanceFromStartKm == null ||
-    nextPoint.distanceFromStartKm == null
+    !finiteNumber(point.altitude) ||
+    !finiteNumber(nextPoint.altitude) ||
+    !finiteNumber(point.distanceFromStartKm) ||
+    !finiteNumber(nextPoint.distanceFromStartKm)
   ) {
-    return 0
+    return false
   }
 
-  const distanceMeters =
-    (nextPoint.distanceFromStartKm - point.distanceFromStartKm) * 1000
-  if (distanceMeters <= 0) return 0
+  return nextPoint.distanceFromStartKm > point.distanceFromStartKm
+}
 
-  return ((nextPoint.altitude - point.altitude) / distanceMeters) * 100
+function hasGradeSegments(points: ClimbMapPoint[]): boolean {
+  return points.some((point, index) => {
+    const nextPoint = points[index + 1]
+    return nextPoint != null && hasSegmentGrade(point, nextPoint)
+  })
 }
 
 function formatMetric(value: number | null, suffix: string): string {
@@ -203,13 +225,25 @@ function formatMetric(value: number | null, suffix: string): string {
 
 const METRIC_OPTIONS: ClimbMapMetricOption[] = [
   {
+    value: 'route',
+    label: 'Route',
+    available: (points) => points.length >= 2,
+    color: () => '#2563eb',
+    tooltip: () => 'Climb segment',
+    legend: [{ label: 'Route', color: '#2563eb' }],
+  },
+  {
     value: 'grade',
     label: 'Grade',
-    available: (points) => points.length >= 2,
-    color: (point, nextPoint) =>
-      getGradeBucket(segmentGrade(point, nextPoint)).color,
-    tooltip: (point, nextPoint) =>
-      `Grade ${segmentGrade(point, nextPoint).toFixed(1)}%`,
+    available: hasGradeSegments,
+    color: (point, nextPoint) => {
+      const grade = segmentGrade(point, nextPoint)
+      return grade == null ? '#6b7280' : getGradeBucket(grade).color
+    },
+    tooltip: (point, nextPoint) => {
+      const grade = segmentGrade(point, nextPoint)
+      return grade == null ? 'Grade -' : `Grade ${grade.toFixed(1)}%`
+    },
     legend: GRADE_BUCKETS.map((bucket) => ({
       label: bucket.label,
       color: bucket.color,
@@ -481,6 +515,7 @@ function ClimbElevationGradeChart({ points }: { points: ClimbGraphPoint[] }) {
 function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const [selectedMetric, setSelectedMetric] = useState<ClimbMapMetric>('grade')
   const availableMetrics = useMemo(
     () => METRIC_OPTIONS.filter((option) => option.available(points)),
@@ -496,6 +531,7 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
       mapInstanceRef.current.remove()
       mapInstanceRef.current = null
     }
+    routeLayerRef.current = null
 
     if (!mapRef.current || points.length < 2) return
 
@@ -510,28 +546,11 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
+    routeLayerRef.current = L.layerGroup().addTo(map)
 
     const bounds = L.latLngBounds([])
     for (const point of points) {
       bounds.extend([point.latitude, point.longitude])
-    }
-
-    for (let index = 0; index < points.length - 1; index += 1) {
-      const point = points[index]
-      const nextPoint = points[index + 1]
-      L.polyline(
-        [
-          [point.latitude, point.longitude],
-          [nextPoint.latitude, nextPoint.longitude],
-        ],
-        {
-          color: activeMetric.color(point, nextPoint),
-          weight: 5,
-          opacity: 0.9,
-        },
-      )
-        .bindTooltip(activeMetric.tooltip(point, nextPoint))
-        .addTo(map)
     }
 
     L.circleMarker([first.latitude, first.longitude], {
@@ -561,6 +580,32 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
     return () => {
       map.remove()
       mapInstanceRef.current = null
+      routeLayerRef.current = null
+    }
+  }, [points])
+
+  useEffect(() => {
+    const routeLayer = routeLayerRef.current
+    if (!routeLayer || points.length < 2) return
+
+    routeLayer.clearLayers()
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const point = points[index]
+      const nextPoint = points[index + 1]
+      L.polyline(
+        [
+          [point.latitude, point.longitude],
+          [nextPoint.latitude, nextPoint.longitude],
+        ],
+        {
+          color: activeMetric.color(point, nextPoint),
+          weight: 5,
+          opacity: 0.9,
+        },
+      )
+        .bindTooltip(activeMetric.tooltip(point, nextPoint))
+        .addTo(routeLayer)
     }
   }, [points, activeMetric])
 
@@ -573,30 +618,44 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      data-testid="climb-map-metric-control"
+      data-available-metrics={availableMetrics
+        .map((option) => option.value)
+        .join(' ')}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm font-medium text-muted-foreground">
           Color route by
         </div>
-        <Select
-          value={activeMetric.value}
-          onValueChange={(value) => setSelectedMetric(value as ClimbMapMetric)}
-        >
-          <SelectTrigger
-            size="sm"
-            className="w-44"
-            aria-label="Color climb map route by metric"
+        {availableMetrics.length > 1 ? (
+          <Select
+            value={activeMetric.value}
+            onValueChange={(value) =>
+              setSelectedMetric(value as ClimbMapMetric)
+            }
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {availableMetrics.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger
+              size="sm"
+              className="w-44"
+              aria-label="Color climb map route by metric"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMetrics.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="rounded-md bg-muted px-3 py-1.5 text-sm font-semibold">
+            {activeMetric.label}
+          </div>
+        )}
       </div>
       <div
         ref={mapRef}
