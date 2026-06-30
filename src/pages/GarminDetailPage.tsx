@@ -118,6 +118,70 @@ function formatPercent(value: number | null | undefined): string {
   return value != null ? `${value.toFixed(2)} %` : '—'
 }
 
+interface ClimbExportMarker {
+  isClimbPoint: boolean
+  climbId: number | null
+  climbIndex: number | null
+  climbLabel: string | null
+  climbType: string | null
+  climbDifficulty: string | null
+}
+
+interface ClimbExportWindow extends ClimbExportMarker {
+  startTime: number
+  endTime: number
+}
+
+function parseTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null
+  const timestamp = new Date(value).getTime()
+  return Number.isFinite(timestamp) ? timestamp : null
+}
+
+const EMPTY_CLIMB_EXPORT_MARKER: ClimbExportMarker = {
+  isClimbPoint: false,
+  climbId: null,
+  climbIndex: null,
+  climbLabel: null,
+  climbType: null,
+  climbDifficulty: null,
+}
+
+function buildClimbExportWindows(climbs: ActivityClimb[]): ClimbExportWindow[] {
+  return climbs.flatMap((climb, index) => {
+    const startTime = parseTimestamp(climb.start_time)
+    const endTime = parseTimestamp(climb.end_time)
+    if (startTime == null || endTime == null) return []
+
+    return [
+      {
+        startTime,
+        endTime,
+        isClimbPoint: true,
+        climbId: climb.id,
+        climbIndex: index + 1,
+        climbLabel: `Climb ${index + 1}`,
+        climbType: climb.climb_type ?? null,
+        climbDifficulty: climb.climb_pro_difficulty ?? null,
+      },
+    ]
+  })
+}
+
+function getClimbExportMarker(
+  timestamp: string,
+  climbWindows: ClimbExportWindow[],
+): ClimbExportMarker {
+  const pointTime = parseTimestamp(timestamp)
+  if (pointTime == null) return EMPTY_CLIMB_EXPORT_MARKER
+
+  return (
+    climbWindows.find(
+      (climb) => pointTime >= climb.startTime && pointTime <= climb.endTime,
+    ) ?? EMPTY_CLIMB_EXPORT_MARKER
+  )
+}
+
 function ActivityClimbsTable({
   climbs,
   selectedClimbId,
@@ -248,6 +312,7 @@ export function GarminDetailPage() {
     null,
   )
   const exportInFlightRef = useRef(false)
+  const mainClimbsRef = useRef<ActivityClimb[]>([])
   const isExporting = activeExport !== null
 
   async function handleExport(format: 'csv' | 'geojson') {
@@ -284,6 +349,13 @@ export function GarminDetailPage() {
       }
 
       const points = allPoints
+      const climbWindows = buildClimbExportWindows(mainClimbsRef.current)
+      const climbMarkers = new Map(
+        points.map((point) => [
+          point.id,
+          getClimbExportMarker(point.timestamp, climbWindows),
+        ]),
+      )
       if (points.length === 0) {
         toast.warning('No track points found for this activity', {
           description: 'Exporting an empty file.',
@@ -305,6 +377,12 @@ export function GarminDetailPage() {
           'respiration_rate',
           'cadence',
           'temperature_c',
+          'is_climb_point',
+          'climb_id',
+          'climb_index',
+          'climb_label',
+          'climb_type',
+          'climb_difficulty',
           'surface_type',
           'effort_level',
           'created_at',
@@ -321,8 +399,9 @@ export function GarminDetailPage() {
           'postalcode',
           'geocoded_at',
         ]
-        const rows = points.map((p) =>
-          [
+        const rows = points.map((p) => {
+          const marker = climbMarkers.get(p.id)
+          return [
             p.activity_id,
             p.id,
             p.timestamp,
@@ -336,6 +415,12 @@ export function GarminDetailPage() {
             p.respiration_rate,
             p.cadence,
             p.temperature_c,
+            marker?.isClimbPoint ?? false,
+            marker?.climbId,
+            marker?.climbIndex,
+            marker?.climbLabel,
+            marker?.climbType,
+            marker?.climbDifficulty,
             p.surface_type,
             p.effort_level,
             p.created_at,
@@ -353,8 +438,8 @@ export function GarminDetailPage() {
             p.address?.geocoded_at,
           ]
             .map(escapeCsvValue)
-            .join(','),
-        )
+            .join(',')
+        })
         const csv = [headers.join(','), ...rows].join('\n')
         triggerDownload(
           csv,
@@ -382,6 +467,12 @@ export function GarminDetailPage() {
               respiration_rate: p.respiration_rate,
               cadence: p.cadence,
               temperature_c: p.temperature_c,
+              is_climb_point: climbMarkers.get(p.id)?.isClimbPoint ?? false,
+              climb_id: climbMarkers.get(p.id)?.climbId ?? null,
+              climb_index: climbMarkers.get(p.id)?.climbIndex ?? null,
+              climb_label: climbMarkers.get(p.id)?.climbLabel ?? null,
+              climb_type: climbMarkers.get(p.id)?.climbType ?? null,
+              climb_difficulty: climbMarkers.get(p.id)?.climbDifficulty ?? null,
               surface_type: p.surface_type,
               effort_level: p.effort_level,
               created_at: p.created_at,
@@ -496,6 +587,9 @@ export function GarminDetailPage() {
       ),
     [climbsData?.garminActivityClimbs],
   )
+  useEffect(() => {
+    mainClimbsRef.current = mainClimbs
+  }, [mainClimbs])
   const effectiveSelectedClimbId =
     mainClimbs.length === 0
       ? null
