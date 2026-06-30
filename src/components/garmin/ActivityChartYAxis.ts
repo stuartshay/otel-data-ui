@@ -1,9 +1,5 @@
 type ActivityChartMetric =
-  | 'elevation'
-  | 'speed'
-  | 'heartRate'
-  | 'respirationRate'
-  | 'cadence'
+  'elevation' | 'speed' | 'heartRate' | 'respirationRate' | 'cadence'
 
 interface ActivityYAxisConfig {
   domain?: [(dataMinimum: number) => number, (dataMaximum: number) => number]

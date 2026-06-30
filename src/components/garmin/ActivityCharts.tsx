@@ -58,11 +58,7 @@ interface ActivityChartsProps {
 }
 
 type MetricKey =
-  | 'elevation'
-  | 'speed'
-  | 'heartRate'
-  | 'respirationRate'
-  | 'cadence'
+  'elevation' | 'speed' | 'heartRate' | 'respirationRate' | 'cadence'
 
 interface ChartConfig {
   title: string
