@@ -9,6 +9,7 @@ export interface ActivityChartTrackPoint {
   hr_zone?: number | null
   respiration_rate?: number | null
   cadence?: number | null
+  temperature_c?: number | null
   latitude?: number | null
   longitude?: number | null
 }
