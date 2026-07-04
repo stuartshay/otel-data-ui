@@ -7,6 +7,7 @@ import {
   useGarminTrackPointsQuery,
   useGarminChartDataQuery,
   useGarminActivityClimbsQuery,
+  useGarminActivityLapsQuery,
   useGarminExportPointsLazyQuery,
   type GarminActivityClimbsQuery,
 } from '@/__generated__/graphql'
@@ -29,6 +30,7 @@ import { ClimbDetailsPanel } from '@/components/garmin/ClimbDetailsPanel'
 import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
+import { ActivityLapsTable } from '@/components/garmin/ActivityLapsTable'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -542,6 +544,14 @@ export function GarminDetailPage() {
     variables: { activity_id: activityId ?? '' },
     skip: !activityId,
   })
+  const {
+    data: lapsData,
+    loading: lapsLoading,
+    error: lapsError,
+  } = useGarminActivityLapsQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+  })
   // Resolve map clicks against the *full-resolution* track series (not the
   // downsampled chart series) so the selected point is the true nearest
   // location, then convert it into the chart/display shape using the same
@@ -671,6 +681,9 @@ export function GarminDetailPage() {
           <TabsTrigger value="stats" data-testid="garmin-tab-stats">
             Stats
           </TabsTrigger>
+          <TabsTrigger value="laps" data-testid="garmin-tab-laps">
+            Laps
+          </TabsTrigger>
           <TabsTrigger value="charts" data-testid="garmin-tab-charts">
             Charts
           </TabsTrigger>
@@ -684,6 +697,16 @@ export function GarminDetailPage() {
             activity={{ ...a, hr_available: hasHrData }}
             heartRateZonePoints={chartPoints}
           />
+        </TabsContent>
+
+        <TabsContent value="laps" className="space-y-4">
+          {lapsLoading && <LoadingState message="Loading laps..." />}
+          {lapsError && (
+            <ErrorState message={`Laps failed: ${lapsError.message}`} />
+          )}
+          {!lapsLoading && !lapsError && (
+            <ActivityLapsTable laps={lapsData?.garminActivityLaps ?? []} />
+          )}
         </TabsContent>
 
         <TabsContent value="charts" className="space-y-4">

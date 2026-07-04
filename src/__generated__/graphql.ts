@@ -312,6 +312,49 @@ export type GarminActivityConnection = {
   total: Scalars['Int']['output'];
 };
 
+/** Garmin-native or derived activity lap row. */
+export type GarminActivityLap = {
+  __typename?: 'GarminActivityLap';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** Average lap heart rate in bpm */
+  avg_heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Average lap speed in meters per second */
+  avg_speed_mps?: Maybe<Scalars['Float']['output']>;
+  /** Calories recorded for this lap */
+  calories?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was inserted */
+  created_at?: Maybe<Scalars['String']['output']>;
+  /** Lap distance in meters */
+  distance_meters?: Maybe<Scalars['Float']['output']>;
+  /** Lap timer duration in seconds */
+  duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** Lap elapsed duration in seconds */
+  elapsed_duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** UTC lap end time */
+  end_time?: Maybe<Scalars['String']['output']>;
+  /** Unique lap row identifier */
+  id: Scalars['Float']['output'];
+  /** One-based lap order within the activity */
+  lap_index: Scalars['Int']['output'];
+  /** Maximum lap heart rate in bpm */
+  max_heart_rate?: Maybe<Scalars['Int']['output']>;
+  /** Lap moving duration in seconds */
+  moving_duration_seconds?: Maybe<Scalars['Float']['output']>;
+  /** Lap paved distance in meters */
+  paved_distance_meters?: Maybe<Scalars['Float']['output']>;
+  /** UTC lap start time */
+  start_time?: Maybe<Scalars['String']['output']>;
+  /** Lap elevation gain in meters */
+  total_ascent_meters?: Maybe<Scalars['Float']['output']>;
+  /** Lap elevation loss in meters */
+  total_descent_meters?: Maybe<Scalars['Float']['output']>;
+  /** Lap unpaved distance in meters */
+  unpaved_distance_meters?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was last updated */
+  updated_at?: Maybe<Scalars['String']['output']>;
+};
+
 /** Aggregated Garmin activity totals for a single time bucket (week, month, or year). */
 export type GarminActivityTotal = {
   __typename?: 'GarminActivityTotal';
@@ -760,6 +803,8 @@ export type Query = {
   garminActivityAddresses: Array<GarminActivityAddress>;
   /** Retrieve Garmin-native ClimbPro typed splits for a Garmin activity. */
   garminActivityClimbs: Array<GarminActivityClimb>;
+  /** Retrieve Garmin-native or derived laps for a Garmin activity. */
+  garminActivityLaps: Array<GarminActivityLap>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
@@ -837,6 +882,11 @@ export type QueryGarminActivityAddressesArgs = {
 
 
 export type QueryGarminActivityClimbsArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivityLapsArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -1089,6 +1139,13 @@ export type GarminActivityClimbsQueryVariables = Exact<{
 
 
 export type GarminActivityClimbsQuery = { garminActivityClimbs: Array<{ id: number, activity_id: string, source_split_index: number, message_index: number | null, climb_type: string | null, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, elevation_gain_meters: number | null, elevation_loss_meters: number | null, start_elevation_meters: number | null, average_grade_percent: number | null, max_grade_percent: number | null, average_speed_mps: number | null, max_speed_mps: number | null, start_latitude: number | null, start_longitude: number | null, end_latitude: number | null, end_longitude: number | null, climb_pro_difficulty: string | null }> };
+
+export type GarminActivityLapsQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminActivityLapsQuery = { garminActivityLaps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, paved_distance_meters: number | null, unpaved_distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null, created_at: string | null, updated_at: string | null }> };
 
 export type TriggerGarminSyncMutationVariables = Exact<{
   window_hours?: number | null | undefined;
@@ -1795,6 +1852,67 @@ export type GarminActivityClimbsQueryHookResult = ReturnType<typeof useGarminAct
 export type GarminActivityClimbsLazyQueryHookResult = ReturnType<typeof useGarminActivityClimbsLazyQuery>;
 export type GarminActivityClimbsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityClimbsSuspenseQuery>;
 export type GarminActivityClimbsQueryResult = ApolloReactCommon.QueryResult<GarminActivityClimbsQuery, GarminActivityClimbsQueryVariables>;
+export const GarminActivityLapsDocument = gql`
+    query GarminActivityLaps($activity_id: String!) {
+  garminActivityLaps(activity_id: $activity_id) {
+    id
+    activity_id
+    lap_index
+    start_time
+    end_time
+    duration_seconds
+    elapsed_duration_seconds
+    moving_duration_seconds
+    distance_meters
+    paved_distance_meters
+    unpaved_distance_meters
+    avg_speed_mps
+    avg_heart_rate
+    max_heart_rate
+    total_ascent_meters
+    total_descent_meters
+    calories
+    created_at
+    updated_at
+  }
+}
+    `;
+
+/**
+ * __useGarminActivityLapsQuery__
+ *
+ * To run a query within a React component, call `useGarminActivityLapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivityLapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivityLapsQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminActivityLapsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivityLapsQuery, GarminActivityLapsQueryVariables> & ({ variables: GarminActivityLapsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>(GarminActivityLapsDocument, options);
+      }
+export function useGarminActivityLapsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>(GarminActivityLapsDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivityLapsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
+export function useGarminActivityLapsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityLapsQuery | undefined, GarminActivityLapsQueryVariables>;
+export function useGarminActivityLapsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>(GarminActivityLapsDocument, options);
+        }
+export type GarminActivityLapsQueryHookResult = ReturnType<typeof useGarminActivityLapsQuery>;
+export type GarminActivityLapsLazyQueryHookResult = ReturnType<typeof useGarminActivityLapsLazyQuery>;
+export type GarminActivityLapsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityLapsSuspenseQuery>;
+export type GarminActivityLapsQueryResult = ApolloReactCommon.QueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
 export const TriggerGarminSyncDocument = gql`
     mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
   triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {

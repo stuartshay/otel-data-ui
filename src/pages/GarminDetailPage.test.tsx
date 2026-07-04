@@ -9,6 +9,7 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminTrackPointsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
   useGarminActivityClimbsQuery: vi.fn(),
+  useGarminActivityLapsQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
 }))
 const toastMocks = vi.hoisted(() => ({
@@ -155,6 +156,12 @@ vi.mock('@/components/garmin/ActivityStatsPanel', () => ({
   ),
 }))
 
+vi.mock('@/components/garmin/ActivityLapsTable', () => ({
+  ActivityLapsTable: ({ laps }: { laps: unknown[] }) => (
+    <div data-testid="activity-laps-table">laps:{laps.length}</div>
+  ),
+}))
+
 import { GarminDetailPage } from './GarminDetailPage'
 
 describe('GarminDetailPage', () => {
@@ -163,6 +170,7 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminTrackPointsQuery.mockReset()
     garminDetailHooks.useGarminChartDataQuery.mockReset()
     garminDetailHooks.useGarminActivityClimbsQuery.mockReset()
+    garminDetailHooks.useGarminActivityLapsQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
     toastMocks.error.mockReset()
     toastMocks.warning.mockReset()
@@ -175,6 +183,11 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
       loading: false,
       data: { garminActivityClimbs: [] },
+      error: undefined,
+    })
+    garminDetailHooks.useGarminActivityLapsQuery.mockReturnValue({
+      loading: false,
+      data: { garminActivityLaps: [] },
       error: undefined,
     })
   })
@@ -334,6 +347,41 @@ describe('GarminDetailPage', () => {
     expect(
       screen.getByText('No Garmin ClimbPro climbs found for this activity.'),
     ).toBeInTheDocument()
+  })
+
+  it('renders the Laps tab with activity laps', async () => {
+    const user = userEvent.setup()
+    mockLoadedActivity()
+    garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: { garminChartData: [] },
+    })
+    garminDetailHooks.useGarminActivityLapsQuery.mockReturnValue({
+      loading: false,
+      error: undefined,
+      data: {
+        garminActivityLaps: [
+          {
+            id: 1,
+            lap_index: 1,
+            duration_seconds: 60,
+            distance_meters: 1609.344,
+          },
+        ],
+      },
+    })
+
+    renderPage()
+    await user.click(screen.getByTestId('garmin-tab-laps'))
+
+    expect(garminDetailHooks.useGarminActivityLapsQuery).toHaveBeenCalledWith({
+      variables: { activity_id: '42' },
+      skip: false,
+    })
+    expect(screen.getByTestId('activity-laps-table')).toHaveTextContent(
+      'laps:1',
+    )
   })
 
   it('renders ClimbPro rows and auto-selects the first climb', async () => {
