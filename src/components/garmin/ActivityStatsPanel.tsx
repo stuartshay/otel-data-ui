@@ -14,6 +14,7 @@ import {
   buildHeartRateZoneSummaries,
   type HeartRateZoneSummary,
 } from './heartRateZoneSummary'
+import { cn } from '@/lib/utils'
 
 interface ActivityStatsPanelProps {
   activity: {
@@ -80,6 +81,129 @@ function formatHeartRate(value: number | null | undefined): string {
 
 function isValidHeartRate(value: number | null | undefined): value is number {
   return value != null && value > 0
+}
+
+function hasTrainingEffect(value: number | null | undefined): value is number {
+  return value != null && Number.isFinite(value) && value >= 0 && value <= 5
+}
+
+function formatTrainingEffect(value: number | null | undefined): string {
+  return hasTrainingEffect(value) ? value.toFixed(1) : '—'
+}
+
+const TRAINING_EFFECT_SEGMENTS = [
+  { start: 0, end: 1, className: 'bg-neutral-500' },
+  { start: 1, end: 2, className: 'bg-neutral-500' },
+  { start: 2, end: 3, className: 'bg-blue-400' },
+  { start: 3, end: 4, className: 'bg-green-500' },
+  { start: 4, end: 4.9, className: 'bg-orange-400' },
+  { start: 4.9, end: 5, className: 'bg-red-500' },
+]
+
+function TrainingEffectGauge({
+  label,
+  value,
+  markerClassName,
+}: {
+  label: string
+  value: number | null | undefined
+  markerClassName: string
+}) {
+  const safeValue = hasTrainingEffect(value) ? value : null
+  const markerPosition = safeValue != null ? (safeValue / 5) * 100 : null
+
+  return (
+    <div
+      className="grid items-center"
+      data-testid={`training-effect-${label.toLowerCase()}`}
+    >
+      <div
+        aria-label={`${label} training effect: ${formatTrainingEffect(value)}`}
+        className="relative h-7"
+        role="img"
+      >
+        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 gap-1">
+          {TRAINING_EFFECT_SEGMENTS.map((segment) => (
+            <div
+              className={cn('h-2.5 rounded-sm', segment.className)}
+              key={`${segment.start}-${segment.end}`}
+              style={{
+                flexGrow: segment.end - segment.start,
+              }}
+            />
+          ))}
+        </div>
+        {markerPosition != null && (
+          <div
+            className={cn(
+              'absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-background shadow-[0_0_0_2px_rgba(0,0,0,0.55)]',
+              markerClassName,
+            )}
+            data-testid={`training-effect-${label.toLowerCase()}-marker`}
+            style={{ left: `${markerPosition}%` }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TrainingEffectGraphic({
+  aerobic,
+  anaerobic,
+}: {
+  aerobic: number | null | undefined
+  anaerobic: number | null | undefined
+}) {
+  if (!hasTrainingEffect(aerobic) && !hasTrainingEffect(anaerobic)) {
+    return null
+  }
+
+  return (
+    <Card data-testid="training-effect-graphic" className="lg:col-span-3">
+      <CardHeader className="pb-1">
+        <CardTitle className="text-sm font-semibold">Training Effect</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+        <div className="grid gap-3">
+          <div className="border-t pt-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                Aerobic
+              </div>
+              <div className="text-2xl font-semibold tabular-nums">
+                {formatTrainingEffect(aerobic)}
+              </div>
+            </div>
+          </div>
+          <div className="border-t pt-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
+                Anaerobic
+              </div>
+              <div className="text-2xl font-semibold tabular-nums">
+                {formatTrainingEffect(anaerobic)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 pt-2">
+          <TrainingEffectGauge
+            label="Aerobic"
+            markerClassName="bg-green-500"
+            value={aerobic}
+          />
+          <TrainingEffectGauge
+            label="Anaerobic"
+            markerClassName="bg-blue-400"
+            value={anaerobic}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 function HeartRateZoneBreakdown({
@@ -165,6 +289,9 @@ export function ActivityStatsPanel({
     () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
     [heartRateZonePoints, hrAvailable],
   )
+  const hasAnyTrainingEffect =
+    hasTrainingEffect(a.aerobic_training_effect) ||
+    hasTrainingEffect(a.anaerobic_training_effect)
 
   const sections: StatSection[] = [
     {
@@ -321,31 +448,21 @@ export function ActivityStatsPanel({
         },
       ],
     },
-    ...(hrAvailable
+    ...(hrAvailable && a.exercise_load != null
       ? [
           {
-            title: 'Training Effect',
+            title: 'Training Load',
             rows: [
               {
-                label: 'Aerobic TE',
-                value:
-                  a.aerobic_training_effect != null
-                    ? a.aerobic_training_effect.toFixed(1)
-                    : '—',
-              },
-              {
-                label: 'Anaerobic TE',
-                value:
-                  a.anaerobic_training_effect != null
-                    ? a.anaerobic_training_effect.toFixed(1)
-                    : '—',
-              },
-              {
                 label: 'Exercise Load',
-                value: a.exercise_load != null ? `${a.exercise_load}` : '—',
+                value: `${a.exercise_load}`,
               },
             ],
           } satisfies StatSection,
+        ]
+      : []),
+    ...(hrAvailable
+      ? [
           {
             title: 'Respiration',
             rows: [
@@ -440,6 +557,12 @@ export function ActivityStatsPanel({
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {hrAvailable && (
         <HeartRateZoneBreakdown summaries={heartRateZoneSummaries} />
+      )}
+      {hrAvailable && hasAnyTrainingEffect && (
+        <TrainingEffectGraphic
+          aerobic={a.aerobic_training_effect}
+          anaerobic={a.anaerobic_training_effect}
+        />
       )}
       {sections.map((section) => (
         <Card key={section.title}>

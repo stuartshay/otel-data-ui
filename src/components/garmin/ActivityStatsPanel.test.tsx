@@ -152,6 +152,67 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText('x2')).toBeInTheDocument()
   })
 
+  it('renders the Garmin-style training effect graphic under heart-rate zones', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: 145,
+          aerobic_training_effect: 3.7,
+          anaerobic_training_effect: 2,
+          exercise_load: 180,
+          hr_available: true,
+        }}
+        heartRateZonePoints={[
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            heart_rate: 118,
+            hr_zone: 2,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            heart_rate: 135,
+            hr_zone: 2,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByTestId('heart-rate-zone-breakdown')).toBeInTheDocument()
+    expect(screen.getByTestId('training-effect-graphic')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Aerobic training effect: 3.7'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Anaerobic training effect: 2.0'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Training Load')).toBeInTheDocument()
+    const exerciseLoadLabel = screen.getByText('Exercise Load')
+    expect(exerciseLoadLabel.nextElementSibling).toHaveTextContent('180')
+    expect(screen.getByTestId('training-effect-aerobic-marker')).toHaveStyle({
+      left: '74%',
+    })
+    expect(screen.getByTestId('training-effect-anaerobic-marker')).toHaveStyle({
+      left: '40%',
+    })
+  })
+
+  it('treats out-of-range training effect values as unavailable', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          avg_heart_rate: 145,
+          aerobic_training_effect: 5.8,
+          anaerobic_training_effect: Number.NaN,
+          hr_available: true,
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId('training-effect-graphic'),
+    ).not.toBeInTheDocument()
+  })
+
   it('falls back to the stored total and hides the x2 badge when vigorous minutes are missing', () => {
     render(
       <ActivityStatsPanel
