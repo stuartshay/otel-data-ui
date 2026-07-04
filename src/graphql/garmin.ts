@@ -249,6 +249,32 @@ export const GARMIN_ACTIVITY_CLIMBS_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_LAPS_QUERY = gql`
+  query GarminActivityLaps($activity_id: String!) {
+    garminActivityLaps(activity_id: $activity_id) {
+      id
+      activity_id
+      lap_index
+      start_time
+      end_time
+      duration_seconds
+      elapsed_duration_seconds
+      moving_duration_seconds
+      distance_meters
+      paved_distance_meters
+      unpaved_distance_meters
+      avg_speed_mps
+      avg_heart_rate
+      max_heart_rate
+      total_ascent_meters
+      total_descent_meters
+      calories
+      created_at
+      updated_at
+    }
+  }
+`
+
 export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
   mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
     triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {
