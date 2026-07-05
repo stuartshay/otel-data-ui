@@ -1,10 +1,9 @@
-import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { useGarminActivitiesQuery } from '@/__generated__/graphql'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
-import { formatDurationShort } from '@/lib/units'
+import { GarminActivitiesTable } from './GarminActivitiesTable'
 
 interface GarminDayActivitiesPopoverProps {
   date: string | null
@@ -95,49 +94,14 @@ export function GarminDayActivitiesPopover({
             className="max-h-72 overflow-y-auto"
             data-testid="garmin-day-popover-list"
           >
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-popover">
-                <tr className="border-b">
-                  <th className="px-3 py-1 text-left font-medium text-muted-foreground">
-                    Sport
-                  </th>
-                  <th className="px-2 py-1 text-right font-medium text-muted-foreground">
-                    Distance
-                  </th>
-                  <th className="px-3 py-1 text-right font-medium text-muted-foreground">
-                    Duration
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {activities.map((a) => (
-                  <tr
-                    key={a.activity_id}
-                    className="border-b last:border-b-0 hover:bg-muted/50"
-                    data-testid="garmin-day-popover-row"
-                  >
-                    <td className="px-3 py-1">
-                      <Link
-                        to={`/garmin/${a.activity_id}`}
-                        onClick={() => onOpenChange(false)}
-                        className="font-medium capitalize text-primary hover:underline"
-                        data-testid="garmin-day-popover-sport-link"
-                      >
-                        {a.sport}
-                      </Link>
-                    </td>
-                    <td className="px-2 py-1 text-right tabular-nums">
-                      {a.distance_km != null
-                        ? `${a.distance_km.toFixed(2)} km`
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">
-                      {formatDurationShort(a.duration_seconds)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <GarminActivitiesTable
+              activities={activities}
+              distanceUnit="mi"
+              linkSport
+              onSportClick={() => onOpenChange(false)}
+              rowTestId="garmin-day-popover-row"
+              sportLinkTestId="garmin-day-popover-sport-link"
+            />
           </div>
         )}
       </PopoverContent>

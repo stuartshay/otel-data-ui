@@ -13,7 +13,11 @@ import { useGarminActivitiesQuery } from '@/__generated__/graphql'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { cn } from '@/lib/utils'
-import { formatDuration, formatDurationShort, kmToMi } from '@/lib/units'
+import { formatDuration, kmToMi } from '@/lib/units'
+import {
+  GarminActivitiesTable,
+  type GarminActivityTableRow,
+} from './GarminActivitiesTable'
 
 const SPORT = 'cycling'
 const BAR_COLOR = '#2563eb'
@@ -35,6 +39,8 @@ interface DayBucket {
   duration_seconds: number
   /** Number of rides completed that day. */
   count: number
+  /** Individual rides for the day, used by the tooltip detail table. */
+  activities: GarminActivityTableRow[]
 }
 
 // Recharts tooltip styled to match the Garmin Activity heatmap day popover.
@@ -62,32 +68,7 @@ function ActivityTooltip({
         </p>
       </div>
       {day.count > 0 ? (
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b">
-              <th className="px-3 py-1 text-left font-medium text-muted-foreground">
-                Sport
-              </th>
-              <th className="px-2 py-1 text-right font-medium text-muted-foreground">
-                Distance
-              </th>
-              <th className="px-3 py-1 text-right font-medium text-muted-foreground">
-                Duration
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-3 py-1">Cycling</td>
-              <td className="px-2 py-1 text-right tabular-nums">
-                {day.distance_mi.toFixed(2)} mi
-              </td>
-              <td className="px-3 py-1 text-right tabular-nums">
-                {formatDurationShort(day.duration_seconds)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <GarminActivitiesTable activities={day.activities} distanceUnit="mi" />
       ) : (
         <p className="px-3 py-2 text-[11px] text-muted-foreground">
           No activities.
@@ -141,6 +122,7 @@ export function CyclingInFocus() {
         distance_mi: 0,
         duration_seconds: 0,
         count: 0,
+        activities: [],
       })
     }
     const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]))
@@ -156,6 +138,12 @@ export function CyclingInFocus() {
       bucket.distance_mi += kmToMi(km)
       bucket.duration_seconds += dur
       bucket.count += 1
+      bucket.activities.push({
+        activity_id: activity.activity_id,
+        sport: activity.sport,
+        distance_km: activity.distance_km,
+        duration_seconds: activity.duration_seconds,
+      })
       totalKm += km
       seconds += dur
     }

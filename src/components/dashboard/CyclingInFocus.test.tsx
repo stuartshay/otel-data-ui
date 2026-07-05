@@ -135,6 +135,43 @@ describe('CyclingInFocus', () => {
     expect(jun18?.distance_mi).toBeCloseTo(31.07, 1)
   })
 
+  it('keeps same-day rides as separate tooltip activities while aggregating the bar', () => {
+    mockActivities([
+      {
+        activity_id: 'a1',
+        sport: 'cycling',
+        start_time: '2026-06-20T08:00:00',
+        distance_km: 25.77,
+        duration_seconds: 6480,
+      },
+      {
+        activity_id: 'a2',
+        sport: 'cycling',
+        start_time: '2026-06-20T14:00:00',
+        distance_km: 18.56,
+        duration_seconds: 5040,
+      },
+    ])
+
+    render(<CyclingInFocus />)
+
+    const jun20 = latestBarChartData.find((d) => d.date === '2026-06-20')
+    expect(jun20?.count).toBe(2)
+    expect(jun20?.distance_mi).toBeCloseTo(27.55, 1)
+    expect(jun20?.activities).toEqual([
+      expect.objectContaining({
+        activity_id: 'a1',
+        distance_km: 25.77,
+        duration_seconds: 6480,
+      }),
+      expect.objectContaining({
+        activity_id: 'a2',
+        distance_km: 18.56,
+        duration_seconds: 5040,
+      }),
+    ])
+  })
+
   it('uses unique date keys for the chart axis while rendering one-letter ticks', () => {
     mockActivities(SAMPLE_ITEMS)
 

@@ -84,7 +84,7 @@ describe('GarminDayActivitiesPopover', () => {
 
     const { onOpenChange } = renderPopover()
 
-    expect(screen.getByText('42.20 km')).toBeInTheDocument()
+    expect(screen.getByText('26.22 mi')).toBeInTheDocument()
     expect(screen.getByText('1h 2m')).toBeInTheDocument()
 
     const link = screen.getByTestId('garmin-day-popover-sport-link')
