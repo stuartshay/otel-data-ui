@@ -157,8 +157,16 @@ vi.mock('@/components/garmin/ActivityStatsPanel', () => ({
 }))
 
 vi.mock('@/components/garmin/ActivityLapsTable', () => ({
-  ActivityLapsTable: ({ laps }: { laps: unknown[] }) => (
-    <div data-testid="activity-laps-table">laps:{laps.length}</div>
+  ActivityLapsTable: ({
+    laps,
+    chartPoints,
+  }: {
+    laps: unknown[]
+    chartPoints?: unknown[]
+  }) => (
+    <div data-testid="activity-laps-table">
+      laps:{laps.length} chart-points:{chartPoints?.length ?? 0}
+    </div>
   ),
 }))
 
@@ -355,7 +363,15 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminChartDataQuery.mockReturnValue({
       loading: false,
       error: undefined,
-      data: { garminChartData: [] },
+      data: {
+        garminChartData: [
+          {
+            timestamp: '2026-03-14T09:00:00Z',
+            latitude: 40.7,
+            longitude: -74,
+          },
+        ],
+      },
     })
     garminDetailHooks.useGarminActivityLapsQuery.mockReturnValue({
       loading: false,
@@ -380,7 +396,7 @@ describe('GarminDetailPage', () => {
       skip: false,
     })
     expect(screen.getByTestId('activity-laps-table')).toHaveTextContent(
-      'laps:1',
+      'laps:1 chart-points:1',
     )
   })
 

@@ -705,7 +705,10 @@ export function GarminDetailPage() {
             <ErrorState message={`Laps failed: ${lapsError.message}`} />
           )}
           {!lapsLoading && !lapsError && (
-            <ActivityLapsTable laps={lapsData?.garminActivityLaps ?? []} />
+            <ActivityLapsTable
+              laps={lapsData?.garminActivityLaps ?? []}
+              chartPoints={chartPoints}
+            />
           )}
         </TabsContent>
 

@@ -31,6 +31,14 @@ test.describe('Garmin Activity Laps', () => {
       'aria-pressed',
       'true',
     )
+    await expect(page.getByTestId('activity-lap-details-panel')).toBeVisible()
+    await expect(page.getByText('Timer Time')).toBeVisible()
+    await expect(page.getByText('Distance')).toBeVisible()
+    await expect(
+      page
+        .getByTestId('activity-route-map')
+        .or(page.getByTestId('activity-lap-route-empty')),
+    ).toBeVisible()
 
     const secondLapButton = page
       .getByTestId('lap-row-2')
