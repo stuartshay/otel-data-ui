@@ -10,6 +10,7 @@ import { LocationsPage } from '@/pages/LocationsPage'
 import { LocationDetailPage } from '@/pages/LocationDetailPage'
 import { GarminPage } from '@/pages/GarminPage'
 import { GarminDetailPage } from '@/pages/GarminDetailPage'
+import { LapComparisonPage } from '@/pages/LapComparisonPage'
 import { MapPage } from '@/pages/MapPage'
 import { DailySummaryPage } from '@/pages/DailySummaryPage'
 import { DailySummaryDetailPage } from '@/pages/DailySummaryDetailPage'
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="locations" element={<LocationsPage />} />
                 <Route path="locations/:id" element={<LocationDetailPage />} />
                 <Route path="garmin" element={<GarminPage />} />
+                <Route path="garmin/compare" element={<LapComparisonPage />} />
                 <Route
                   path="garmin/:activityId"
                   element={<GarminDetailPage />}

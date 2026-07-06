@@ -1147,6 +1147,17 @@ export type GarminActivityLapsQueryVariables = Exact<{
 
 export type GarminActivityLapsQuery = { garminActivityLaps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, paved_distance_meters: number | null, unpaved_distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null, created_at: string | null, updated_at: string | null }> };
 
+export type GarminLapsComparisonQueryVariables = Exact<{
+  sport?: string | null | undefined;
+  date_from?: string | null | undefined;
+  date_to?: string | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+}>;
+
+
+export type GarminLapsComparisonQuery = { garminLapsComparison: { total: number, limit: number, offset: number, items: Array<{ activity: { activity_id: string, sport: string | null, sub_sport: string | null, start_time: string | null, distance_km: number | null, duration_seconds: number | null, avg_speed_kmh: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_m: number | null }, laps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null }> }> } };
+
 export type TriggerGarminSyncMutationVariables = Exact<{
   window_hours?: number | null | undefined;
   lookback?: number | null | undefined;
@@ -1913,6 +1924,82 @@ export type GarminActivityLapsQueryHookResult = ReturnType<typeof useGarminActiv
 export type GarminActivityLapsLazyQueryHookResult = ReturnType<typeof useGarminActivityLapsLazyQuery>;
 export type GarminActivityLapsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityLapsSuspenseQuery>;
 export type GarminActivityLapsQueryResult = ApolloReactCommon.QueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
+export const GarminLapsComparisonDocument = gql`
+    query GarminLapsComparison($sport: String, $date_from: String, $date_to: String, $limit: Int, $offset: Int) {
+  garminLapsComparison(
+    sport: $sport
+    date_from: $date_from
+    date_to: $date_to
+    limit: $limit
+    offset: $offset
+  ) {
+    total
+    limit
+    offset
+    items {
+      activity {
+        activity_id
+        sport
+        sub_sport
+        start_time
+        distance_km
+        duration_seconds
+        avg_speed_kmh
+        avg_heart_rate
+        max_heart_rate
+        total_ascent_m
+      }
+      laps {
+        id
+        activity_id
+        lap_index
+        start_time
+        end_time
+        duration_seconds
+        distance_meters
+        avg_speed_mps
+        avg_heart_rate
+        max_heart_rate
+        total_ascent_meters
+        total_descent_meters
+        calories
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGarminLapsComparisonQuery__
+ *
+ * To run a query within a React component, call `useGarminLapsComparisonQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminLapsComparisonQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminLapsComparisonQuery({
+ *   variables: {
+ *      sport: // value for 'sport'
+ *      date_from: // value for 'date_from'
+ *      date_to: // value for 'date_to'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useGarminLapsComparisonQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GarminLapsComparisonQuery, GarminLapsComparisonQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminLapsComparisonQuery, GarminLapsComparisonQueryVariables>(GarminLapsComparisonDocument, options);
+      }
+export function useGarminLapsComparisonLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminLapsComparisonQuery, GarminLapsComparisonQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminLapsComparisonQuery, GarminLapsComparisonQueryVariables>(GarminLapsComparisonDocument, options);
+        }
+export type GarminLapsComparisonQueryHookResult = ReturnType<typeof useGarminLapsComparisonQuery>;
+export type GarminLapsComparisonLazyQueryHookResult = ReturnType<typeof useGarminLapsComparisonLazyQuery>;
+export type GarminLapsComparisonQueryResult = ApolloReactCommon.QueryResult<GarminLapsComparisonQuery, GarminLapsComparisonQueryVariables>;
 export const TriggerGarminSyncDocument = gql`
     mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
   triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {
