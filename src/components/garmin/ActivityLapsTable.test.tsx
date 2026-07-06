@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ActivityLapsTable } from './ActivityLapsTable'
+import { toRoutePoints } from './ActivityLapRoutePoints'
 import {
   buildLapSummary,
   getLapSegmentPoints,
@@ -393,6 +394,31 @@ describe('ActivityLapsTable', () => {
       { latitude: 40.7, longitude: -74.01, speed_kmh: 18 },
       { latitude: 40.71, longitude: -74.02, speed_kmh: 20 },
     ])
+  })
+
+  it('filters invalid coordinates before converting route points', () => {
+    expect(
+      toRoutePoints([
+        {
+          timestamp: '2026-03-14T09:05:00Z',
+          latitude: 40.7,
+          longitude: -74.01,
+          speed_kmh: 18,
+        },
+        {
+          timestamp: '2026-03-14T09:06:00Z',
+          latitude: null,
+          longitude: -74.02,
+          speed_kmh: 19,
+        },
+        {
+          timestamp: '2026-03-14T09:07:00Z',
+          latitude: 40.72,
+          longitude: Number.NaN,
+          speed_kmh: 20,
+        },
+      ]),
+    ).toEqual([{ latitude: 40.7, longitude: -74.01, speed_kmh: 18 }])
   })
 
   it('uses the effective fallback end time in the selected lap details', () => {

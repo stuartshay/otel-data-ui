@@ -11,6 +11,7 @@ import {
 import { formatDuration, metersToFeet } from '@/lib/units'
 import { cn } from '@/lib/utils'
 import type { ActivityChartTrackPoint } from './ActivityChartData'
+import { toRoutePoints } from './ActivityLapRoutePoints'
 import { ActivityRouteMap } from './ActivityRouteMap'
 import {
   buildLapSummary,
@@ -25,12 +26,6 @@ const MPS_TO_MPH = 2.2369362921
 interface ActivityLapsTableProps {
   laps: ActivityLap[]
   chartPoints?: ActivityChartTrackPoint[]
-}
-
-interface LapRoutePoint {
-  latitude: number
-  longitude: number
-  speed_kmh?: number | null
 }
 
 function formatDistanceMeters(value: number | null | undefined): string {
@@ -105,14 +100,6 @@ function LapStat({ label, value }: { label: string; value: string }) {
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
   )
-}
-
-function toRoutePoints(points: ActivityChartTrackPoint[]): LapRoutePoint[] {
-  return points.map((point) => ({
-    latitude: point.latitude as number,
-    longitude: point.longitude as number,
-    speed_kmh: point.speed_kmh,
-  }))
 }
 
 function ActivityLapDetailsPanel({
