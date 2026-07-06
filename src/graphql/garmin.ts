@@ -275,6 +275,57 @@ export const GARMIN_ACTIVITY_LAPS_QUERY = gql`
   }
 `
 
+export const GARMIN_LAPS_COMPARISON_QUERY = gql`
+  query GarminLapsComparison(
+    $sport: String
+    $date_from: String
+    $date_to: String
+    $limit: Int
+    $offset: Int
+  ) {
+    garminLapsComparison(
+      sport: $sport
+      date_from: $date_from
+      date_to: $date_to
+      limit: $limit
+      offset: $offset
+    ) {
+      total
+      limit
+      offset
+      items {
+        activity {
+          activity_id
+          sport
+          sub_sport
+          start_time
+          distance_km
+          duration_seconds
+          avg_speed_kmh
+          avg_heart_rate
+          max_heart_rate
+          total_ascent_m
+        }
+        laps {
+          id
+          activity_id
+          lap_index
+          start_time
+          end_time
+          duration_seconds
+          distance_meters
+          avg_speed_mps
+          avg_heart_rate
+          max_heart_rate
+          total_ascent_meters
+          total_descent_meters
+          calories
+        }
+      }
+    }
+  }
+`
+
 export const TRIGGER_GARMIN_SYNC_MUTATION = gql`
   mutation TriggerGarminSync($window_hours: Int, $lookback: Int) {
     triggerGarminSync(window_hours: $window_hours, lookback: $lookback) {
