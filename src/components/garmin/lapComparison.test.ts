@@ -96,6 +96,46 @@ describe('buildComparisonMatrix', () => {
     expect(a1Lap2.score).toBeNull()
   })
 
+  it('does not flag any PR when all values in a column are tied (no spread)', () => {
+    const tied: ComparisonItem[] = [
+      {
+        activity: { activity_id: 't1', start_time: '2026-07-05T10:00:00Z' },
+        laps: [
+          {
+            lap_index: 1,
+            duration_seconds: 1500,
+            distance_meters: 8046,
+            avg_speed_mps: 5,
+            avg_heart_rate: 120,
+            max_heart_rate: 140,
+            total_ascent_meters: 20,
+            total_descent_meters: 18,
+            calories: 260,
+          },
+        ],
+      },
+      {
+        activity: { activity_id: 't2', start_time: '2026-07-04T10:00:00Z' },
+        laps: [
+          {
+            lap_index: 1,
+            duration_seconds: 1500,
+            distance_meters: 8046,
+            avg_speed_mps: 5,
+            avg_heart_rate: 120,
+            max_heart_rate: 140,
+            total_ascent_meters: 20,
+            total_descent_meters: 18,
+            calories: 260,
+          },
+        ],
+      },
+    ]
+    const matrix = buildComparisonMatrix(tied, 'time')
+    expect(matrix.rows.every((r) => r.cells.every((c) => !c.isPR))).toBe(true)
+    expect(matrix.rows[0].cells[0].score).toBeNull()
+  })
+
   it('computes best/avg/worst summaries per lap column', () => {
     const matrix = buildComparisonMatrix(items, 'time')
     // Lap 1: 1500 and 1600 -> best 25:00, worst 26:40, avg 25:50

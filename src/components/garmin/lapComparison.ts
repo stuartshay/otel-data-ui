@@ -130,7 +130,7 @@ export interface MatrixCell {
   formatted: string
   /** 0 (worst) .. 1 (best) within the lap column; null when no value or no spread. */
   score: number | null
-  /** True when this cell holds the best value in its lap column (needs ≥2 values). */
+  /** True when this cell holds the best value in a lap column that has a spread of values. */
   isPR: boolean
 }
 
@@ -211,12 +211,12 @@ export function buildComparisonMatrix(
       const stat = colStats[c - 1]
       let score: number | null = null
       let isPR = false
-      if (value != null && stat) {
-        if (stat.max !== stat.min) {
-          const norm = (value - stat.min) / (stat.max - stat.min)
-          score = def.higherIsBetter ? norm : 1 - norm
-        }
-        isPR = value === stat.best && stat.values.length > 1
+      if (value != null && stat && stat.max !== stat.min) {
+        const norm = (value - stat.min) / (stat.max - stat.min)
+        score = def.higherIsBetter ? norm : 1 - norm
+        // Only flag a PR when the column actually has a spread of values, so a
+        // column where every activity ties (no-spread) highlights nothing.
+        isPR = value === stat.best
       }
       cells.push({
         lapIndex: c,

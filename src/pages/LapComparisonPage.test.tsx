@@ -145,7 +145,8 @@ describe('LapComparisonPage', () => {
     expect(screen.getByText(/no laps to compare/i)).toBeInTheDocument()
   })
 
-  it('shows the error state and allows retry', () => {
+  it('shows the error state and retries when the Retry button is clicked', async () => {
+    const user = userEvent.setup()
     const refetch = vi.fn()
     garminHooks.useGarminLapsComparisonQuery.mockReturnValue({
       data: undefined,
@@ -156,5 +157,8 @@ describe('LapComparisonPage', () => {
 
     renderWithRouter(<LapComparisonPage />, { route: '/garmin/compare' })
     expect(screen.getByText('boom')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
   })
 })
