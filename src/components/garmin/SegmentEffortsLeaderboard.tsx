@@ -15,11 +15,11 @@ import { cn } from '@/lib/utils'
 import {
   EFFORT_SORTS,
   bestEffortActivityId,
-  formatDistanceKm,
+  formatDistanceMi,
   formatEffortDate,
   formatElapsed,
   formatHeartRate,
-  formatSpeedKmh,
+  formatSpeedMph,
   sortEfforts,
   type EffortSort,
   type SegmentEffort,
@@ -70,7 +70,7 @@ export function SegmentEffortsLeaderboard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((effort) => {
+            {sorted.map((effort, index) => {
               const isPR = effort.activity_id === bestActivityId
               return (
                 <TableRow
@@ -79,7 +79,7 @@ export function SegmentEffortsLeaderboard({
                   data-testid="segment-effort-row"
                 >
                   <TableCell className="font-medium tabular-nums">
-                    {effort.rank}
+                    {index + 1}
                   </TableCell>
                   <TableCell>
                     {formatEffortDate(
@@ -102,10 +102,10 @@ export function SegmentEffortsLeaderboard({
                     </span>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {formatSpeedKmh(effort.avg_speed_kmh)}
+                    {formatSpeedMph(effort.avg_speed_kmh)}
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {formatDistanceKm(effort.distance_km)}
+                    {formatDistanceMi(effort.distance_km)}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {formatHeartRate(effort.avg_heart_rate)}

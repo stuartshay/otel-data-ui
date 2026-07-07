@@ -68,12 +68,12 @@ export function formatElapsed(seconds: number | null | undefined): string {
   return formatDuration(seconds)
 }
 
-export function formatSpeedKmh(value: number | null | undefined): string {
+export function formatSpeedMph(value: number | null | undefined): string {
   if (value == null) return '—'
   return `${kmhToMph(value).toFixed(1)} mph`
 }
 
-export function formatDistanceKm(value: number | null | undefined): string {
+export function formatDistanceMi(value: number | null | undefined): string {
   if (value == null) return '—'
   return `${kmToMi(value).toFixed(2)} mi`
 }

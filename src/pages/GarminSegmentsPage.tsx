@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  formatDistanceKm,
+  formatDistanceMi,
   formatEffortDate,
   formatTolerance,
 } from '@/components/garmin/segmentEfforts'
@@ -38,7 +38,7 @@ export function GarminSegmentsPage() {
       ) : segments.length === 0 ? (
         <EmptyState
           title="No saved segments"
-          message="Create a segment from an activity lap or climb to compare efforts over time."
+          message="Saved segments will appear here. Creating a segment from an activity lap or climb is coming soon."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -63,7 +63,7 @@ export function GarminSegmentsPage() {
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">Distance</dt>
                     <dd className="text-right tabular-nums">
-                      {formatDistanceKm(
+                      {formatDistanceMi(
                         segment.distance_meters != null
                           ? segment.distance_meters / 1000
                           : null,

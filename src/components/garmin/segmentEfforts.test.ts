@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   bestEffortActivityId,
-  formatDistanceKm,
+  formatDistanceMi,
   formatElapsed,
-  formatSpeedKmh,
+  formatSpeedMph,
   formatTolerance,
   sortEfforts,
   type SegmentEffort,
@@ -94,13 +94,13 @@ describe('formatters', () => {
   })
 
   it('formats km/h to mph', () => {
-    expect(formatSpeedKmh(20)).toBe('12.4 mph')
-    expect(formatSpeedKmh(null)).toBe('—')
+    expect(formatSpeedMph(20)).toBe('12.4 mph')
+    expect(formatSpeedMph(null)).toBe('—')
   })
 
   it('formats km to miles', () => {
-    expect(formatDistanceKm(1)).toBe('0.62 mi')
-    expect(formatDistanceKm(null)).toBe('—')
+    expect(formatDistanceMi(1)).toBe('0.62 mi')
+    expect(formatDistanceMi(null)).toBe('—')
   })
 
   it('formats tolerance in meters', () => {

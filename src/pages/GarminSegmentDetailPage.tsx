@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import {
-  formatDistanceKm,
+  formatDistanceMi,
   formatTolerance,
   type SegmentEffort,
 } from '@/components/garmin/segmentEfforts'
@@ -41,6 +41,7 @@ export function GarminSegmentDetailPage() {
     data: effortsData,
     loading: effortsLoading,
     error: effortsError,
+    refetch: refetchEfforts,
   } = useGarminSegmentEffortsQuery({
     variables: { id, limit: EFFORTS_LIMIT },
     skip: !validId,
@@ -136,7 +137,7 @@ export function GarminSegmentDetailPage() {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Distance</dt>
               <dd className="text-right tabular-nums">
-                {formatDistanceKm(
+                {formatDistanceMi(
                   segment.distance_meters != null
                     ? segment.distance_meters / 1000
                     : null,
@@ -171,7 +172,10 @@ export function GarminSegmentDetailPage() {
             {effortsLoading && !effortsData ? (
               <LoadingState message="Loading efforts..." />
             ) : effortsError ? (
-              <ErrorState message={effortsError.message} />
+              <ErrorState
+                message={effortsError.message}
+                onRetry={() => refetchEfforts()}
+              />
             ) : efforts.length === 0 ? (
               <EmptyState
                 title="No efforts yet"
