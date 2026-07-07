@@ -31,6 +31,12 @@ vi.mock('./ActivityRouteMap', () => ({
   },
 }))
 
+vi.mock('./SaveSegmentPopover', () => ({
+  SaveSegmentPopover: () => (
+    <div data-testid="save-segment-trigger">save-segment</div>
+  ),
+}))
+
 function lap(overrides: Partial<ActivityLap> = {}): ActivityLap {
   return {
     id: overrides.lap_index ?? 1,
@@ -515,6 +521,50 @@ describe('ActivityLapsTable', () => {
     expect(screen.getByTestId('activity-lap-route-empty')).toHaveTextContent(
       'No route points available for this lap.',
     )
+  })
+
+  it('offers Save as segment only when the lap has 2+ route points', () => {
+    const selectedLap = lap({
+      lap_index: 1,
+      start_time: '2026-03-14T09:05:00Z',
+      end_time: '2026-03-14T09:10:00Z',
+    })
+
+    const { unmount } = render(
+      <ActivityLapsTable
+        laps={[selectedLap]}
+        chartPoints={[
+          {
+            timestamp: '2026-03-14T09:05:00Z',
+            latitude: 40.7,
+            longitude: -74.01,
+          },
+          {
+            timestamp: '2026-03-14T09:10:00Z',
+            latitude: 40.71,
+            longitude: -74.02,
+          },
+        ]}
+      />,
+    )
+    fireEvent.click(screen.getByTestId('lap-row-1'))
+    expect(screen.getByTestId('save-segment-trigger')).toBeInTheDocument()
+    unmount()
+
+    render(
+      <ActivityLapsTable
+        laps={[selectedLap]}
+        chartPoints={[
+          {
+            timestamp: '2026-03-14T09:07:00Z',
+            latitude: 40.7,
+            longitude: -74.01,
+          },
+        ]}
+      />,
+    )
+    fireEvent.click(screen.getByTestId('lap-row-1'))
+    expect(screen.queryByTestId('save-segment-trigger')).toBeNull()
   })
 
   it('renders an empty state when no laps are available', () => {

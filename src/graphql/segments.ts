@@ -81,3 +81,30 @@ export const GARMIN_SEGMENT_EFFORTS_QUERY = gql`
     }
   }
 `
+
+export const CREATE_GARMIN_SEGMENT_MUTATION = gql`
+  mutation CreateGarminSegment($input: CreateGarminSegmentInput!) {
+    createGarminSegment(input: $input) {
+      id
+      name
+      sport
+      start_latitude
+      start_longitude
+      end_latitude
+      end_longitude
+      distance_meters
+      match_tolerance_meters
+      source_activity_id
+      source_lap_index
+      source_climb_index
+      created_at
+      updated_at
+    }
+  }
+`
+
+export const DELETE_GARMIN_SEGMENT_MUTATION = gql`
+  mutation DeleteGarminSegment($id: Int!) {
+    deleteGarminSegment(id: $id)
+  }
+`
