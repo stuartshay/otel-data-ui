@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import type { ActivityChartTrackPoint } from './ActivityChartData'
 import { toRoutePoints } from './ActivityLapRoutePoints'
 import { ActivityRouteMap } from './ActivityRouteMap'
+import { SaveSegmentPopover } from './SaveSegmentPopover'
 import {
   buildLapSummary,
   getLapSegmentPoints,
@@ -26,6 +27,7 @@ const MPS_TO_MPH = 2.2369362921
 interface ActivityLapsTableProps {
   laps: ActivityLap[]
   chartPoints?: ActivityChartTrackPoint[]
+  sport?: string | null
 }
 
 function formatDistanceMeters(value: number | null | undefined): string {
@@ -106,10 +108,12 @@ function ActivityLapDetailsPanel({
   lap,
   laps,
   chartPoints,
+  sport,
 }: {
   lap: ActivityLap
   laps: ActivityLap[]
   chartPoints: ActivityChartTrackPoint[]
+  sport?: string | null
 }) {
   const segmentPoints = useMemo(
     () => getLapSegmentPoints(lap, chartPoints, laps),
@@ -120,6 +124,10 @@ function ActivityLapDetailsPanel({
     [segmentPoints],
   )
   const timeWindow = useMemo(() => getLapTimeWindow(lap), [lap])
+
+  const canSaveSegment = routePoints.length >= 2
+  const segmentStart = canSaveSegment ? routePoints[0] : null
+  const segmentEnd = canSaveSegment ? routePoints[routePoints.length - 1] : null
 
   return (
     <div className="space-y-4" data-testid="activity-lap-details-panel">
@@ -137,6 +145,18 @@ function ActivityLapDetailsPanel({
                 )}
               </p>
             </div>
+            {segmentStart && segmentEnd && (
+              <SaveSegmentPopover
+                activityId={lap.activity_id}
+                lapIndex={lap.lap_index}
+                sport={sport}
+                startLatitude={segmentStart.latitude}
+                startLongitude={segmentStart.longitude}
+                endLatitude={segmentEnd.latitude}
+                endLongitude={segmentEnd.longitude}
+                distanceMeters={lap.distance_meters}
+              />
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,6 +230,7 @@ function ActivityLapDetailsPanel({
 export function ActivityLapsTable({
   laps,
   chartPoints = [],
+  sport,
 }: ActivityLapsTableProps) {
   const [selectedLapIndex, setSelectedLapIndex] = useState<number | null>(null)
   const orderedLaps = useMemo(
@@ -370,6 +391,7 @@ export function ActivityLapsTable({
           lap={selectedLap}
           laps={orderedLaps}
           chartPoints={chartPoints}
+          sport={sport}
         />
       )}
     </div>

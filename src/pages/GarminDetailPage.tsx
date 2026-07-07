@@ -708,6 +708,7 @@ export function GarminDetailPage() {
             <ActivityLapsTable
               laps={lapsData?.garminActivityLaps ?? []}
               chartPoints={chartPoints}
+              sport={a.sport}
             />
           )}
         </TabsContent>

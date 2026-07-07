@@ -31,6 +31,12 @@ vi.mock('./ActivityRouteMap', () => ({
   },
 }))
 
+vi.mock('./SaveSegmentPopover', () => ({
+  SaveSegmentPopover: () => (
+    <div data-testid="save-segment-trigger">save-segment</div>
+  ),
+}))
+
 function lap(overrides: Partial<ActivityLap> = {}): ActivityLap {
   return {
     id: overrides.lap_index ?? 1,

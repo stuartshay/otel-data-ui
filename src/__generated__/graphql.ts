@@ -1283,6 +1283,8 @@ export type WithinReferenceResult = {
   total_points: Scalars['Int']['output'];
 };
 
+/** Input for creating a saved Garmin segment (e.g. from an activity lap or climb). */
+
 /** Sort direction for query results. */
 
 export type GarminActivitiesQueryVariables = Exact<{
@@ -1488,6 +1490,20 @@ export type GarminSegmentEffortsQueryVariables = Exact<{
 
 
 export type GarminSegmentEffortsQuery = { garminSegmentEfforts: { total: number, segment: { start_lat: number, start_lon: number, end_lat: number, end_lon: number, tolerance_meters: number }, items: Array<{ rank: number, activity_id: string, sport: string | null, activity_start_time: string | null, effort_start: string, effort_end: string, elapsed_seconds: number, distance_km: number | null, avg_speed_kmh: number | null, avg_heart_rate: number | null, max_heart_rate: number | null }> } };
+
+export type CreateGarminSegmentMutationVariables = Exact<{
+  input: CreateGarminSegmentInput;
+}>;
+
+
+export type CreateGarminSegmentMutation = { createGarminSegment: { id: number, name: string, sport: string | null, start_latitude: number, start_longitude: number, end_latitude: number, end_longitude: number, distance_meters: number | null, match_tolerance_meters: number, source_activity_id: string | null, source_lap_index: number | null, source_climb_index: number | null, created_at: string | null, updated_at: string | null } };
+
+export type DeleteGarminSegmentMutationVariables = Exact<{
+  id: number;
+}>;
+
+
+export type DeleteGarminSegmentMutation = { deleteGarminSegment: boolean };
 
 export type NearbyPointsQueryVariables = Exact<{
   lat: number;
@@ -3099,6 +3115,83 @@ export type GarminSegmentEffortsQueryHookResult = ReturnType<typeof useGarminSeg
 export type GarminSegmentEffortsLazyQueryHookResult = ReturnType<typeof useGarminSegmentEffortsLazyQuery>;
 export type GarminSegmentEffortsSuspenseQueryHookResult = ReturnType<typeof useGarminSegmentEffortsSuspenseQuery>;
 export type GarminSegmentEffortsQueryResult = ApolloReactCommon.QueryResult<GarminSegmentEffortsQuery, GarminSegmentEffortsQueryVariables>;
+export const CreateGarminSegmentDocument = gql`
+    mutation CreateGarminSegment($input: CreateGarminSegmentInput!) {
+  createGarminSegment(input: $input) {
+    id
+    name
+    sport
+    start_latitude
+    start_longitude
+    end_latitude
+    end_longitude
+    distance_meters
+    match_tolerance_meters
+    source_activity_id
+    source_lap_index
+    source_climb_index
+    created_at
+    updated_at
+  }
+}
+    `;
+export type CreateGarminSegmentMutationFn = ApolloReactCommon.MutationFunction<CreateGarminSegmentMutation, CreateGarminSegmentMutationVariables>;
+
+/**
+ * __useCreateGarminSegmentMutation__
+ *
+ * To run a mutation, you first call `useCreateGarminSegmentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateGarminSegmentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createGarminSegmentMutation, { data, loading, error }] = useCreateGarminSegmentMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateGarminSegmentMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreateGarminSegmentMutation, CreateGarminSegmentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<CreateGarminSegmentMutation, CreateGarminSegmentMutationVariables>(CreateGarminSegmentDocument, options);
+      }
+export type CreateGarminSegmentMutationHookResult = ReturnType<typeof useCreateGarminSegmentMutation>;
+export type CreateGarminSegmentMutationResult = ApolloReactCommon.MutationResult<CreateGarminSegmentMutation>;
+export type CreateGarminSegmentMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateGarminSegmentMutation, CreateGarminSegmentMutationVariables>;
+export const DeleteGarminSegmentDocument = gql`
+    mutation DeleteGarminSegment($id: Int!) {
+  deleteGarminSegment(id: $id)
+}
+    `;
+export type DeleteGarminSegmentMutationFn = ApolloReactCommon.MutationFunction<DeleteGarminSegmentMutation, DeleteGarminSegmentMutationVariables>;
+
+/**
+ * __useDeleteGarminSegmentMutation__
+ *
+ * To run a mutation, you first call `useDeleteGarminSegmentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteGarminSegmentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteGarminSegmentMutation, { data, loading, error }] = useDeleteGarminSegmentMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteGarminSegmentMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeleteGarminSegmentMutation, DeleteGarminSegmentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<DeleteGarminSegmentMutation, DeleteGarminSegmentMutationVariables>(DeleteGarminSegmentDocument, options);
+      }
+export type DeleteGarminSegmentMutationHookResult = ReturnType<typeof useDeleteGarminSegmentMutation>;
+export type DeleteGarminSegmentMutationResult = ApolloReactCommon.MutationResult<DeleteGarminSegmentMutation>;
+export type DeleteGarminSegmentMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteGarminSegmentMutation, DeleteGarminSegmentMutationVariables>;
 export const NearbyPointsDocument = gql`
     query NearbyPoints($lat: Float!, $lon: Float!, $radius_meters: Float, $source: String, $limit: Int) {
   nearbyPoints(
