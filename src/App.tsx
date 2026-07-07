@@ -11,6 +11,8 @@ import { LocationDetailPage } from '@/pages/LocationDetailPage'
 import { GarminPage } from '@/pages/GarminPage'
 import { GarminDetailPage } from '@/pages/GarminDetailPage'
 import { LapComparisonPage } from '@/pages/LapComparisonPage'
+import { GarminSegmentsPage } from '@/pages/GarminSegmentsPage'
+import { GarminSegmentDetailPage } from '@/pages/GarminSegmentDetailPage'
 import { MapPage } from '@/pages/MapPage'
 import { DailySummaryPage } from '@/pages/DailySummaryPage'
 import { DailySummaryDetailPage } from '@/pages/DailySummaryDetailPage'
@@ -34,6 +36,14 @@ export default function App() {
                 <Route path="locations/:id" element={<LocationDetailPage />} />
                 <Route path="garmin" element={<GarminPage />} />
                 <Route path="garmin/compare" element={<LapComparisonPage />} />
+                <Route
+                  path="garmin/segments"
+                  element={<GarminSegmentsPage />}
+                />
+                <Route
+                  path="garmin/segments/:segmentId"
+                  element={<GarminSegmentDetailPage />}
+                />
                 <Route
                   path="garmin/:activityId"
                   element={<GarminDetailPage />}
