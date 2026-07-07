@@ -80,7 +80,8 @@ export function SaveSegmentPopover({
           distance_meters: distanceMeters ?? null,
           match_tolerance_meters: toleranceValue,
           source_activity_id: activityId ?? null,
-          source_lap_index: lapIndex,
+          // lap.lap_index is 1-based; the API stores source_lap_index zero-based.
+          source_lap_index: lapIndex - 1,
         },
       },
     })

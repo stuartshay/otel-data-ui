@@ -86,7 +86,7 @@ describe('SaveSegmentPopover', () => {
           distance_meters: 508.1,
           match_tolerance_meters: 35,
           source_activity_id: '23493313338',
-          source_lap_index: 1,
+          source_lap_index: 0,
         },
       },
     })
