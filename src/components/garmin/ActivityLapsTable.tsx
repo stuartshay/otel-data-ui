@@ -148,7 +148,7 @@ function ActivityLapDetailsPanel({
             {segmentStart && segmentEnd && (
               <SaveSegmentPopover
                 activityId={lap.activity_id}
-                lapIndex={lap.lap_index}
+                sourceLapIndex={lap.lap_index - 1}
                 sport={sport}
                 startLatitude={segmentStart.latitude}
                 startLongitude={segmentStart.longitude}

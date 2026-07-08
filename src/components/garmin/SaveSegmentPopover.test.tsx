@@ -21,7 +21,7 @@ import { SaveSegmentPopover } from './SaveSegmentPopover'
 
 const baseProps = {
   activityId: '23493313338',
-  lapIndex: 1,
+  sourceLapIndex: 0,
   sport: 'cycling',
   startLatitude: 40.79,
   startLongitude: -73.96,
@@ -87,6 +87,42 @@ describe('SaveSegmentPopover', () => {
           match_tolerance_meters: 35,
           source_activity_id: '23493313338',
           source_lap_index: 0,
+          source_climb_index: null,
+        },
+      },
+    })
+  })
+
+  it('submits the segment with a climb source index', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SaveSegmentPopover
+        {...baseProps}
+        sourceLapIndex={null}
+        sourceClimbIndex={2}
+      />,
+    )
+    await user.click(screen.getByTestId('save-segment-trigger'))
+
+    await user.type(screen.getByTestId('save-segment-name'), 'Harlem Hill')
+    await user.click(screen.getByTestId('save-segment-submit'))
+
+    expect(createSegment).toHaveBeenCalledTimes(1)
+    expect(createSegment).toHaveBeenCalledWith({
+      variables: {
+        input: {
+          name: 'Harlem Hill',
+          sport: 'cycling',
+          start_latitude: 40.79,
+          start_longitude: -73.96,
+          end_latitude: 40.791,
+          end_longitude: -73.965,
+          distance_meters: 508.1,
+          match_tolerance_meters: 35,
+          source_activity_id: '23493313338',
+          source_lap_index: null,
+          source_climb_index: 2,
         },
       },
     })

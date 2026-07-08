@@ -824,6 +824,7 @@ export function GarminDetailPage() {
                   onNext={selectNextClimb}
                   canPrevious={selectedClimbIndex > 0}
                   canNext={selectedClimbIndex < mainClimbs.length - 1}
+                  sport={a.sport}
                 />
               )}
             </>
