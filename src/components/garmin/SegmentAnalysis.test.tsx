@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { SavedPoint } from './ActivityChartData'
 import { SegmentAnalysis } from './SegmentAnalysis'
+
+vi.mock('./SaveSegmentPopover', () => ({
+  SaveSegmentPopover: () => (
+    <div data-testid="save-segment-trigger">save-segment</div>
+  ),
+}))
 
 function savedPoint(overrides: Partial<SavedPoint> = {}): SavedPoint {
   return {
@@ -61,6 +67,19 @@ describe('SegmentAnalysis', () => {
     expect(screen.getByText('10.0 mph')).toBeInTheDocument()
     expect(screen.getByText('6:00 /mi')).toBeInTheDocument()
     expect(screen.getByText('+100 ft')).toBeInTheDocument()
+    // No coordinates on these points, so the save-as-segment control is hidden.
+    expect(screen.queryByTestId('save-segment-trigger')).not.toBeInTheDocument()
+  })
+
+  it('shows a save-as-segment control for segments with coordinates', () => {
+    const points = [
+      savedPoint({ id: 'a', time: 0, latitude: 40.0, longitude: -74.0 }),
+      savedPoint({ id: 'b', time: 10, latitude: 40.0, longitude: -73.9 }),
+    ]
+
+    render(<SegmentAnalysis points={points} activityId="42" sport="cycling" />)
+
+    expect(screen.getByTestId('save-segment-trigger')).toBeInTheDocument()
   })
 
   it('flags a straight-line distance with a direct suffix', () => {

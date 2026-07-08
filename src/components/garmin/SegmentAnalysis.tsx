@@ -1,14 +1,32 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDuration } from '@/lib/units'
 import type { SavedPoint } from './ActivityChartData'
+import { SaveSegmentPopover } from './SaveSegmentPopover'
 import {
   buildSavedSegments,
   formatPaceMinPerMi,
   type SavedSegment,
 } from './segmentAnalysis'
 
+const METERS_PER_MILE = 1609.344
+
 interface SegmentAnalysisProps {
   points: SavedPoint[]
+  activityId?: string | null
+  sport?: string | null
+}
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function canSaveSegment(segment: SavedSegment): boolean {
+  return (
+    isFiniteNumber(segment.from.latitude) &&
+    isFiniteNumber(segment.from.longitude) &&
+    isFiniteNumber(segment.to.latitude) &&
+    isFiniteNumber(segment.to.longitude)
+  )
 }
 
 function formatDistance(segment: SavedSegment): string {
@@ -38,7 +56,11 @@ function formatGrade(value: number | null): string {
  * each pair of consecutive saved points. Renders nothing until at least two
  * points are saved (i.e. there is a segment to analyze).
  */
-export function SegmentAnalysis({ points }: SegmentAnalysisProps) {
+export function SegmentAnalysis({
+  points,
+  activityId,
+  sport,
+}: SegmentAnalysisProps) {
   const segments = buildSavedSegments(points)
   if (segments.length === 0) return null
 
@@ -59,7 +81,8 @@ export function SegmentAnalysis({ points }: SegmentAnalysisProps) {
               <th className="py-1 pr-3 font-medium">Avg Speed</th>
               <th className="py-1 pr-3 font-medium">Pace</th>
               <th className="py-1 pr-3 font-medium">Elev Δ</th>
-              <th className="py-1 font-medium">Grade</th>
+              <th className="py-1 pr-3 font-medium">Grade</th>
+              <th className="py-1 font-medium sr-only">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -94,8 +117,26 @@ export function SegmentAnalysis({ points }: SegmentAnalysisProps) {
                 <td className="py-1 pr-3 tabular-nums">
                   {formatElevation(s.elevationChangeFt)}
                 </td>
-                <td className="py-1 tabular-nums">
+                <td className="py-1 pr-3 tabular-nums">
                   {formatGrade(s.gradePercent)}
+                </td>
+                <td className="py-1">
+                  {canSaveSegment(s) && (
+                    <SaveSegmentPopover
+                      activityId={activityId}
+                      sport={sport}
+                      sourceLabel="range"
+                      startLatitude={s.from.latitude as number}
+                      startLongitude={s.from.longitude as number}
+                      endLatitude={s.to.latitude as number}
+                      endLongitude={s.to.longitude as number}
+                      distanceMeters={
+                        s.distanceMi != null
+                          ? s.distanceMi * METERS_PER_MILE
+                          : null
+                      }
+                    />
+                  )}
                 </td>
               </tr>
             ))}

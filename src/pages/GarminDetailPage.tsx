@@ -797,7 +797,11 @@ export function GarminDetailPage() {
                 onRemove={removeSavedPoint}
                 onClear={clearSavedPoints}
               />
-              <SegmentAnalysis points={savedPoints} />
+              <SegmentAnalysis
+                points={savedPoints}
+                activityId={activityId}
+                sport={a.sport}
+              />
             </>
           )}
         </TabsContent>

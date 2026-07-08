@@ -64,6 +64,24 @@ describe('SaveSegmentPopover', () => {
     expect(createSegment).not.toHaveBeenCalled()
   })
 
+  it('uses a custom source label in the login prompt', async () => {
+    const user = userEvent.setup()
+    authMocks.useAuth.mockReturnValue({ isAuthenticated: false, login })
+
+    render(
+      <SaveSegmentPopover
+        {...baseProps}
+        sourceLapIndex={null}
+        sourceLabel="range"
+      />,
+    )
+    await user.click(screen.getByTestId('save-segment-trigger'))
+
+    expect(
+      screen.getByText('Log in to save this range as a named segment.'),
+    ).toBeVisible()
+  })
+
   it('submits the segment with lap-derived coordinates', async () => {
     const user = userEvent.setup()
 
