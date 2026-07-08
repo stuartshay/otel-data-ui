@@ -14,7 +14,6 @@ import {
 
 interface SaveSegmentPopoverProps {
   activityId?: string | null
-  lapIndex: number
   sport?: string | null
   startLatitude: number
   startLongitude: number
@@ -22,13 +21,16 @@ interface SaveSegmentPopoverProps {
   endLongitude: number
   distanceMeters?: number | null
   defaultName?: string
+  /** Zero-based lap index this segment is created from, if any. */
+  sourceLapIndex?: number | null
+  /** Zero-based climb (typed split) index this segment is created from, if any. */
+  sourceClimbIndex?: number | null
 }
 
 const DEFAULT_TOLERANCE = 35
 
 export function SaveSegmentPopover({
   activityId,
-  lapIndex,
   sport,
   startLatitude,
   startLongitude,
@@ -36,6 +38,8 @@ export function SaveSegmentPopover({
   endLongitude,
   distanceMeters,
   defaultName = '',
+  sourceLapIndex = null,
+  sourceClimbIndex = null,
 }: SaveSegmentPopoverProps) {
   const { isAuthenticated, login } = useAuth()
   const [open, setOpen] = useState(false)
@@ -80,8 +84,8 @@ export function SaveSegmentPopover({
           distance_meters: distanceMeters ?? null,
           match_tolerance_meters: toleranceValue,
           source_activity_id: activityId ?? null,
-          // lap.lap_index is 1-based; the API stores source_lap_index zero-based.
-          source_lap_index: lapIndex - 1,
+          source_lap_index: sourceLapIndex,
+          source_climb_index: sourceClimbIndex,
         },
       },
     })

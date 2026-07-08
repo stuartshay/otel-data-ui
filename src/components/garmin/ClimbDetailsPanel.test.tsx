@@ -57,6 +57,12 @@ vi.mock('leaflet', () => ({
   },
 }))
 
+vi.mock('./SaveSegmentPopover', () => ({
+  SaveSegmentPopover: () => (
+    <div data-testid="save-segment-trigger">save-segment</div>
+  ),
+}))
+
 describe('ClimbDetailsPanel', () => {
   beforeEach(() => {
     leafletMocks.map.mockClear()

@@ -14,11 +14,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatDurationShort, metersToFeet } from '@/lib/units'
+import { SaveSegmentPopover } from './SaveSegmentPopover'
 import {
   getClimbSegmentPoints,
   getGradeBucket,
   GRADE_BUCKETS,
 } from './ClimbDetailsPanel.helpers'
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
 
 const METERS_PER_MILE = 1609.344
 const FEET_PER_MILE = 5280
@@ -42,6 +47,7 @@ interface ClimbDetailsPanelProps {
   onNext: () => void
   canPrevious: boolean
   canNext: boolean
+  sport?: string | null
 }
 
 interface ClimbGraphPoint {
@@ -686,6 +692,7 @@ export function ClimbDetailsPanel({
   onNext,
   canPrevious,
   canNext,
+  sport,
 }: ClimbDetailsPanelProps) {
   const segmentPoints = useMemo(
     () => getClimbSegmentPoints(climb, chartPoints),
@@ -697,11 +704,31 @@ export function ClimbDetailsPanel({
   )
   const mapPoints = useMemo(() => toMapPoints(segmentPoints), [segmentPoints])
 
+  const canSaveSegment =
+    isFiniteNumber(climb.start_latitude) &&
+    isFiniteNumber(climb.start_longitude) &&
+    isFiniteNumber(climb.end_latitude) &&
+    isFiniteNumber(climb.end_longitude)
+
   return (
     <Card data-testid="climb-details-panel">
       <CardHeader className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Climb Details</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Climb Details</CardTitle>
+            {canSaveSegment && (
+              <SaveSegmentPopover
+                activityId={climb.activity_id}
+                sourceClimbIndex={climbIndex}
+                sport={sport}
+                startLatitude={climb.start_latitude as number}
+                startLongitude={climb.start_longitude as number}
+                endLatitude={climb.end_latitude as number}
+                endLongitude={climb.end_longitude as number}
+                distanceMeters={climb.distance_meters}
+              />
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button
               type="button"
