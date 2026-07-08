@@ -14,6 +14,11 @@ vi.mock('@/lib/newrelic-browser', () => ({ setNRCustomAttribute: vi.fn() }))
 vi.mock('@/components/garmin/SegmentStartEndMap', () => ({
   SegmentStartEndMap: () => <div data-testid="segment-map">map</div>,
 }))
+vi.mock('@/components/garmin/DeleteSegmentButton', () => ({
+  DeleteSegmentButton: () => (
+    <div data-testid="delete-segment-trigger">delete</div>
+  ),
+}))
 
 const segment = {
   id: 1,
