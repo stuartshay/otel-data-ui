@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import {
   useGarminSegmentQuery,
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
+import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
 import {
   formatDistanceMi,
   formatTolerance,
@@ -23,6 +24,7 @@ const EFFORTS_LIMIT = 100
 
 export function GarminSegmentDetailPage() {
   const { segmentId } = useParams<{ segmentId: string }>()
+  const navigate = useNavigate()
   const id = Number(segmentId)
   const validId = Number.isInteger(id) && id > 0
 
@@ -115,11 +117,14 @@ export function GarminSegmentDetailPage() {
             {total.toLocaleString()} matching effort{total === 1 ? '' : 's'}
           </p>
         </div>
-        {segment.sport && (
-          <Badge variant="secondary" className="mt-2">
-            {segment.sport}
-          </Badge>
-        )}
+        <div className="mt-2 flex items-center gap-2">
+          {segment.sport && <Badge variant="secondary">{segment.sport}</Badge>}
+          <DeleteSegmentButton
+            segmentId={segment.id}
+            segmentName={segment.name}
+            onDeleted={() => navigate('/garmin/segments')}
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
