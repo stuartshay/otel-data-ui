@@ -136,6 +136,46 @@ describe('ClimbDetailsPanel', () => {
     )
   })
 
+  it('renders the save-as-segment control when the climb has coordinates', () => {
+    render(
+      <ClimbDetailsPanel
+        climb={mockClimb()}
+        climbIndex={0}
+        totalClimbs={1}
+        chartPoints={mockChartPoints()}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+        canPrevious={false}
+        canNext={false}
+      />,
+    )
+
+    expect(screen.getByTestId('save-segment-trigger')).toBeInTheDocument()
+  })
+
+  it('hides the save-as-segment control when the climb lacks coordinates', () => {
+    render(
+      <ClimbDetailsPanel
+        climb={{
+          ...mockClimb(),
+          start_latitude: null,
+          start_longitude: null,
+          end_latitude: null,
+          end_longitude: null,
+        }}
+        climbIndex={0}
+        totalClimbs={1}
+        chartPoints={mockChartPoints()}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+        canPrevious={false}
+        canNext={false}
+      />,
+    )
+
+    expect(screen.queryByTestId('save-segment-trigger')).not.toBeInTheDocument()
+  })
+
   it('hides sensor overlay options when older climb points lack sensor data', async () => {
     render(
       <ClimbDetailsPanel

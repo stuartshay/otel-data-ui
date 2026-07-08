@@ -719,7 +719,7 @@ export function ClimbDetailsPanel({
             {canSaveSegment && (
               <SaveSegmentPopover
                 activityId={climb.activity_id}
-                sourceClimbIndex={climbIndex}
+                sourceClimbIndex={climb.source_split_index}
                 sport={sport}
                 startLatitude={climb.start_latitude as number}
                 startLongitude={climb.start_longitude as number}
