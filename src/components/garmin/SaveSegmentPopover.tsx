@@ -25,6 +25,11 @@ interface SaveSegmentPopoverProps {
   sourceLapIndex?: number | null
   /** Zero-based climb (typed split) index this segment is created from, if any. */
   sourceClimbIndex?: number | null
+  /**
+   * Noun used in the unauthenticated prompt ("Log in to save this {label}…").
+   * Defaults to "climb" or "lap" based on the source index.
+   */
+  sourceLabel?: string
 }
 
 const DEFAULT_TOLERANCE = 35
@@ -40,6 +45,7 @@ export function SaveSegmentPopover({
   defaultName = '',
   sourceLapIndex = null,
   sourceClimbIndex = null,
+  sourceLabel,
 }: SaveSegmentPopoverProps) {
   const { isAuthenticated, login } = useAuth()
   const [open, setOpen] = useState(false)
@@ -70,7 +76,8 @@ export function SaveSegmentPopover({
     toleranceValue <= 200
   const canSubmit = trimmedName.length > 0 && toleranceValid && !loading
 
-  const sourceLabel = sourceClimbIndex != null ? 'climb' : 'lap'
+  const resolvedSourceLabel =
+    sourceLabel ?? (sourceClimbIndex != null ? 'climb' : 'lap')
 
   const handleSubmit = () => {
     if (!canSubmit) return
@@ -105,7 +112,7 @@ export function SaveSegmentPopover({
         {!isAuthenticated ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Log in to save this {sourceLabel} as a named segment.
+              Log in to save this {resolvedSourceLabel} as a named segment.
             </p>
             <Button variant="outline" size="sm" onClick={() => login()}>
               <LogIn className="h-4 w-4" />

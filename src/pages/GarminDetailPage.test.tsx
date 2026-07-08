@@ -170,6 +170,12 @@ vi.mock('@/components/garmin/ActivityLapsTable', () => ({
   ),
 }))
 
+vi.mock('@/components/garmin/SegmentAnalysis', () => ({
+  SegmentAnalysis: ({ points }: { points: unknown[] }) => (
+    <div data-testid="segment-analysis">segments:{points.length}</div>
+  ),
+}))
+
 import { GarminDetailPage } from './GarminDetailPage'
 
 describe('GarminDetailPage', () => {
