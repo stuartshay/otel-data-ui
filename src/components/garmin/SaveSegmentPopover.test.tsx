@@ -96,9 +96,13 @@ describe('SaveSegmentPopover', () => {
   it('submits the segment with a climb source index', async () => {
     const user = userEvent.setup()
 
-    const { sourceLapIndex: _omit, ...climbProps } = baseProps
-    void _omit
-    render(<SaveSegmentPopover {...climbProps} sourceClimbIndex={2} />)
+    render(
+      <SaveSegmentPopover
+        {...baseProps}
+        sourceLapIndex={null}
+        sourceClimbIndex={2}
+      />,
+    )
     await user.click(screen.getByTestId('save-segment-trigger'))
 
     await user.type(screen.getByTestId('save-segment-name'), 'Harlem Hill')

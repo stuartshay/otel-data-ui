@@ -70,6 +70,8 @@ export function SaveSegmentPopover({
     toleranceValue <= 200
   const canSubmit = trimmedName.length > 0 && toleranceValid && !loading
 
+  const sourceLabel = sourceClimbIndex != null ? 'climb' : 'lap'
+
   const handleSubmit = () => {
     if (!canSubmit) return
     createSegment({
@@ -103,7 +105,7 @@ export function SaveSegmentPopover({
         {!isAuthenticated ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Log in to save this lap as a named segment.
+              Log in to save this {sourceLabel} as a named segment.
             </p>
             <Button variant="outline" size="sm" onClick={() => login()}>
               <LogIn className="h-4 w-4" />
