@@ -26,11 +26,16 @@ export function DeleteSegmentButton({
   const [open, setOpen] = useState(false)
 
   const [deleteSegment, { loading }] = useDeleteGarminSegmentMutation({
-    variables: { id: segmentId },
     refetchQueries: [{ query: GARMIN_SEGMENTS_QUERY }],
-    onCompleted() {
+    onCompleted(data) {
+      if (!data.deleteGarminSegment) {
+        toast.error('Could not delete segment', {
+          description: 'The server did not confirm the deletion.',
+        })
+        return
+      }
       toast.success('Segment deleted', {
-        description: `"${segmentName}" was removed (and will be removed from Garmin Connect).`,
+        description: `"${segmentName}" was removed and will be cleared from Garmin Connect shortly.`,
       })
       setOpen(false)
       onDeleted()
@@ -69,8 +74,8 @@ export function DeleteSegmentButton({
             <div className="space-y-1">
               <p className="text-sm font-medium">Delete “{segmentName}”?</p>
               <p className="text-sm text-muted-foreground">
-                This removes the saved segment and deletes it from Garmin
-                Connect too. This can’t be undone.
+                This removes the saved segment and queues it for removal from
+                Garmin Connect (cleared on the next sync). This can’t be undone.
               </p>
             </div>
             <div className="flex justify-end gap-2">

@@ -75,17 +75,32 @@ describe('DeleteSegmentButton', () => {
     await user.click(screen.getByTestId('delete-segment-confirm'))
 
     expect(deleteSegment).toHaveBeenCalledTimes(1)
+    expect(deleteSegment).toHaveBeenCalledWith({ variables: { id: 1 } })
   })
 
-  it('passes the segment id to the mutation hook', () => {
+  it('treats a false result as a failure (no navigation)', async () => {
+    const user = userEvent.setup()
+    graphqlMocks.useDeleteGarminSegmentMutation.mockImplementation(
+      (options: { onCompleted?: (data: unknown) => void }) => {
+        const fn = vi.fn(() => {
+          options.onCompleted?.({ deleteGarminSegment: false })
+        })
+        return [fn, { loading: false }]
+      },
+    )
+
     render(
       <DeleteSegmentButton
-        segmentId={7}
-        segmentName="Test"
+        segmentId={1}
+        segmentName="Harlem Hill"
         onDeleted={onDeleted}
       />,
     )
-    const options = graphqlMocks.useDeleteGarminSegmentMutation.mock.calls[0][0]
-    expect(options.variables).toEqual({ id: 7 })
+    await user.click(screen.getByTestId('delete-segment-trigger'))
+    await user.click(screen.getByTestId('delete-segment-confirm'))
+
+    expect(onDeleted).not.toHaveBeenCalled()
+    expect(toastMocks.error).toHaveBeenCalled()
+    expect(toastMocks.success).not.toHaveBeenCalled()
   })
 })
