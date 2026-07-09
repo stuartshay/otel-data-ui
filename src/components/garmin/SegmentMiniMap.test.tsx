@@ -41,30 +41,13 @@ vi.mock('leaflet', () => ({
   },
 }))
 
-const graphqlMocks = vi.hoisted(() => ({
-  useGarminChartDataQuery: vi.fn(),
-}))
-
-vi.mock('@/__generated__/graphql', () => graphqlMocks)
-
 describe('SegmentMiniMap', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     leafletMocks.bounds.isValid.mockReturnValue(true)
   })
 
-  it('renders an OpenStreetMap tile layer and the real recovered route path', async () => {
-    graphqlMocks.useGarminChartDataQuery.mockReturnValue({
-      data: {
-        garminChartData: [
-          { latitude: 40.79, longitude: -73.96, altitude: 10 },
-          { latitude: 40.795, longitude: -73.955, altitude: 12 },
-          { latitude: 40.798, longitude: -73.948, altitude: 15 },
-          { latitude: 40.8, longitude: -73.94, altitude: 18 },
-        ],
-      },
-    })
-
+  it('renders an OpenStreetMap tile layer and the supplied route path', async () => {
     render(
       <SegmentMiniMap
         startLat={40.79}
@@ -72,15 +55,17 @@ describe('SegmentMiniMap', () => {
         endLat={40.8}
         endLon={-73.94}
         label="Harlem Hill"
-        sourceActivityId="23493313338"
+        route={[
+          [40.79, -73.96],
+          [40.795, -73.955],
+          [40.798, -73.948],
+          [40.8, -73.94],
+        ]}
       />,
     )
 
     await waitFor(() => expect(leafletMocks.map).toHaveBeenCalledTimes(1))
 
-    expect(graphqlMocks.useGarminChartDataQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { activity_id: '23493313338' } }),
-    )
     expect(leafletMocks.tileLayer).toHaveBeenCalledWith(
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       expect.objectContaining({
@@ -99,9 +84,7 @@ describe('SegmentMiniMap', () => {
     expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to a straight line when no source track is available', async () => {
-    graphqlMocks.useGarminChartDataQuery.mockReturnValue({ data: undefined })
-
+  it('falls back to a straight line when no route is provided', async () => {
     render(
       <SegmentMiniMap
         startLat={40.79}
@@ -109,15 +92,12 @@ describe('SegmentMiniMap', () => {
         endLat={40.8}
         endLon={-73.94}
         label="Harlem Hill"
-        sourceActivityId={null}
+        route={null}
       />,
     )
 
     await waitFor(() => expect(leafletMocks.map).toHaveBeenCalledTimes(1))
 
-    expect(graphqlMocks.useGarminChartDataQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: true }),
-    )
     expect(leafletMocks.polyline).toHaveBeenCalledWith(
       [
         [40.79, -73.96],

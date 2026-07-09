@@ -525,6 +525,8 @@ export type GarminSegment = {
   match_tolerance_meters: Scalars['Float']['output'];
   /** Human-readable segment name (e.g. "Harlem Hill") */
   name: Scalars['String']['output'];
+  /** Ordered [latitude, longitude] pairs tracing the segment path; null when unavailable */
+  route?: Maybe<Array<Array<Scalars['Float']['output']>>>;
   /** Garmin activity this segment was created from, if any */
   source_activity_id?: Maybe<Scalars['String']['output']>;
   /** Zero-based ClimbPro split index the segment was created from, if any */
@@ -1471,7 +1473,7 @@ export type GarminSegmentsQueryVariables = Exact<{
 }>;
 
 
-export type GarminSegmentsQuery = { garminSegments: Array<{ id: number, name: string, sport: string | null, start_latitude: number, start_longitude: number, end_latitude: number, end_longitude: number, distance_meters: number | null, match_tolerance_meters: number, source_activity_id: string | null, source_lap_index: number | null, source_climb_index: number | null, created_at: string | null, updated_at: string | null }> };
+export type GarminSegmentsQuery = { garminSegments: Array<{ id: number, name: string, sport: string | null, start_latitude: number, start_longitude: number, end_latitude: number, end_longitude: number, distance_meters: number | null, match_tolerance_meters: number, source_activity_id: string | null, source_lap_index: number | null, source_climb_index: number | null, created_at: string | null, updated_at: string | null, route: Array<Array<number>> | null }> };
 
 export type GarminSegmentQueryVariables = Exact<{
   id: number;
@@ -2947,6 +2949,7 @@ export const GarminSegmentsDocument = gql`
     source_climb_index
     created_at
     updated_at
+    route
   }
 }
     `;
