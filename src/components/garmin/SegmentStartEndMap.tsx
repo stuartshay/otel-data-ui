@@ -7,11 +7,40 @@ interface SegmentStartEndMapProps {
   startLon: number
   endLat: number
   endLon: number
+  routePoints?: Array<{
+    latitude: number
+    longitude: number
+    altitude?: number | null
+  }>
+}
+
+function elevationToColor(
+  elevation: number | null,
+  minElevation: number | null,
+  maxElevation: number | null,
+): string {
+  if (
+    elevation == null ||
+    minElevation == null ||
+    maxElevation == null ||
+    maxElevation <= minElevation
+  ) {
+    return '#2563eb'
+  }
+
+  const ratio = Math.min(
+    1,
+    Math.max(0, (elevation - minElevation) / (maxElevation - minElevation)),
+  )
+  if (ratio < 0.25) return '#2563eb'
+  if (ratio < 0.5) return '#16a34a'
+  if (ratio < 0.75) return '#f59e0b'
+  return '#dc2626'
 }
 
 /**
  * Compact preview map for a saved segment: green start marker, red finish
- * marker, and a dashed line between them, fitted to bounds. Uses vanilla
+ * marker, and the source route between them, fitted to bounds. Uses vanilla
  * Leaflet (circle markers) to avoid marker-icon asset setup, mirroring
  * {@link ActivityRouteMap}.
  */
@@ -20,6 +49,7 @@ export function SegmentStartEndMap({
   startLon,
   endLat,
   endLon,
+  routePoints = [],
 }: SegmentStartEndMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -39,13 +69,53 @@ export function SegmentStartEndMap({
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
-    L.polyline(
-      [
-        [startLat, startLon],
-        [endLat, endLon],
-      ],
-      { color: '#6366f1', weight: 3, opacity: 0.8, dashArray: '6 6' },
-    ).addTo(map)
+    const routeLatLngs = routePoints.map(
+      (point) => [point.latitude, point.longitude] as L.LatLngTuple,
+    )
+    const hasRoute = routeLatLngs.length >= 2
+
+    if (hasRoute) {
+      const elevations = routePoints
+        .map((point) => point.altitude)
+        .filter(
+          (value): value is number => value != null && Number.isFinite(value),
+        )
+      const minElevation =
+        elevations.length > 0 ? Math.min(...elevations) : null
+      const maxElevation =
+        elevations.length > 0 ? Math.max(...elevations) : null
+
+      for (let index = 0; index < routePoints.length - 1; index++) {
+        const point = routePoints[index]
+        const nextPoint = routePoints[index + 1]
+
+        L.polyline(
+          [
+            [point.latitude, point.longitude],
+            [nextPoint.latitude, nextPoint.longitude],
+          ],
+          {
+            color: elevationToColor(
+              point.altitude ?? null,
+              minElevation,
+              maxElevation,
+            ),
+            weight: 5,
+            opacity: 0.95,
+            lineCap: 'butt',
+            lineJoin: 'round',
+          },
+        ).addTo(map)
+      }
+    } else {
+      L.polyline(
+        [
+          [startLat, startLon],
+          [endLat, endLon],
+        ],
+        { color: '#6366f1', weight: 3, opacity: 0.8, dashArray: '6 6' },
+      ).addTo(map)
+    }
 
     L.circleMarker([startLat, startLon], {
       radius: 7,
@@ -67,10 +137,14 @@ export function SegmentStartEndMap({
       .bindPopup('Finish')
       .addTo(map)
 
-    const bounds = L.latLngBounds([
-      [startLat, startLon],
-      [endLat, endLon],
-    ])
+    const bounds = L.latLngBounds(
+      hasRoute
+        ? routeLatLngs
+        : [
+            [startLat, startLon],
+            [endLat, endLon],
+          ],
+    )
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
     }
@@ -79,7 +153,7 @@ export function SegmentStartEndMap({
       map.remove()
       mapInstanceRef.current = null
     }
-  }, [startLat, startLon, endLat, endLon])
+  }, [startLat, startLon, endLat, endLon, routePoints])
 
   return (
     <div

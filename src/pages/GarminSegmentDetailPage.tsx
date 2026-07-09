@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import {
   useGarminSegmentQuery,
   useGarminSegmentEffortsQuery,
+  useGarminChartDataQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -18,6 +19,7 @@ import {
   formatTolerance,
   type SegmentEffort,
 } from '@/components/garmin/segmentEfforts'
+import { getSegmentRoutePoints } from '@/components/garmin/segmentRoute'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
 const EFFORTS_LIMIT = 100
@@ -50,9 +52,27 @@ export function GarminSegmentDetailPage() {
   })
 
   const segment = segmentData?.garminSegment
+
+  const { data: sourceTrackData } = useGarminChartDataQuery({
+    variables: { activity_id: segment?.source_activity_id ?? '' },
+    skip: !segment?.source_activity_id,
+    fetchPolicy: 'no-cache',
+  })
+
   const efforts = (effortsData?.garminSegmentEfforts?.items ??
     []) as SegmentEffort[]
   const total = effortsData?.garminSegmentEfforts?.total ?? 0
+  const routePoints = useMemo(
+    () =>
+      segment
+        ? getSegmentRoutePoints(
+            sourceTrackData?.garminChartData ?? [],
+            { lat: segment.start_latitude, lon: segment.start_longitude },
+            { lat: segment.end_latitude, lon: segment.end_longitude },
+          )
+        : [],
+    [segment, sourceTrackData?.garminChartData],
+  )
 
   const backLink = (
     <Link
@@ -138,6 +158,7 @@ export function GarminSegmentDetailPage() {
               startLon={segment.start_longitude}
               endLat={segment.end_latitude}
               endLon={segment.end_longitude}
+              routePoints={routePoints}
             />
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Distance</dt>
