@@ -1,4 +1,8 @@
-import { buildSegmentPreviewPath } from './segmentPreviewPath'
+import { useEffect, useMemo, useRef } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { useGarminChartDataQuery } from '@/__generated__/graphql'
+import { getSegmentRoutePoints } from './segmentRoute'
 
 interface SegmentMiniMapProps {
   startLat: number
@@ -6,104 +10,130 @@ interface SegmentMiniMapProps {
   endLat: number
   endLon: number
   label: string
+  sourceActivityId?: string | null
 }
 
+/**
+ * Compact, non-interactive OpenStreetMap preview for a saved segment shown in
+ * the segments list. Recovers the real route geometry from the source
+ * activity's GPS track (snapped to the segment start/end) and draws it as a
+ * blue polyline, mirroring {@link SegmentStartEndMap} on the detail page. Falls
+ * back to a dashed straight line only when the source track is unavailable.
+ */
 export function SegmentMiniMap({
   startLat,
   startLon,
   endLat,
   endLon,
   label,
+  sourceActivityId,
 }: SegmentMiniMapProps) {
-  const points = buildSegmentPreviewPath(startLat, startLon, endLat, endLon)
-  const latitudes = points.map(([lat]) => lat)
-  const longitudes = points.map(([, lon]) => lon)
-  const minLat = Math.min(...latitudes)
-  const maxLat = Math.max(...latitudes)
-  const minLon = Math.min(...longitudes)
-  const maxLon = Math.max(...longitudes)
-  const latRange = Math.max(maxLat - minLat, 0.000001)
-  const lonRange = Math.max(maxLon - minLon, 0.000001)
-  const padding = 14
-  const width = 128
-  const height = 112
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
 
-  const svgPoints = points.map(([lat, lon]) => {
-    const x = padding + ((lon - minLon) / lonRange) * (width - padding * 2)
-    const y = padding + ((maxLat - lat) / latRange) * (height - padding * 2)
-    return { x, y }
+  const { data: chartData } = useGarminChartDataQuery({
+    variables: { activity_id: sourceActivityId ?? '' },
+    skip: !sourceActivityId,
   })
-  const pathData = svgPoints
-    .map(
-      (point, index) =>
-        `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
+
+  const routePoints = useMemo(
+    () =>
+      getSegmentRoutePoints(
+        chartData?.garminChartData ?? [],
+        { lat: startLat, lon: startLon },
+        { lat: endLat, lon: endLon },
+      ),
+    [chartData?.garminChartData, startLat, startLon, endLat, endLon],
+  )
+
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove()
+      mapInstanceRef.current = null
+    }
+
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false,
+    }).setView([startLat, startLon], 14)
+    mapInstanceRef.current = map
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map)
+
+    const routeLatLngs = routePoints.map(
+      (point) => [point.latitude, point.longitude] as L.LatLngTuple,
     )
-    .join(' ')
-  const startPoint = svgPoints[0]
-  const endPoint = svgPoints[svgPoints.length - 1]
+    const hasRoute = routeLatLngs.length >= 2
+
+    if (hasRoute) {
+      L.polyline(routeLatLngs, {
+        color: '#2563eb',
+        weight: 4,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(map)
+    } else {
+      L.polyline(
+        [
+          [startLat, startLon],
+          [endLat, endLon],
+        ],
+        { color: '#6366f1', weight: 3, opacity: 0.8, dashArray: '6 6' },
+      ).addTo(map)
+    }
+
+    L.circleMarker([startLat, startLon], {
+      radius: 5,
+      fillColor: '#22c55e',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    }).addTo(map)
+
+    L.circleMarker([endLat, endLon], {
+      radius: 5,
+      fillColor: '#ef4444',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    }).addTo(map)
+
+    const bounds = L.latLngBounds(
+      hasRoute
+        ? routeLatLngs
+        : [
+            [startLat, startLon],
+            [endLat, endLon],
+          ],
+    )
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [16, 16], maxZoom: 16 })
+    }
+
+    return () => {
+      map.remove()
+      mapInstanceRef.current = null
+    }
+  }, [startLat, startLon, endLat, endLon, routePoints])
 
   return (
     <div
+      ref={mapRef}
       aria-label={`${label} segment map`}
-      className="h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 bg-slate-100 dark:bg-slate-900 sm:h-28 sm:w-32"
-      data-testid="segment-mini-map"
       role="img"
-    >
-      <svg
-        className="h-full w-full"
-        data-testid="segment-mini-map-svg"
-        viewBox={`0 0 ${width} ${height}`}
-      >
-        <rect
-          width={width}
-          height={height}
-          fill="currentColor"
-          opacity="0.04"
-        />
-        <path
-          d="M18 26H110M18 56H110M18 86H110M36 14V98M70 14V98M102 14V98"
-          fill="none"
-          stroke="currentColor"
-          strokeOpacity="0.12"
-          strokeWidth="1"
-        />
-        <path
-          d="M16 74C36 58 48 64 68 48S96 34 112 24"
-          fill="none"
-          stroke="currentColor"
-          strokeOpacity="0.12"
-          strokeWidth="7"
-        />
-        <path
-          d={pathData}
-          data-testid="segment-mini-map-path"
-          fill="none"
-          stroke="#2563eb"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="3"
-        />
-        {startPoint && (
-          <circle
-            cx={startPoint.x}
-            cy={startPoint.y}
-            fill="#22c55e"
-            r="4"
-            stroke="#ffffff"
-            strokeWidth="1.5"
-          />
-        )}
-        {endPoint && (
-          <circle
-            cx={endPoint.x}
-            cy={endPoint.y}
-            fill="#ef4444"
-            r="4"
-            stroke="#ffffff"
-            strokeWidth="1.5"
-          />
-        )}
-      </svg>
-    </div>
+      data-testid="segment-mini-map"
+      className="h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 sm:h-28 sm:w-32"
+    />
   )
 }
