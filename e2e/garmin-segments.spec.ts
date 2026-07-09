@@ -20,6 +20,34 @@ test.describe('Garmin Segments', () => {
     const card = page.getByTestId('segment-card').first()
     await expect(card).toBeVisible({ timeout: 20_000 })
 
+    const miniMaps = page.getByTestId('segment-mini-map')
+    await expect(miniMaps.first()).toBeVisible({ timeout: 20_000 })
+    const cardCount = await page.getByTestId('segment-card').count()
+    await expect(miniMaps).toHaveCount(cardCount)
+
+    const firstMapBox = await miniMaps.first().boundingBox()
+    expect(firstMapBox?.width).toBeGreaterThan(100)
+    expect(firstMapBox?.height).toBeGreaterThan(80)
+
+    // Mini map is a real Leaflet OpenStreetMap, not a hand-drawn SVG.
+    await expect(miniMaps.first()).toHaveClass(/leaflet-container/)
+    const firstTile = miniMaps.first().locator('img.leaflet-tile').first()
+    await expect(firstTile).toHaveAttribute('src', /tile\.openstreetmap\.org/, {
+      timeout: 20_000,
+    })
+
+    // The drawn route is the real multi-point segment path (blue polyline),
+    // not a straight line between the two endpoints.
+    const firstRoutePath = miniMaps
+      .first()
+      .locator('path[stroke="#2563eb"]')
+      .first()
+    await expect(firstRoutePath).toBeVisible({ timeout: 20_000 })
+    await expect(async () => {
+      const routePathData = await firstRoutePath.getAttribute('d')
+      expect(routePathData?.split('L').length).toBeGreaterThan(3)
+    }).toPass({ timeout: 10_000 })
+
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, 'segments-list.png'),
       fullPage: true,
