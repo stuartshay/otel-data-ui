@@ -17,6 +17,7 @@ export const GARMIN_SEGMENTS_QUERY = gql`
       source_climb_index
       created_at
       updated_at
+      route
     }
   }
 `

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useGarminChartDataQuery } from '@/__generated__/graphql'
-import { getSegmentRoutePoints } from './segmentRoute'
 
 interface SegmentMiniMapProps {
   startLat: number
@@ -10,15 +8,14 @@ interface SegmentMiniMapProps {
   endLat: number
   endLon: number
   label: string
-  sourceActivityId?: string | null
+  route?: ReadonlyArray<ReadonlyArray<number>> | null
 }
 
 /**
  * Compact, non-interactive OpenStreetMap preview for a saved segment shown in
- * the segments list. Recovers the real route geometry from the source
- * activity's GPS track (snapped to the segment start/end) and draws it as a
- * blue polyline, mirroring {@link SegmentStartEndMap} on the detail page. Falls
- * back to a dashed straight line only when the source track is unavailable.
+ * the segments list. Draws the real route geometry supplied by the API
+ * (`segment.route`, ordered [lat, lon] pairs) as a blue polyline. Falls back to
+ * a dashed straight line only when no route is available.
  */
 export function SegmentMiniMap({
   startLat,
@@ -26,24 +23,22 @@ export function SegmentMiniMap({
   endLat,
   endLon,
   label,
-  sourceActivityId,
+  route,
 }: SegmentMiniMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
-  const { data: chartData } = useGarminChartDataQuery({
-    variables: { activity_id: sourceActivityId ?? '' },
-    skip: !sourceActivityId,
-  })
-
-  const routePoints = useMemo(
+  const routeLatLngs = useMemo<L.LatLngTuple[]>(
     () =>
-      getSegmentRoutePoints(
-        chartData?.garminChartData ?? [],
-        { lat: startLat, lon: startLon },
-        { lat: endLat, lon: endLon },
-      ),
-    [chartData?.garminChartData, startLat, startLon, endLat, endLon],
+      (route ?? [])
+        .filter(
+          (point) =>
+            point.length >= 2 &&
+            Number.isFinite(point[0]) &&
+            Number.isFinite(point[1]),
+        )
+        .map((point) => [point[0], point[1]] as L.LatLngTuple),
+    [route],
   )
 
   useEffect(() => {
@@ -70,9 +65,6 @@ export function SegmentMiniMap({
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
-    const routeLatLngs = routePoints.map(
-      (point) => [point.latitude, point.longitude] as L.LatLngTuple,
-    )
     const hasRoute = routeLatLngs.length >= 2
 
     if (hasRoute) {
@@ -125,7 +117,7 @@ export function SegmentMiniMap({
       map.remove()
       mapInstanceRef.current = null
     }
-  }, [startLat, startLon, endLat, endLon, routePoints])
+  }, [startLat, startLon, endLat, endLon, routeLatLngs])
 
   return (
     <div
