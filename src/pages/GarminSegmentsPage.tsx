@@ -88,7 +88,6 @@ export function GarminSegmentsPage() {
                     startLon={segment.start_longitude}
                     endLat={segment.end_latitude}
                     endLon={segment.end_longitude}
-                    sourceActivityId={segment.source_activity_id}
                     label={segment.name}
                   />
                 </CardContent>

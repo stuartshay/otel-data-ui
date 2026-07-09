@@ -1,42 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useGarminChartDataQuery } from '@/__generated__/graphql'
-import { getSegmentRoutePoints } from './segmentRoute'
 
 interface SegmentMiniMapProps {
   startLat: number
   startLon: number
   endLat: number
   endLon: number
-  sourceActivityId?: string | null
   label: string
-}
-
-interface MiniMapPoint {
-  latitude: number
-  longitude: number
-}
-
-const MAX_PREVIEW_POINTS = 28
-
-function simplifyPreviewPoints<T extends MiniMapPoint>(
-  points: readonly T[],
-): MiniMapPoint[] {
-  if (points.length <= MAX_PREVIEW_POINTS) return [...points]
-
-  const step = (points.length - 1) / (MAX_PREVIEW_POINTS - 1)
-  return Array.from({ length: MAX_PREVIEW_POINTS }, (_, index) => {
-    const sourceIndex =
-      index === MAX_PREVIEW_POINTS - 1
-        ? points.length - 1
-        : Math.round(index * step)
-
-    return {
-      latitude: points[sourceIndex].latitude,
-      longitude: points[sourceIndex].longitude,
-    }
-  })
 }
 
 export function SegmentMiniMap({
@@ -44,37 +15,10 @@ export function SegmentMiniMap({
   startLon,
   endLat,
   endLon,
-  sourceActivityId,
   label,
 }: SegmentMiniMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
-
-  const { data: sourceTrackData } = useGarminChartDataQuery({
-    variables: { activity_id: sourceActivityId ?? '' },
-    skip: !sourceActivityId,
-  })
-
-  const previewPoints = useMemo(() => {
-    const routePoints = getSegmentRoutePoints(
-      sourceTrackData?.garminChartData ?? [],
-      { lat: startLat, lon: startLon },
-      { lat: endLat, lon: endLon },
-    )
-
-    const points: MiniMapPoint[] =
-      routePoints.length >= 2
-        ? routePoints.map((point) => ({
-            latitude: point.latitude,
-            longitude: point.longitude,
-          }))
-        : [
-            { latitude: startLat, longitude: startLon },
-            { latitude: endLat, longitude: endLon },
-          ]
-
-    return simplifyPreviewPoints(points)
-  }, [sourceTrackData?.garminChartData, startLat, startLon, endLat, endLon])
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -85,7 +29,6 @@ export function SegmentMiniMap({
     }
 
     const map = L.map(mapRef.current, {
-      attributionControl: false,
       boxZoom: false,
       doubleClickZoom: false,
       dragging: false,
@@ -96,11 +39,14 @@ export function SegmentMiniMap({
     }).setView([startLat, startLon], 14)
     mapInstanceRef.current = map
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map)
 
-    const latLngs = previewPoints.map(
-      (point) => [point.latitude, point.longitude] as L.LatLngTuple,
-    )
+    const latLngs: L.LatLngTuple[] = [
+      [startLat, startLon],
+      [endLat, endLon],
+    ]
 
     L.polyline(latLngs, {
       color: '#2563eb',
@@ -135,7 +81,7 @@ export function SegmentMiniMap({
       map.remove()
       mapInstanceRef.current = null
     }
-  }, [startLat, startLon, endLat, endLon, previewPoints])
+  }, [startLat, startLon, endLat, endLon])
 
   return (
     <div
