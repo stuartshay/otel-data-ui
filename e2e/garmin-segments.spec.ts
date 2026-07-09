@@ -20,6 +20,15 @@ test.describe('Garmin Segments', () => {
     const card = page.getByTestId('segment-card').first()
     await expect(card).toBeVisible({ timeout: 20_000 })
 
+    const miniMaps = page.getByTestId('segment-mini-map')
+    await expect(miniMaps.first()).toBeVisible({ timeout: 20_000 })
+    const cardCount = await page.getByTestId('segment-card').count()
+    await expect(miniMaps).toHaveCount(cardCount)
+
+    const firstMapBox = await miniMaps.first().boundingBox()
+    expect(firstMapBox?.width).toBeGreaterThan(100)
+    expect(firstMapBox?.height).toBeGreaterThan(80)
+
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, 'segments-list.png'),
       fullPage: true,

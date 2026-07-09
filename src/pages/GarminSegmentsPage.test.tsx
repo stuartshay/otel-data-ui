@@ -9,6 +9,11 @@ const segmentHooks = vi.hoisted(() => ({
 
 vi.mock('@/__generated__/graphql', () => segmentHooks)
 vi.mock('@/lib/newrelic-browser', () => ({ setNRCustomAttribute: vi.fn() }))
+vi.mock('@/components/garmin/SegmentMiniMap', () => ({
+  SegmentMiniMap: ({ label }: { label: string }) => (
+    <div data-testid="segment-mini-map">{label} map</div>
+  ),
+}))
 
 describe('GarminSegmentsPage', () => {
   beforeEach(() => {
@@ -46,6 +51,7 @@ describe('GarminSegmentsPage', () => {
 
     expect(screen.getByText('Saved Segments')).toBeVisible()
     expect(screen.getByText('Harlem Hill')).toBeVisible()
+    expect(screen.getByText('Harlem Hill map')).toBeVisible()
     expect(screen.getByText('35 m')).toBeVisible()
     expect(screen.getByTestId('segment-card')).toHaveAttribute(
       'href',
