@@ -28,7 +28,7 @@
     "@fontsource-variable/geist": "^5.2.8",
     "@newrelic/browser-agent": "^1.310.1",
     "@radix-ui/react-slot": "^1.2.4",
-    "@stuartshay/otel-graphql-types": "1.0.486",
+    "@stuartshay/otel-graphql-types": "1.0.489",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
