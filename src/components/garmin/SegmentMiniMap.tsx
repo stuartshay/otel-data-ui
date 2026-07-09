@@ -1,6 +1,3 @@
-import { useEffect, useRef } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { buildSegmentPreviewPath } from './segmentPreviewPath'
 
 interface SegmentMiniMapProps {
@@ -18,77 +15,95 @@ export function SegmentMiniMap({
   endLon,
   label,
 }: SegmentMiniMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<L.Map | null>(null)
+  const points = buildSegmentPreviewPath(startLat, startLon, endLat, endLon)
+  const latitudes = points.map(([lat]) => lat)
+  const longitudes = points.map(([, lon]) => lon)
+  const minLat = Math.min(...latitudes)
+  const maxLat = Math.max(...latitudes)
+  const minLon = Math.min(...longitudes)
+  const maxLon = Math.max(...longitudes)
+  const latRange = Math.max(maxLat - minLat, 0.000001)
+  const lonRange = Math.max(maxLon - minLon, 0.000001)
+  const padding = 14
+  const width = 128
+  const height = 112
 
-  useEffect(() => {
-    if (!mapRef.current) return
-
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove()
-      mapInstanceRef.current = null
-    }
-
-    const map = L.map(mapRef.current, {
-      boxZoom: false,
-      doubleClickZoom: false,
-      dragging: false,
-      keyboard: false,
-      scrollWheelZoom: false,
-      touchZoom: false,
-      zoomControl: false,
-    }).setView([startLat, startLon], 14)
-    mapInstanceRef.current = map
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map)
-
-    const latLngs = buildSegmentPreviewPath(startLat, startLon, endLat, endLon)
-
-    L.polyline(latLngs, {
-      color: '#2563eb',
-      lineCap: 'round',
-      lineJoin: 'round',
-      opacity: 1,
-      smoothFactor: 0,
-      weight: 3,
-    }).addTo(map)
-
-    L.circleMarker([startLat, startLon], {
-      color: '#ffffff',
-      fillColor: '#22c55e',
-      fillOpacity: 1,
-      radius: 4,
-      weight: 1.5,
-    }).addTo(map)
-
-    L.circleMarker([endLat, endLon], {
-      color: '#ffffff',
-      fillColor: '#ef4444',
-      fillOpacity: 1,
-      radius: 4,
-      weight: 1.5,
-    }).addTo(map)
-
-    const bounds = L.latLngBounds(latLngs)
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [14, 14], maxZoom: 15 })
-    }
-
-    return () => {
-      map.remove()
-      mapInstanceRef.current = null
-    }
-  }, [startLat, startLon, endLat, endLon])
+  const svgPoints = points.map(([lat, lon]) => {
+    const x = padding + ((lon - minLon) / lonRange) * (width - padding * 2)
+    const y = padding + ((maxLat - lat) / latRange) * (height - padding * 2)
+    return { x, y }
+  })
+  const pathData = svgPoints
+    .map(
+      (point, index) =>
+        `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
+    )
+    .join(' ')
+  const startPoint = svgPoints[0]
+  const endPoint = svgPoints[svgPoints.length - 1]
 
   return (
     <div
-      ref={mapRef}
       aria-label={`${label} segment map`}
-      className="h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted sm:h-28 sm:w-32"
+      className="h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 bg-slate-100 dark:bg-slate-900 sm:h-28 sm:w-32"
       data-testid="segment-mini-map"
       role="img"
-    />
+    >
+      <svg
+        className="h-full w-full"
+        data-testid="segment-mini-map-svg"
+        viewBox={`0 0 ${width} ${height}`}
+      >
+        <rect
+          width={width}
+          height={height}
+          fill="currentColor"
+          opacity="0.04"
+        />
+        <path
+          d="M18 26H110M18 56H110M18 86H110M36 14V98M70 14V98M102 14V98"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="1"
+        />
+        <path
+          d="M16 74C36 58 48 64 68 48S96 34 112 24"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="7"
+        />
+        <path
+          d={pathData}
+          data-testid="segment-mini-map-path"
+          fill="none"
+          stroke="#2563eb"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="3"
+        />
+        {startPoint && (
+          <circle
+            cx={startPoint.x}
+            cy={startPoint.y}
+            fill="#22c55e"
+            r="4"
+            stroke="#ffffff"
+            strokeWidth="1.5"
+          />
+        )}
+        {endPoint && (
+          <circle
+            cx={endPoint.x}
+            cy={endPoint.y}
+            fill="#ef4444"
+            r="4"
+            stroke="#ffffff"
+            strokeWidth="1.5"
+          />
+        )}
+      </svg>
+    </div>
   )
 }
