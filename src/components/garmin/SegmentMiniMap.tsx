@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { buildSegmentPreviewPath } from './segmentPreviewPath'
 
 interface SegmentMiniMapProps {
   startLat: number
@@ -43,16 +44,14 @@ export function SegmentMiniMap({
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
-    const latLngs: L.LatLngTuple[] = [
-      [startLat, startLon],
-      [endLat, endLon],
-    ]
+    const latLngs = buildSegmentPreviewPath(startLat, startLon, endLat, endLon)
 
     L.polyline(latLngs, {
       color: '#2563eb',
       lineCap: 'round',
       lineJoin: 'round',
       opacity: 1,
+      smoothFactor: 0,
       weight: 3,
     }).addTo(map)
 

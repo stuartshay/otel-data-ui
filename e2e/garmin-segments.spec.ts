@@ -29,6 +29,17 @@ test.describe('Garmin Segments', () => {
     expect(firstMapBox?.width).toBeGreaterThan(100)
     expect(firstMapBox?.height).toBeGreaterThan(80)
 
+    const firstRoutePath = miniMaps
+      .first()
+      .locator('.leaflet-overlay-pane svg path[fill="none"]')
+      .first()
+    await expect(firstRoutePath).toHaveAttribute('stroke', '#2563eb')
+
+    await expect(async () => {
+      const routePathData = await firstRoutePath.getAttribute('d')
+      expect(routePathData?.split('L').length).toBeGreaterThan(3)
+    }).toPass({ timeout: 10_000 })
+
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, 'segments-list.png'),
       fullPage: true,
