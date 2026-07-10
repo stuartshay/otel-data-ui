@@ -191,6 +191,21 @@ function computeLapCount(items: ComparisonItem[]): number {
   }, 0)
 }
 
+// Finite metric values for a single lap column across all activities.
+function collectColumnValues(
+  items: ComparisonItem[],
+  def: MetricDef,
+  lapIndex: number,
+): number[] {
+  const values: number[] = []
+  for (const item of items) {
+    const lap = item.laps.find((l) => l.lap_index === lapIndex)
+    const v = lap ? def.extract(lap) : null
+    if (v != null && Number.isFinite(v)) values.push(v)
+  }
+  return values
+}
+
 // Per-column min/max/best/worst stats used for heat-map scoring and summaries.
 // A column with no finite values yields null.
 function computeColumnStats(
@@ -200,12 +215,7 @@ function computeColumnStats(
 ): (ColumnStat | null)[] {
   const colStats: (ColumnStat | null)[] = []
   for (let c = 1; c <= lapCount; c++) {
-    const values: number[] = []
-    for (const item of items) {
-      const lap = item.laps.find((l) => l.lap_index === c)
-      const v = lap ? def.extract(lap) : null
-      if (v != null && Number.isFinite(v)) values.push(v)
-    }
+    const values = collectColumnValues(items, def, c)
     if (values.length === 0) {
       colStats.push(null)
       continue
