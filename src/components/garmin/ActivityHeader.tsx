@@ -54,7 +54,7 @@ export function ActivityHeader({
       <div className="text-muted-foreground">{icon}</div>
       <div className="flex-1">
         <h1 className="text-2xl font-bold capitalize tracking-tight">
-          {sport.replace(/_/g, ' ')}
+          {sport.replaceAll('_', ' ')}
         </h1>
         <p className="text-sm text-muted-foreground">
           {startTime
@@ -72,7 +72,7 @@ export function ActivityHeader({
       <div className="flex gap-2">
         {subSport && (
           <Badge variant="secondary" className="capitalize">
-            {subSport.replace(/_/g, ' ')}
+            {subSport.replaceAll('_', ' ')}
           </Badge>
         )}
         {deviceModel ? (

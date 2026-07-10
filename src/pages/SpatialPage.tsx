@@ -33,9 +33,9 @@ export function SpatialPage() {
 
   const { data: nearbyData, loading: nearbyLoading } = useNearbyPointsQuery({
     variables: {
-      lat: parseFloat(nearbyLat),
-      lon: parseFloat(nearbyLon),
-      radius_meters: parseFloat(nearbyRadius),
+      lat: Number.parseFloat(nearbyLat),
+      lon: Number.parseFloat(nearbyLon),
+      radius_meters: Number.parseFloat(nearbyRadius),
       limit: 20,
     },
     skip: !runNearby,
@@ -44,10 +44,10 @@ export function SpatialPage() {
   const { data: distanceData, loading: distanceLoading } =
     useCalculateDistanceQuery({
       variables: {
-        from_lat: parseFloat(fromLat),
-        from_lon: parseFloat(fromLon),
-        to_lat: parseFloat(toLat),
-        to_lon: parseFloat(toLon),
+        from_lat: Number.parseFloat(fromLat),
+        from_lon: Number.parseFloat(fromLon),
+        to_lat: Number.parseFloat(toLat),
+        to_lon: Number.parseFloat(toLon),
       },
       skip: !runDistance,
     })

@@ -147,9 +147,9 @@ function normalizeTooltipIndex(
   if (typeof raw === 'number') return raw
   if (typeof raw === 'string') {
     const trimmed = raw.trim()
-    return trimmed === '' ? NaN : Number(trimmed)
+    return trimmed === '' ? Number.NaN : Number(trimmed)
   }
-  return NaN
+  return Number.NaN
 }
 
 function pointFromTooltipState(

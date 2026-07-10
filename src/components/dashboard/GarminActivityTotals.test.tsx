@@ -524,7 +524,7 @@ describe('GarminActivityTotals', () => {
 
     // Chart data has one bar per year, distance increasing with year.
     await waitFor(() => {
-      expect(latestBarChartData.length).toBe(expectedYears)
+      expect(latestBarChartData).toHaveLength(expectedYears)
     })
     expect(latestBarChartData[0]).toEqual(
       expect.objectContaining({ label: '2010', distance_km: 10 }),

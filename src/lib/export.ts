@@ -11,7 +11,7 @@ export function escapeCsvValue(value: unknown): string {
   if (value == null) return ''
   const str = String(value)
   if (/[,"\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`
+    return `"${str.replaceAll('"', '""')}"`
   }
   return str
 }
@@ -35,7 +35,7 @@ export function triggerDownload(
   a.download = filename
   document.body.appendChild(a)
   a.click()
-  document.body.removeChild(a)
+  a.remove()
   const revokeObjectURL =
     typeof URL.revokeObjectURL === 'function'
       ? URL.revokeObjectURL.bind(URL)

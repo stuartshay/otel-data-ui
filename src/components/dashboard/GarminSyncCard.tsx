@@ -34,8 +34,8 @@ export function GarminSyncCard() {
 
   const handleSync = () => {
     const variables: { window_hours?: number; lookback?: number } = {}
-    if (windowHours) variables.window_hours = parseInt(windowHours, 10)
-    if (lookback) variables.lookback = parseInt(lookback, 10)
+    if (windowHours) variables.window_hours = Number.parseInt(windowHours, 10)
+    if (lookback) variables.lookback = Number.parseInt(lookback, 10)
     triggerSync({ variables })
   }
 
