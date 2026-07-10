@@ -256,19 +256,19 @@ export function ActivityRouteMap({
         <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-full bg-blue-500" />
-            Slow
+            <span>Slow</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-full bg-green-500" />
-            Moderate
+            <span>Moderate</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-full bg-yellow-500" />
-            Fast
+            <span>Fast</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-full bg-red-500" />
-            Sprint
+            <span>Sprint</span>
           </div>
         </div>
       </CardContent>

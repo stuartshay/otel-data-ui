@@ -244,7 +244,7 @@ export function CyclingInFocus() {
                 <span className="block font-semibold tabular-nums text-foreground">
                   {formatDuration(totalSeconds)}
                 </span>
-                Total Time
+                <span>Total Time</span>
               </span>
             </div>
 
