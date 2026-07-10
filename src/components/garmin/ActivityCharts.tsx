@@ -140,18 +140,20 @@ function ChartTooltip({ label, payload, chart, xMode }: ChartTooltipProps) {
   )
 }
 
+// Recharts 3 may emit the tooltip index as a string; normalize it to a number.
+function normalizeTooltipIndex(
+  raw: number | string | null | undefined,
+): number {
+  if (typeof raw === 'number') return raw
+  if (typeof raw === 'string' && raw !== '') return Number(raw)
+  return NaN
+}
+
 function pointFromTooltipState(
   state: { activeTooltipIndex?: number | string | null } | undefined,
   chartData: ChartDataPoint[],
 ): ChartDataPoint | null {
-  const raw = state?.activeTooltipIndex
-  // Recharts 3 may emit the index as a string; normalize it.
-  const i =
-    typeof raw === 'number'
-      ? raw
-      : typeof raw === 'string' && raw !== ''
-        ? Number(raw)
-        : NaN
+  const i = normalizeTooltipIndex(state?.activeTooltipIndex)
 
   return Number.isInteger(i) && chartData[i] ? chartData[i] : null
 }
@@ -216,6 +218,7 @@ export function ActivityCharts({
     xMode === 'distance' && !hasReliableDistance ? 'time' : xMode
   const xKey = effectiveXMode === 'distance' ? 'distance' : 'time'
   const xLabel = effectiveXMode === 'distance' ? 'Distance (mi)' : 'Time (min)'
+  const xTickDigits = effectiveXMode === 'distance' ? 1 : 0
   const activeX =
     activePoint?.[xKey] != null && Number.isFinite(activePoint[xKey])
       ? activePoint[xKey]
@@ -485,9 +488,7 @@ export function ActivityCharts({
                   type="number"
                   domain={[0, 'dataMax']}
                   tickFormatter={(v: number) =>
-                    v != null
-                      ? v.toFixed(effectiveXMode === 'distance' ? 1 : 0)
-                      : ''
+                    v != null ? v.toFixed(xTickDigits) : ''
                   }
                   label={{
                     value: xLabel,

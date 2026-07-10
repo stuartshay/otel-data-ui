@@ -241,6 +241,16 @@ function TrainingEffectGraphic({
   )
 }
 
+// Format the observed HR range for a zone, collapsing equal min/max to a single
+// value and returning null when either bound is missing.
+function formatObservedRange(
+  min: number | null | undefined,
+  max: number | null | undefined,
+): string | null {
+  if (min == null || max == null) return null
+  return min === max ? `${min} bpm` : `${min} - ${max} bpm`
+}
+
 function HeartRateZoneBreakdown({
   summaries,
 }: {
@@ -258,12 +268,10 @@ function HeartRateZoneBreakdown({
       </CardHeader>
       <CardContent className="space-y-4">
         {summaries.map((summary) => {
-          const observedRange =
-            summary.minHeartRate != null && summary.maxHeartRate != null
-              ? summary.minHeartRate === summary.maxHeartRate
-                ? `${summary.minHeartRate} bpm`
-                : `${summary.minHeartRate} - ${summary.maxHeartRate} bpm`
-              : null
+          const observedRange = formatObservedRange(
+            summary.minHeartRate,
+            summary.maxHeartRate,
+          )
 
           return (
             <div

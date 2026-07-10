@@ -169,18 +169,7 @@ export function ActivityHoverDetails({
             label="Time"
             value={`${timeStr} (${point.time.toFixed(1)} min)`}
           />
-          <Field
-            label="Distance"
-            value={
-              point.distance != null
-                ? `${point.distance.toFixed(2)} mi${
-                    point.distanceKm != null
-                      ? ` (${point.distanceKm.toFixed(2)} km)`
-                      : ''
-                  }`
-                : '—'
-            }
-          />
+          <Field label="Distance" value={formatHoverDistance(point)} />
           <Field
             label="Lat/Lon"
             value={
@@ -221,6 +210,14 @@ function renderAddress(state: AddressState): string {
     default:
       return '—'
   }
+}
+
+// Format the hover distance in miles, appending the km value when available.
+function formatHoverDistance(point: ChartDataPoint): string {
+  if (point.distance == null) return '—'
+  const km =
+    point.distanceKm != null ? ` (${point.distanceKm.toFixed(2)} km)` : ''
+  return `${point.distance.toFixed(2)} mi${km}`
 }
 
 function Field({ label, value }: { label: string; value: string }) {
