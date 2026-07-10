@@ -35,17 +35,18 @@ interface CoordKey {
 }
 
 function coordKey(point: ChartDataPoint | null): CoordKey | null {
+  const latitude = point?.latitude
+  const longitude = point?.longitude
   if (
-    !point ||
-    point.latitude == null ||
-    point.longitude == null ||
-    !Number.isFinite(point.latitude) ||
-    !Number.isFinite(point.longitude)
+    latitude == null ||
+    longitude == null ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
   ) {
     return null
   }
-  const lat = roundCoord(point.latitude)
-  const lon = roundCoord(point.longitude)
+  const lat = roundCoord(latitude)
+  const lon = roundCoord(longitude)
   return { key: `${lat},${lon}`, lat, lon }
 }
 
@@ -97,7 +98,7 @@ export function ActivityHoverDetails({
       const cached = addressCache.get(target.key)
       return cached ? { status: 'ok', label: cached } : { status: 'empty' }
     }
-    if (pendingState && pendingState.key === target.key) {
+    if (pendingState?.key === target.key) {
       return pendingState.state
     }
     return { status: 'loading' }

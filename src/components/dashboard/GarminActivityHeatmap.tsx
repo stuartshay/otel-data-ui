@@ -32,7 +32,7 @@ interface HeatmapValue {
 type HeatmapCallbackValue = { date: string; [key: string]: unknown } | undefined
 
 function getColorClass(value: HeatmapCallbackValue): string {
-  if (!value || !value.count) return 'color-empty'
+  if (!value?.count) return 'color-empty'
   const count = value.count as number
   if (count === 1) return 'color-scale-1'
   if (count === 2) return 'color-scale-2'
@@ -41,7 +41,7 @@ function getColorClass(value: HeatmapCallbackValue): string {
 }
 
 function getTitleForValue(value: HeatmapCallbackValue): string {
-  if (!value || !value.date) return 'No activities'
+  if (!value?.date) return 'No activities'
   const count = (value.count as number) ?? 0
   if (count === 0) return `No activities on ${value.date}`
   return `${count} ${count === 1 ? 'activity' : 'activities'} on ${value.date}`
@@ -154,7 +154,7 @@ export function GarminActivityHeatmap() {
               showWeekdayLabels
               gutterSize={2}
               onClick={(value: HeatmapCallbackValue) => {
-                if (!value || !value.date || !value.count) return
+                if (!value?.date || !value?.count) return
                 setAnchorPos(pendingAnchor.current)
                 setSelectedDate(value.date)
                 setPopoverOpen(true)
