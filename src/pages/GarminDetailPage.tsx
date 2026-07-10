@@ -61,9 +61,9 @@ function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180
 }
 
-function isFiniteCoordinate(
-  point: ActivityChartTrackPoint,
-): point is ActivityChartTrackPoint & { latitude: number; longitude: number } {
+function isFiniteCoordinate<
+  T extends { latitude?: number | null; longitude?: number | null },
+>(point: T): point is T & { latitude: number; longitude: number } {
   return (
     point.latitude != null &&
     point.longitude != null &&
@@ -461,6 +461,60 @@ function exportGarminTrackPoints(
   )
 }
 
+// Resolve which climb is selected: none when there are no climbs, the current
+// selection when it still exists, otherwise the first climb.
+function resolveSelectedClimbId(
+  mainClimbs: ActivityClimb[],
+  selectedClimbId: number | null,
+): number | null {
+  if (mainClimbs.length === 0) return null
+  if (
+    selectedClimbId != null &&
+    mainClimbs.some((climb) => climb.id === selectedClimbId)
+  ) {
+    return selectedClimbId
+  }
+  return mainClimbs[0].id
+}
+
+// Whether the activity has any usable heart-rate data (summary or samples).
+function computeHasHrData(
+  avgHeartRate: number | null | undefined,
+  maxHeartRate: number | null | undefined,
+  chartPoints: ActivityChartTrackPoint[],
+): boolean {
+  return (
+    avgHeartRate != null ||
+    maxHeartRate != null ||
+    chartPoints.some((point) => point.heart_rate != null)
+  )
+}
+
+// Whether the currently displayed point is in the saved set (by timestamp).
+function isSavedPoint(
+  point: ChartDataPoint | null,
+  savedPoints: SavedPoint[],
+): boolean {
+  return point != null && savedPoints.some((p) => p.id === point.timestamp)
+}
+
+interface SavedMapPoint {
+  id: string
+  lat: number
+  lng: number
+  color: string
+}
+
+// Saved points that have finite coordinates, shaped for the map layer.
+function toSavedMapPoints(savedPoints: SavedPoint[]): SavedMapPoint[] {
+  return savedPoints.filter(isFiniteCoordinate).map((p) => ({
+    id: p.id,
+    lat: p.latitude,
+    lng: p.longitude,
+    color: p.color,
+  }))
+}
+
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
@@ -655,13 +709,10 @@ export function GarminDetailPage() {
   useEffect(() => {
     mainClimbsRef.current = mainClimbs
   }, [mainClimbs])
-  const effectiveSelectedClimbId =
-    mainClimbs.length === 0
-      ? null
-      : selectedClimbId != null &&
-          mainClimbs.some((climb) => climb.id === selectedClimbId)
-        ? selectedClimbId
-        : mainClimbs[0].id
+  const effectiveSelectedClimbId = resolveSelectedClimbId(
+    mainClimbs,
+    selectedClimbId,
+  )
   const selectedClimbIndex = mainClimbs.findIndex(
     (climb) => climb.id === effectiveSelectedClimbId,
   )
@@ -685,29 +736,15 @@ export function GarminDetailPage() {
   const a = data?.garminActivity
   if (!a) return <ErrorState message="Activity not found" />
 
-  const hasHrData =
-    a.avg_heart_rate != null ||
-    a.max_heart_rate != null ||
-    chartPoints.some((point) => point.heart_rate != null)
+  const hasHrData = computeHasHrData(
+    a.avg_heart_rate,
+    a.max_heart_rate,
+    chartPoints,
+  )
   const trackLoading = mapTrackLoading || chartLoading
   const displayPoint = activePoint
-  const displayPointSaved =
-    displayPoint != null &&
-    savedPoints.some((p) => p.id === displayPoint.timestamp)
-  const savedMapPoints = savedPoints
-    .filter(
-      (p) =>
-        p.latitude != null &&
-        p.longitude != null &&
-        Number.isFinite(p.latitude) &&
-        Number.isFinite(p.longitude),
-    )
-    .map((p) => ({
-      id: p.id,
-      lat: p.latitude as number,
-      lng: p.longitude as number,
-      color: p.color,
-    }))
+  const displayPointSaved = isSavedPoint(displayPoint, savedPoints)
+  const savedMapPoints = toSavedMapPoints(savedPoints)
 
   return (
     <div className="space-y-6">
