@@ -75,6 +75,41 @@ function fmt(
   return `${val.toFixed(decimals)} ${unit}`
 }
 
+// Convert then format, short-circuiting to an em dash for null/undefined so the
+// converter never receives null.
+function fmtConverted(
+  val: number | null | undefined,
+  convert: (v: number) => number,
+  decimals: number,
+  unit: string,
+): string {
+  return val == null ? '—' : fmt(convert(val), decimals, unit)
+}
+
+// Format a raw value with a trailing unit, or an em dash when absent.
+function fmtUnit(val: number | null | undefined, unit: string): string {
+  return val == null ? '—' : `${val} ${unit}`
+}
+
+// Format a count with locale grouping, or an em dash when absent.
+function fmtCount(val: number | null | undefined): string {
+  return val == null ? '—' : val.toLocaleString()
+}
+
+// Garmin counts vigorous intensity minutes as 2x toward the total. Compute it
+// from the components when both are present (self-consistent with the displayed
+// values); otherwise fall back to the stored total.
+function formatTotalIntensityMinutes(
+  moderate: number | null | undefined,
+  vigorous: number | null | undefined,
+  total: number | null | undefined,
+): string {
+  if (moderate != null && vigorous != null) {
+    return `${moderate + vigorous * 2} min`
+  }
+  return fmtUnit(total, 'min')
+}
+
 function formatHeartRate(value: number | null | undefined): string {
   return isValidHeartRate(value) ? `${value} bpm` : '—'
 }
@@ -271,36 +306,21 @@ function HeartRateZoneBreakdown({
   )
 }
 
-export function ActivityStatsPanel({
-  activity: a,
-  heartRateZonePoints = [],
-}: ActivityStatsPanelProps) {
-  const hasHeartRateSamples = heartRateZonePoints.some((point) =>
-    isValidHeartRate(point.heart_rate),
-  )
-  const hrAvailable =
-    a.hr_available === false
-      ? false
-      : isValidHeartRate(a.avg_heart_rate) ||
-        isValidHeartRate(a.max_heart_rate) ||
-        isValidHeartRate(a.min_heart_rate) ||
-        hasHeartRateSamples
-  const heartRateZoneSummaries = useMemo(
-    () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
-    [heartRateZonePoints, hrAvailable],
-  )
-  const hasAnyTrainingEffect =
-    hasTrainingEffect(a.aerobic_training_effect) ||
-    hasTrainingEffect(a.anaerobic_training_effect)
+type ActivityStats = ActivityStatsPanelProps['activity']
 
-  const sections: StatSection[] = [
+// Build the ordered list of stat sections shown in the panel. HR-dependent
+// sections are only included when heart-rate data is available.
+function buildStatSections(
+  a: ActivityStats,
+  hrAvailable: boolean,
+): StatSection[] {
+  return [
     {
       title: 'Distance',
       rows: [
         {
           label: 'Total Distance',
-          value:
-            a.distance_km != null ? fmt(kmToMi(a.distance_km), 2, 'mi') : '—',
+          value: fmtConverted(a.distance_km, kmToMi, 2, 'mi'),
         },
         { label: 'Total Distance', value: fmt(a.distance_km, 2, 'km') },
       ],
@@ -327,17 +347,11 @@ export function ActivityStatsPanel({
       rows: [
         {
           label: 'Ascent',
-          value:
-            a.total_ascent_m != null
-              ? fmt(metersToFeet(a.total_ascent_m), 0, 'ft')
-              : '—',
+          value: fmtConverted(a.total_ascent_m, metersToFeet, 0, 'ft'),
         },
         {
           label: 'Descent',
-          value:
-            a.total_descent_m != null
-              ? fmt(metersToFeet(a.total_descent_m), 0, 'ft')
-              : '—',
+          value: fmtConverted(a.total_descent_m, metersToFeet, 0, 'ft'),
         },
         { label: 'Ascent', value: fmt(a.total_ascent_m, 0, 'm') },
         { label: 'Descent', value: fmt(a.total_descent_m, 0, 'm') },
@@ -348,17 +362,11 @@ export function ActivityStatsPanel({
       rows: [
         {
           label: 'Avg Speed',
-          value:
-            a.avg_speed_kmh != null
-              ? fmt(kmhToMph(a.avg_speed_kmh), 1, 'mph')
-              : '—',
+          value: fmtConverted(a.avg_speed_kmh, kmhToMph, 1, 'mph'),
         },
         {
           label: 'Max Speed',
-          value:
-            a.max_speed_kmh != null
-              ? fmt(kmhToMph(a.max_speed_kmh), 1, 'mph')
-              : '—',
+          value: fmtConverted(a.max_speed_kmh, kmhToMph, 1, 'mph'),
         },
         { label: 'Avg Pace', value: formatPace(a.avg_speed_kmh ?? null) },
         { label: 'Avg Speed', value: fmt(a.avg_speed_kmh, 1, 'km/h') },
@@ -389,19 +397,9 @@ export function ActivityStatsPanel({
     {
       title: 'Cadence',
       rows: [
-        {
-          label: 'Avg Cadence',
-          value: a.avg_cadence != null ? `${a.avg_cadence} rpm` : '—',
-        },
-        {
-          label: 'Max Cadence',
-          value: a.max_cadence != null ? `${a.max_cadence} rpm` : '—',
-        },
-        {
-          label: 'Total Strokes',
-          value:
-            a.total_strokes != null ? a.total_strokes.toLocaleString() : '—',
-        },
+        { label: 'Avg Cadence', value: fmtUnit(a.avg_cadence, 'rpm') },
+        { label: 'Max Cadence', value: fmtUnit(a.max_cadence, 'rpm') },
+        { label: 'Total Strokes', value: fmtCount(a.total_strokes) },
       ],
     },
     {
@@ -409,55 +407,49 @@ export function ActivityStatsPanel({
       rows: [
         {
           label: 'Avg Temperature',
-          value:
-            a.avg_temperature_c != null
-              ? fmt(celsiusToFahrenheit(a.avg_temperature_c), 0, '°F')
-              : '—',
+          value: fmtConverted(
+            a.avg_temperature_c,
+            celsiusToFahrenheit,
+            0,
+            '°F',
+          ),
         },
         {
           label: 'Min Temperature',
-          value:
-            a.min_temperature_c != null
-              ? fmt(celsiusToFahrenheit(a.min_temperature_c), 0, '°F')
-              : '—',
+          value: fmtConverted(
+            a.min_temperature_c,
+            celsiusToFahrenheit,
+            0,
+            '°F',
+          ),
         },
         {
           label: 'Max Temperature',
-          value:
-            a.max_temperature_c != null
-              ? fmt(celsiusToFahrenheit(a.max_temperature_c), 0, '°F')
-              : '—',
+          value: fmtConverted(
+            a.max_temperature_c,
+            celsiusToFahrenheit,
+            0,
+            '°F',
+          ),
         },
         {
           label: 'Avg Temperature',
-          value:
-            a.avg_temperature_c != null ? `${a.avg_temperature_c} °C` : '—',
+          value: fmtUnit(a.avg_temperature_c, '°C'),
         },
       ],
     },
     {
       title: 'Calories',
       rows: [
-        {
-          label: 'Total Calories',
-          value: a.calories != null ? `${a.calories} kcal` : '—',
-        },
-        {
-          label: 'Est. Sweat Loss',
-          value: a.sweat_loss_ml != null ? `${a.sweat_loss_ml} ml` : '—',
-        },
+        { label: 'Total Calories', value: fmtUnit(a.calories, 'kcal') },
+        { label: 'Est. Sweat Loss', value: fmtUnit(a.sweat_loss_ml, 'ml') },
       ],
     },
     ...(hrAvailable && a.exercise_load != null
       ? [
           {
             title: 'Training Load',
-            rows: [
-              {
-                label: 'Exercise Load',
-                value: `${a.exercise_load}`,
-              },
-            ],
+            rows: [{ label: 'Exercise Load', value: `${a.exercise_load}` }],
           } satisfies StatSection,
         ]
       : []),
@@ -468,24 +460,15 @@ export function ActivityStatsPanel({
             rows: [
               {
                 label: 'Avg Respiration',
-                value:
-                  a.avg_respiration_rate != null
-                    ? `${a.avg_respiration_rate} breaths/min`
-                    : '—',
+                value: fmtUnit(a.avg_respiration_rate, 'breaths/min'),
               },
               {
                 label: 'Min Respiration',
-                value:
-                  a.min_respiration_rate != null
-                    ? `${a.min_respiration_rate} breaths/min`
-                    : '—',
+                value: fmtUnit(a.min_respiration_rate, 'breaths/min'),
               },
               {
                 label: 'Max Respiration',
-                value:
-                  a.max_respiration_rate != null
-                    ? `${a.max_respiration_rate} breaths/min`
-                    : '—',
+                value: fmtUnit(a.max_respiration_rate, 'breaths/min'),
               },
             ],
           } satisfies StatSection,
@@ -494,17 +477,11 @@ export function ActivityStatsPanel({
             rows: [
               {
                 label: 'Moderate',
-                value:
-                  a.moderate_intensity_minutes != null
-                    ? `${a.moderate_intensity_minutes} min`
-                    : '—',
+                value: fmtUnit(a.moderate_intensity_minutes, 'min'),
               },
               {
                 label: 'Vigorous',
-                value:
-                  a.vigorous_intensity_minutes != null
-                    ? `${a.vigorous_intensity_minutes} min`
-                    : '—',
+                value: fmtUnit(a.vigorous_intensity_minutes, 'min'),
                 // Only show the x2 multiplier badge when a value is present.
                 ...(a.vigorous_intensity_minutes != null
                   ? { badge: 'x2' }
@@ -512,21 +489,11 @@ export function ActivityStatsPanel({
               },
               {
                 label: 'Total',
-                value: (() => {
-                  // Garmin counts vigorous intensity minutes as 2x toward the
-                  // total. Compute it from the components when both are present
-                  // (self-consistent with the displayed values); otherwise fall
-                  // back to the stored total.
-                  if (
-                    a.moderate_intensity_minutes != null &&
-                    a.vigorous_intensity_minutes != null
-                  ) {
-                    return `${a.moderate_intensity_minutes + a.vigorous_intensity_minutes * 2} min`
-                  }
-                  return a.total_intensity_minutes != null
-                    ? `${a.total_intensity_minutes} min`
-                    : '—'
-                })(),
+                value: formatTotalIntensityMinutes(
+                  a.moderate_intensity_minutes,
+                  a.vigorous_intensity_minutes,
+                  a.total_intensity_minutes,
+                ),
               },
             ],
           } satisfies StatSection,
@@ -537,21 +504,40 @@ export function ActivityStatsPanel({
       rows: [
         {
           label: 'Paved',
-          value:
-            a.paved_distance_km != null
-              ? `${kmToMi(a.paved_distance_km).toFixed(2)} mi`
-              : '—',
+          value: fmtConverted(a.paved_distance_km, kmToMi, 2, 'mi'),
         },
         {
           label: 'Unpaved',
-          value:
-            a.unpaved_distance_km != null
-              ? `${kmToMi(a.unpaved_distance_km).toFixed(2)} mi`
-              : '—',
+          value: fmtConverted(a.unpaved_distance_km, kmToMi, 2, 'mi'),
         },
       ],
     },
   ]
+}
+
+export function ActivityStatsPanel({
+  activity: a,
+  heartRateZonePoints = [],
+}: ActivityStatsPanelProps) {
+  const hasHeartRateSamples = heartRateZonePoints.some((point) =>
+    isValidHeartRate(point.heart_rate),
+  )
+  const hrAvailable =
+    a.hr_available === false
+      ? false
+      : isValidHeartRate(a.avg_heart_rate) ||
+        isValidHeartRate(a.max_heart_rate) ||
+        isValidHeartRate(a.min_heart_rate) ||
+        hasHeartRateSamples
+  const heartRateZoneSummaries = useMemo(
+    () => (hrAvailable ? buildHeartRateZoneSummaries(heartRateZonePoints) : []),
+    [heartRateZonePoints, hrAvailable],
+  )
+  const hasAnyTrainingEffect =
+    hasTrainingEffect(a.aerobic_training_effect) ||
+    hasTrainingEffect(a.anaerobic_training_effect)
+
+  const sections = buildStatSections(a, hrAvailable)
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

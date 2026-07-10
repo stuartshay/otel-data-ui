@@ -172,14 +172,32 @@ export function buildComparisonMatrix(
   metric: LapMetric,
 ): ComparisonMatrix {
   const def = getMetricDef(metric)
+  const lapCount = computeLapCount(items)
+  const colStats = computeColumnStats(items, def, lapCount)
+  const rows = items.map((item) =>
+    buildMatrixRow(item, def, colStats, lapCount),
+  )
+  const summary = buildColumnSummaries(colStats, def, lapCount)
+  return { lapCount, rows, summary }
+}
 
-  const lapCount = items.reduce((max, item) => {
+// Highest lap index present across all activities.
+function computeLapCount(items: ComparisonItem[]): number {
+  return items.reduce((max, item) => {
     for (const lap of item.laps) {
       if (lap.lap_index > max) max = lap.lap_index
     }
     return max
   }, 0)
+}
 
+// Per-column min/max/best/worst stats used for heat-map scoring and summaries.
+// A column with no finite values yields null.
+function computeColumnStats(
+  items: ComparisonItem[],
+  def: MetricDef,
+  lapCount: number,
+): (ColumnStat | null)[] {
   const colStats: (ColumnStat | null)[] = []
   for (let c = 1; c <= lapCount; c++) {
     const values: number[] = []
@@ -202,37 +220,51 @@ export function buildComparisonMatrix(
       values,
     })
   }
+  return colStats
+}
 
-  const rows: MatrixRow[] = items.map((item) => {
-    const cells: MatrixCell[] = []
-    for (let c = 1; c <= lapCount; c++) {
-      const lap = item.laps.find((l) => l.lap_index === c)
-      const value = lap ? def.extract(lap) : null
-      const stat = colStats[c - 1]
-      let score: number | null = null
-      let isPR = false
-      if (value != null && stat && stat.max !== stat.min) {
-        const norm = (value - stat.min) / (stat.max - stat.min)
-        score = def.higherIsBetter ? norm : 1 - norm
-        // Only flag a PR when the column actually has a spread of values, so a
-        // column where every activity ties (no-spread) highlights nothing.
-        isPR = value === stat.best
-      }
-      cells.push({
-        lapIndex: c,
-        value,
-        formatted: def.format(value),
-        score,
-        isPR,
-      })
+// One activity's row of cells, with heat-map score and PR flag per lap column.
+function buildMatrixRow(
+  item: ComparisonItem,
+  def: MetricDef,
+  colStats: (ColumnStat | null)[],
+  lapCount: number,
+): MatrixRow {
+  const cells: MatrixCell[] = []
+  for (let c = 1; c <= lapCount; c++) {
+    const lap = item.laps.find((l) => l.lap_index === c)
+    const value = lap ? def.extract(lap) : null
+    const stat = colStats[c - 1]
+    let score: number | null = null
+    let isPR = false
+    if (value != null && stat && stat.max !== stat.min) {
+      const norm = (value - stat.min) / (stat.max - stat.min)
+      score = def.higherIsBetter ? norm : 1 - norm
+      // Only flag a PR when the column actually has a spread of values, so a
+      // column where every activity ties (no-spread) highlights nothing.
+      isPR = value === stat.best
     }
-    return {
-      activityId: item.activity.activity_id,
-      startTime: item.activity.start_time,
-      cells,
-    }
-  })
+    cells.push({
+      lapIndex: c,
+      value,
+      formatted: def.format(value),
+      score,
+      isPR,
+    })
+  }
+  return {
+    activityId: item.activity.activity_id,
+    startTime: item.activity.start_time,
+    cells,
+  }
+}
 
+// Best/worst/avg summary per lap column.
+function buildColumnSummaries(
+  colStats: (ColumnStat | null)[],
+  def: MetricDef,
+  lapCount: number,
+): ColumnSummary[] {
   const summary: ColumnSummary[] = []
   for (let c = 1; c <= lapCount; c++) {
     const stat = colStats[c - 1]
@@ -248,8 +280,7 @@ export function buildComparisonMatrix(
       avg: def.format(avg),
     })
   }
-
-  return { lapCount, rows, summary }
+  return summary
 }
 
 /**
