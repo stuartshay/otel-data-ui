@@ -465,7 +465,6 @@ function DayPointRow({
   const isFocused = rowKey === focusKey
   return (
     <TableRow
-      key={rowKey}
       onClick={() => onFocus(rowKey)}
       data-state={isFocused ? 'selected' : undefined}
       className="cursor-pointer"
