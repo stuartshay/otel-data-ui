@@ -14,6 +14,8 @@ import {
   useDailySummaryQuery,
   useUnifiedGpsLazyQuery,
   useUnifiedGpsQuery,
+  type DailySummaryQuery,
+  type UnifiedGpsQuery,
 } from '@/__generated__/graphql'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -72,6 +74,544 @@ function parseColorBy(value: string | null): ColorBy {
 
 function parseBoolParam(value: string | null): boolean {
   return value === '1' || value === 'true'
+}
+
+type UnifiedGpsItem = UnifiedGpsQuery['unifiedGps']['items'][number]
+type DailySummaryItem = DailySummaryQuery['dailySummary']['items'][number]
+type ExportFormat = 'csv' | 'geojson'
+
+const CSV_HEADERS = [
+  'source',
+  'identifier',
+  'latitude',
+  'longitude',
+  'timestamp',
+  'battery',
+  'speed_kmh',
+  'heart_rate',
+  'accuracy',
+]
+
+function buildDailyPointsCsv(items: UnifiedGpsItem[]): string {
+  const rows = items.map((p) =>
+    CSV_HEADERS.map((h) => escapeCsvValue((p as Record<string, unknown>)[h])),
+  )
+  return [CSV_HEADERS.join(','), ...rows.map((r) => r.join(','))].join('\n')
+}
+
+function buildDailyPointsGeoJson(items: UnifiedGpsItem[]): string {
+  const geojson = {
+    type: 'FeatureCollection' as const,
+    features: items.map((p) => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [p.longitude, p.latitude],
+      },
+      properties: {
+        source: p.source,
+        identifier: p.identifier,
+        timestamp: p.timestamp,
+        battery: p.battery ?? null,
+        speed_kmh: p.speed_kmh ?? null,
+        heart_rate: p.heart_rate ?? null,
+        accuracy: p.accuracy ?? null,
+      },
+    })),
+  }
+  return JSON.stringify(geojson, null, 2)
+}
+
+function exportDailyPoints(
+  formatType: ExportFormat,
+  items: UnifiedGpsItem[],
+  queryDate: string,
+  sourceFilter: SourceFilter | undefined,
+): void {
+  const suffix = sourceFilter ? `-${sourceFilter}` : ''
+  if (formatType === 'csv') {
+    triggerDownload(
+      buildDailyPointsCsv(items),
+      'text/csv;charset=utf-8',
+      `daily-summary-${queryDate}${suffix}.csv`,
+    )
+    return
+  }
+  triggerDownload(
+    buildDailyPointsGeoJson(items),
+    'application/geo+json',
+    `daily-summary-${queryDate}${suffix}.geojson`,
+  )
+}
+
+// Alt+Left / Alt+Right day navigation. Extracted to a hook so the page
+// component stays focused on rendering.
+function useDayKeyboardNavigation(
+  prevDayIso: string | undefined,
+  nextDayIso: string | undefined,
+): void {
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey) return
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+      if (event.key === 'ArrowLeft' && prevDayIso) {
+        event.preventDefault()
+        window.location.href = `/daily-summary/${prevDayIso}`
+      } else if (event.key === 'ArrowRight' && nextDayIso) {
+        event.preventDefault()
+        window.location.href = `/daily-summary/${nextDayIso}`
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [prevDayIso, nextDayIso])
+}
+
+function DayNavButton({
+  iso,
+  direction,
+}: {
+  iso: string | undefined
+  direction: 'prev' | 'next'
+}) {
+  const text = direction === 'prev' ? 'Previous Day' : 'Next Day'
+  // Accessible name intentionally lower-cases "day" to match existing labels.
+  const name = direction === 'prev' ? 'Previous day' : 'Next day'
+  const arrowKey = direction === 'prev' ? 'Left' : 'Right'
+  const icon =
+    direction === 'prev' ? (
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+    ) : (
+      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+    )
+  const content =
+    direction === 'prev' ? (
+      <>
+        {icon}
+        {text}
+      </>
+    ) : (
+      <>
+        {text}
+        {icon}
+      </>
+    )
+  if (!iso) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        aria-label={name}
+        title={`${name} unavailable`}
+      >
+        {content}
+      </Button>
+    )
+  }
+  return (
+    <Button
+      asChild
+      variant="outline"
+      size="sm"
+      title={`${name} (Alt+${arrowKey})`}
+    >
+      <Link to={`/daily-summary/${iso}`} aria-label={name}>
+        {content}
+      </Link>
+    </Button>
+  )
+}
+
+function DayDetailHeader({
+  routeDate,
+  displayed,
+  total,
+  sourceFilter,
+  ownTracksTotal,
+  garminTotal,
+  prevDayIso,
+  nextDayIso,
+}: {
+  routeDate: Date
+  displayed: number
+  total: number
+  sourceFilter: SourceFilter | undefined
+  ownTracksTotal: number
+  garminTotal: number
+  prevDayIso: string | undefined
+  nextDayIso: string | undefined
+}) {
+  const showBreakdown = !sourceFilter && (ownTracksTotal > 0 || garminTotal > 0)
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="space-y-2">
+        <Button asChild variant="outline" size="sm">
+          <Link to="/daily-summary">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Daily Summary
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {format(routeDate, 'MMMM d, yyyy')}
+          </h1>
+          <p className="text-muted-foreground">
+            {displayed.toLocaleString()} of {total.toLocaleString()} GPS points
+            {sourceFilter ? ` from ${sourceFilter}` : ''}
+            {showBreakdown && (
+              <>
+                {' '}
+                (OwnTracks: {ownTracksTotal.toLocaleString()}, Garmin:{' '}
+                {garminTotal.toLocaleString()})
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <DayNavButton iso={prevDayIso} direction="prev" />
+        <DayNavButton iso={nextDayIso} direction="next" />
+        <Badge className="bg-blue-500">OwnTracks</Badge>
+        <Badge className="bg-red-500">Garmin</Badge>
+      </div>
+    </div>
+  )
+}
+
+function DaySummaryStats({
+  summary,
+}: {
+  summary: DailySummaryItem | undefined
+}) {
+  if (!summary) return null
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatsCard
+        title="Distance"
+        value={
+          summary.total_distance_km != null
+            ? `${summary.total_distance_km.toFixed(2)} km`
+            : '—'
+        }
+        description={
+          summary.garmin_sport ? `Sport: ${summary.garmin_sport}` : undefined
+        }
+      />
+      <StatsCard
+        title="Avg Heart Rate"
+        value={
+          summary.avg_heart_rate != null ? `${summary.avg_heart_rate} bpm` : '—'
+        }
+      />
+      <StatsCard
+        title="Calories"
+        value={summary.total_calories?.toLocaleString() ?? '—'}
+      />
+      <StatsCard
+        title="Battery"
+        value={
+          summary.min_battery != null && summary.max_battery != null
+            ? `${summary.min_battery}–${summary.max_battery}%`
+            : '—'
+        }
+        description={
+          summary.owntracks_device
+            ? `Device: ${summary.owntracks_device}`
+            : undefined
+        }
+      />
+    </div>
+  )
+}
+
+function DayFilterBar({
+  sourceFilter,
+  sortOrder,
+  showTrack,
+  colorBy,
+  exportLoading,
+  total,
+  onSourceFilter,
+  onSortOrder,
+  onToggleTrack,
+  onColorBy,
+  onExport,
+}: {
+  sourceFilter: SourceFilter | undefined
+  sortOrder: SortOrder
+  showTrack: boolean
+  colorBy: ColorBy
+  exportLoading: boolean
+  total: number
+  onSourceFilter: (source: SourceFilter | undefined) => void
+  onSortOrder: (order: SortOrder) => void
+  onToggleTrack: () => void
+  onColorBy: (value: ColorBy) => void
+  onExport: (formatType: ExportFormat) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Filters &amp; display</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={!sourceFilter ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onSourceFilter(undefined)}
+          aria-current={!sourceFilter ? 'page' : undefined}
+        >
+          All
+        </Button>
+        <Button
+          variant={sourceFilter === 'owntracks' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onSourceFilter('owntracks')}
+          aria-current={sourceFilter === 'owntracks' ? 'page' : undefined}
+        >
+          OwnTracks
+        </Button>
+        <Button
+          variant={sourceFilter === 'garmin' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onSourceFilter('garmin')}
+          aria-current={sourceFilter === 'garmin' ? 'page' : undefined}
+        >
+          Garmin
+        </Button>
+        <div className="mx-2 hidden h-6 w-px bg-border sm:block" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          aria-label={`Sort by time ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
+        >
+          Order: {sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
+        </Button>
+        <Button
+          variant={showTrack ? 'default' : 'outline'}
+          size="sm"
+          onClick={onToggleTrack}
+          aria-pressed={showTrack}
+        >
+          <Route className="h-4 w-4" aria-hidden="true" />
+          {showTrack ? 'Hide track' : 'Show track'}
+        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Color by:</span>
+          <Select
+            value={colorBy}
+            onValueChange={(value) => onColorBy(value as ColorBy)}
+          >
+            <SelectTrigger size="sm" aria-label="Color map markers by metric">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="source">Source</SelectItem>
+              <SelectItem value="speed">Speed</SelectItem>
+              <SelectItem value="heart_rate">Heart rate</SelectItem>
+              <SelectItem value="battery">Battery</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onExport('csv')}
+            disabled={exportLoading || total === 0}
+            aria-label="Download points as CSV"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onExport('geojson')}
+            disabled={exportLoading || total === 0}
+            aria-label="Download points as GeoJSON"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            GeoJSON
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DayPointRow({
+  point,
+  index,
+  focusKey,
+  onFocus,
+}: {
+  point: UnifiedGpsItem
+  index: number
+  focusKey: string | undefined
+  onFocus: (key: string) => void
+}) {
+  const rowKey = `${point.source}-${point.identifier}-${point.timestamp}-${index}`
+  const isFocused = rowKey === focusKey
+  return (
+    <TableRow
+      onClick={() => onFocus(rowKey)}
+      data-state={isFocused ? 'selected' : undefined}
+      className="cursor-pointer"
+      aria-label={`Show ${point.source} point ${point.identifier} on map`}
+    >
+      <TableCell>
+        <Badge variant={point.source === 'owntracks' ? 'default' : 'secondary'}>
+          {point.source}
+        </Badge>
+      </TableCell>
+      <TableCell className="font-medium">{point.identifier}</TableCell>
+      <TableCell className="font-mono text-xs">
+        {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}
+      </TableCell>
+      <TableCell>{point.battery != null ? `${point.battery}%` : '—'}</TableCell>
+      <TableCell>
+        {point.speed_kmh != null ? `${point.speed_kmh.toFixed(1)} km/h` : '—'}
+      </TableCell>
+      <TableCell>
+        {point.heart_rate != null ? `${point.heart_rate} bpm` : '—'}
+      </TableCell>
+      <TableCell className="text-xs">
+        {new Date(point.timestamp).toLocaleString()}
+      </TableCell>
+    </TableRow>
+  )
+}
+
+function DayPointsSection({
+  points,
+  isPageOutOfRange,
+  lastPage,
+  hasFilter,
+  focusKey,
+  onFocus,
+  onClearFilter,
+  onResetPage,
+}: {
+  points: UnifiedGpsItem[]
+  isPageOutOfRange: boolean
+  lastPage: number
+  hasFilter: boolean
+  focusKey: string | undefined
+  onFocus: (key: string) => void
+  onClearFilter: () => void
+  onResetPage: () => void
+}) {
+  if (isPageOutOfRange) {
+    return (
+      <div className="rounded-md border">
+        <EmptyState
+          title="Page out of range"
+          message={`Only ${lastPage.toLocaleString()} page${lastPage === 1 ? '' : 's'} available for this day.`}
+          onReset={onResetPage}
+          resetLabel="Go to first page"
+        />
+      </div>
+    )
+  }
+  if (points.length === 0) {
+    return (
+      <div className="rounded-md border">
+        <EmptyState
+          title="No points available"
+          message={
+            hasFilter
+              ? 'No GPS points match the selected source filter for this day.'
+              : 'No OwnTracks or Garmin GPS points were recorded for this day.'
+          }
+          onReset={hasFilter ? onClearFilter : undefined}
+          resetLabel="Clear source filter"
+        />
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Source</TableHead>
+            <TableHead>Identifier</TableHead>
+            <TableHead>Lat / Lon</TableHead>
+            <TableHead>Battery</TableHead>
+            <TableHead>Speed</TableHead>
+            <TableHead>HR</TableHead>
+            <TableHead>Timestamp</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {points.map((point, index) => (
+            <DayPointRow
+              key={`${point.source}-${point.identifier}-${point.timestamp}-${index}`}
+              point={point}
+              index={index}
+              focusKey={focusKey}
+              onFocus={onFocus}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function DayPagination({
+  page,
+  total,
+  offset,
+  isPageOutOfRange,
+  onPageChange,
+}: {
+  page: number
+  total: number
+  offset: number
+  isPageOutOfRange: boolean
+  onPageChange: (next: number) => void
+}) {
+  if (total <= 0 || isPageOutOfRange) return null
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-sm text-muted-foreground">
+        Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of{' '}
+        {total.toLocaleString()}
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Prev
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={offset + PAGE_SIZE >= total}
+          onClick={() => onPageChange(page + 1)}
+          aria-label="Next page"
+        >
+          Next <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function DailySummaryDetailPage() {
@@ -182,29 +722,7 @@ export function DailySummaryDetailPage() {
     return format(next, 'yyyy-MM-dd')
   }, [routeDate, maxDate])
 
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (!event.altKey) return
-      const target = event.target as HTMLElement | null
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
-        return
-      }
-      if (event.key === 'ArrowLeft' && prevDayIso) {
-        event.preventDefault()
-        window.location.href = `/daily-summary/${prevDayIso}`
-      } else if (event.key === 'ArrowRight' && nextDayIso) {
-        event.preventDefault()
-        window.location.href = `/daily-summary/${nextDayIso}`
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [prevDayIso, nextDayIso])
+  useDayKeyboardNavigation(prevDayIso, nextDayIso)
 
   const updateParams = useCallback(
     (mutator: (params: URLSearchParams) => void, resetPage = false) => {
@@ -254,7 +772,7 @@ export function DailySummaryDetailPage() {
   }, [updateParams, showTrack])
 
   const handleExport = useCallback(
-    async (formatType: 'csv' | 'geojson') => {
+    async (formatType: ExportFormat) => {
       if (!queryDate) return
       const result = await exportPoints({
         variables: {
@@ -267,59 +785,26 @@ export function DailySummaryDetailPage() {
         },
       })
       const items = result.data?.unifiedGps?.items ?? []
-      const suffix = sourceFilter ? `-${sourceFilter}` : ''
-      if (formatType === 'csv') {
-        const headers = [
-          'source',
-          'identifier',
-          'latitude',
-          'longitude',
-          'timestamp',
-          'battery',
-          'speed_kmh',
-          'heart_rate',
-          'accuracy',
-        ]
-        const rows = items.map((p) =>
-          headers.map((h) => escapeCsvValue((p as Record<string, unknown>)[h])),
-        )
-        const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join(
-          '\n',
-        )
-        triggerDownload(
-          csv,
-          'text/csv;charset=utf-8',
-          `daily-summary-${queryDate}${suffix}.csv`,
-        )
-      } else {
-        const geojson = {
-          type: 'FeatureCollection' as const,
-          features: items.map((p) => ({
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: [p.longitude, p.latitude],
-            },
-            properties: {
-              source: p.source,
-              identifier: p.identifier,
-              timestamp: p.timestamp,
-              battery: p.battery ?? null,
-              speed_kmh: p.speed_kmh ?? null,
-              heart_rate: p.heart_rate ?? null,
-              accuracy: p.accuracy ?? null,
-            },
-          })),
-        }
-        triggerDownload(
-          JSON.stringify(geojson, null, 2),
-          'application/geo+json',
-          `daily-summary-${queryDate}${suffix}.geojson`,
-        )
-      }
+      exportDailyPoints(formatType, items, queryDate, sourceFilter)
     },
     [exportPoints, queryDate, sourceFilter, sortOrder],
   )
+
+  const goToPage = useCallback(
+    (next: number) => {
+      updateParams((params) => {
+        if (next <= 1) params.delete('page')
+        else params.set('page', String(next))
+      })
+    },
+    [updateParams],
+  )
+
+  const resetPageReplace = useCallback(() => {
+    const params = new URLSearchParams(searchParams)
+    params.delete('page')
+    setSearchParams(params, { replace: true })
+  }, [searchParams, setSearchParams])
 
   if (!routeDate) {
     return (
@@ -351,221 +836,32 @@ export function DailySummaryDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/daily-summary">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Daily Summary
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {format(routeDate, 'MMMM d, yyyy')}
-            </h1>
-            <p className="text-muted-foreground">
-              {displayed.toLocaleString()} of {total.toLocaleString()} GPS
-              points
-              {sourceFilter ? ` from ${sourceFilter}` : ''}
-              {!sourceFilter && (ownTracksTotal > 0 || garminTotal > 0) && (
-                <>
-                  {' '}
-                  (OwnTracks: {ownTracksTotal.toLocaleString()}, Garmin:{' '}
-                  {garminTotal.toLocaleString()})
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {prevDayIso ? (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              title="Previous day (Alt+Left)"
-            >
-              <Link
-                to={`/daily-summary/${prevDayIso}`}
-                aria-label="Previous day"
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                Previous Day
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              aria-label="Previous day"
-              title="Previous day unavailable"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              Previous Day
-            </Button>
-          )}
-          {nextDayIso ? (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              title="Next day (Alt+Right)"
-            >
-              <Link to={`/daily-summary/${nextDayIso}`} aria-label="Next day">
-                Next Day
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              aria-label="Next day"
-              title="Next day unavailable"
-            >
-              Next Day
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          )}
-          <Badge className="bg-blue-500">OwnTracks</Badge>
-          <Badge className="bg-red-500">Garmin</Badge>
-        </div>
-      </div>
+      <DayDetailHeader
+        routeDate={routeDate}
+        displayed={displayed}
+        total={total}
+        sourceFilter={sourceFilter}
+        ownTracksTotal={ownTracksTotal}
+        garminTotal={garminTotal}
+        prevDayIso={prevDayIso}
+        nextDayIso={nextDayIso}
+      />
 
-      {summaryForDay && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Distance"
-            value={
-              summaryForDay.total_distance_km != null
-                ? `${summaryForDay.total_distance_km.toFixed(2)} km`
-                : '—'
-            }
-            description={
-              summaryForDay.garmin_sport
-                ? `Sport: ${summaryForDay.garmin_sport}`
-                : undefined
-            }
-          />
-          <StatsCard
-            title="Avg Heart Rate"
-            value={
-              summaryForDay.avg_heart_rate != null
-                ? `${summaryForDay.avg_heart_rate} bpm`
-                : '—'
-            }
-          />
-          <StatsCard
-            title="Calories"
-            value={summaryForDay.total_calories?.toLocaleString() ?? '—'}
-          />
-          <StatsCard
-            title="Battery"
-            value={
-              summaryForDay.min_battery != null &&
-              summaryForDay.max_battery != null
-                ? `${summaryForDay.min_battery}–${summaryForDay.max_battery}%`
-                : '—'
-            }
-            description={
-              summaryForDay.owntracks_device
-                ? `Device: ${summaryForDay.owntracks_device}`
-                : undefined
-            }
-          />
-        </div>
-      )}
+      <DaySummaryStats summary={summaryForDay} />
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filters & display</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={!sourceFilter ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSourceFilter(undefined)}
-            aria-current={!sourceFilter ? 'page' : undefined}
-          >
-            All
-          </Button>
-          <Button
-            variant={sourceFilter === 'owntracks' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSourceFilter('owntracks')}
-            aria-current={sourceFilter === 'owntracks' ? 'page' : undefined}
-          >
-            OwnTracks
-          </Button>
-          <Button
-            variant={sourceFilter === 'garmin' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSourceFilter('garmin')}
-            aria-current={sourceFilter === 'garmin' ? 'page' : undefined}
-          >
-            Garmin
-          </Button>
-          <div className="mx-2 hidden h-6 w-px bg-border sm:block" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            aria-label={`Sort by time ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
-          >
-            Order: {sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
-          </Button>
-          <Button
-            variant={showTrack ? 'default' : 'outline'}
-            size="sm"
-            onClick={toggleShowTrack}
-            aria-pressed={showTrack}
-          >
-            <Route className="h-4 w-4" aria-hidden="true" />
-            {showTrack ? 'Hide track' : 'Show track'}
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Color by:</span>
-            <Select
-              value={colorBy}
-              onValueChange={(value) => setColorBy(value as ColorBy)}
-            >
-              <SelectTrigger size="sm" aria-label="Color map markers by metric">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="source">Source</SelectItem>
-                <SelectItem value="speed">Speed</SelectItem>
-                <SelectItem value="heart_rate">Heart rate</SelectItem>
-                <SelectItem value="battery">Battery</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('csv')}
-              disabled={exportLoading || total === 0}
-              aria-label="Download points as CSV"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('geojson')}
-              disabled={exportLoading || total === 0}
-              aria-label="Download points as GeoJSON"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              GeoJSON
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <DayFilterBar
+        sourceFilter={sourceFilter}
+        sortOrder={sortOrder}
+        showTrack={showTrack}
+        colorBy={colorBy}
+        exportLoading={exportLoading}
+        total={total}
+        onSourceFilter={setSourceFilter}
+        onSortOrder={setSortOrder}
+        onToggleTrack={toggleShowTrack}
+        onColorBy={setColorBy}
+        onExport={(formatType) => void handleExport(formatType)}
+      />
 
       <div className="relative">
         <UnifiedGpsMap
@@ -589,130 +885,24 @@ export function DailySummaryDetailPage() {
         )}
       </div>
 
-      <div className="rounded-md border">
-        {isPageOutOfRange ? (
-          <EmptyState
-            title="Page out of range"
-            message={`Only ${lastPage.toLocaleString()} page${lastPage === 1 ? '' : 's'} available for this day.`}
-            onReset={() => {
-              const params = new URLSearchParams(searchParams)
-              params.delete('page')
-              setSearchParams(params, { replace: true })
-            }}
-            resetLabel="Go to first page"
-          />
-        ) : points.length === 0 ? (
-          <EmptyState
-            title="No points available"
-            message={
-              hasFilter
-                ? 'No GPS points match the selected source filter for this day.'
-                : 'No OwnTracks or Garmin GPS points were recorded for this day.'
-            }
-            onReset={hasFilter ? () => setSourceFilter(undefined) : undefined}
-            resetLabel="Clear source filter"
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Source</TableHead>
-                <TableHead>Identifier</TableHead>
-                <TableHead>Lat / Lon</TableHead>
-                <TableHead>Battery</TableHead>
-                <TableHead>Speed</TableHead>
-                <TableHead>HR</TableHead>
-                <TableHead>Timestamp</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {points.map((point, index) => {
-                const rowKey = `${point.source}-${point.identifier}-${point.timestamp}-${index}`
-                const isFocused = rowKey === focusKey
-                return (
-                  <TableRow
-                    key={rowKey}
-                    onClick={() => setFocusKey(rowKey)}
-                    data-state={isFocused ? 'selected' : undefined}
-                    className="cursor-pointer"
-                    aria-label={`Show ${point.source} point ${point.identifier} on map`}
-                  >
-                    <TableCell>
-                      <Badge
-                        variant={
-                          point.source === 'owntracks' ? 'default' : 'secondary'
-                        }
-                      >
-                        {point.source}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {point.identifier}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}
-                    </TableCell>
-                    <TableCell>
-                      {point.battery != null ? `${point.battery}%` : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {point.speed_kmh != null
-                        ? `${point.speed_kmh.toFixed(1)} km/h`
-                        : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {point.heart_rate != null
-                        ? `${point.heart_rate} bpm`
-                        : '—'}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(point.timestamp).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      <DayPointsSection
+        points={points}
+        isPageOutOfRange={isPageOutOfRange}
+        lastPage={lastPage}
+        hasFilter={hasFilter}
+        focusKey={focusKey}
+        onFocus={setFocusKey}
+        onClearFilter={() => setSourceFilter(undefined)}
+        onResetPage={resetPageReplace}
+      />
 
-      {total > 0 && !isPageOutOfRange && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of{' '}
-            {total.toLocaleString()}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => {
-                const params = new URLSearchParams(searchParams)
-                if (page - 1 <= 1) params.delete('page')
-                else params.set('page', String(page - 1))
-                setSearchParams(params)
-              }}
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={offset + PAGE_SIZE >= total}
-              onClick={() => {
-                const params = new URLSearchParams(searchParams)
-                params.set('page', String(page + 1))
-                setSearchParams(params)
-              }}
-              aria-label="Next page"
-            >
-              Next <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <DayPagination
+        page={page}
+        total={total}
+        offset={offset}
+        isPageOutOfRange={isPageOutOfRange}
+        onPageChange={goToPage}
+      />
 
       {(total > 0 || summaryForDay) && (
         <div className="flex items-center justify-between">
