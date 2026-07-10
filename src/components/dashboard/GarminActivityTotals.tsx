@@ -212,6 +212,251 @@ function trimLeadingEmptyBuckets(buckets: ChartBucket[]): ChartBucket[] {
   return firstDataIndex === -1 ? [] : buckets.slice(firstDataIndex)
 }
 
+type GarminApolloClient = ReturnType<typeof useApolloClient>
+
+// Project a date into a target year by preserving month/day and clamping
+// invalid dates (e.g. Feb 29 in a non-leap year) to the last valid day of
+// that month. Avoids the silent date-shift produced by Date#setFullYear.
+function projectToYear(source: Date, targetYear: number): Date {
+  const month = source.getMonth()
+  const day = source.getDate()
+  // Day 0 of next month yields the last day of the current month.
+  const lastDay = new Date(targetYear, month + 1, 0).getDate()
+  return new Date(targetYear, month, Math.min(day, lastDay))
+}
+
+// Fetch and aggregate the projected 7-day window for a single year. The API
+// filters by date_from/date_to before grouping, so summing all returned rows
+// yields the correct window total even when DATE_TRUNC('week', ...) splits the
+// window across two ISO weeks.
+async function fetchYearWeeklyTotal(
+  apolloClient: GarminApolloClient,
+  year: number,
+  weekStart: Date,
+  weekEnd: Date,
+  baseEndYear: number,
+): Promise<ChartBucket> {
+  const ws = projectToYear(
+    weekStart,
+    weekStart.getFullYear() + (year - baseEndYear),
+  )
+  const we = projectToYear(weekEnd, year)
+  const result = await apolloClient.query<
+    GarminActivityTotalsQuery,
+    GarminActivityTotalsQueryVariables
+  >({
+    query: GarminActivityTotalsDocument,
+    variables: {
+      period: 'week',
+      date_from: format(ws, 'yyyy-MM-dd'),
+      date_to: format(we, 'yyyy-MM-dd'),
+    },
+    fetchPolicy: 'cache-first',
+  })
+  const buckets = result.data?.garminActivityTotals ?? []
+  return buckets.reduce<ChartBucket>(
+    (acc, b) => ({
+      period_start: acc.period_start,
+      label: String(year),
+      activity_count: acc.activity_count + b.activity_count,
+      distance_km: acc.distance_km + (b.total_distance_km ?? 0),
+      duration_hours:
+        acc.duration_hours + (b.total_duration_seconds ?? 0) / 3600,
+      total_ascent_m: acc.total_ascent_m + (b.total_ascent_m ?? 0),
+      total_calories: acc.total_calories + (b.total_calories ?? 0),
+    }),
+    {
+      period_start: format(ws, 'yyyy-MM-dd'),
+      label: String(year),
+      activity_count: 0,
+      distance_km: 0,
+      duration_hours: 0,
+      total_ascent_m: 0,
+      total_calories: 0,
+    },
+  )
+}
+
+// Fetch the weekly totals for every year in the list, limiting concurrency so
+// dashboards with long Garmin history don't fan out N parallel requests on
+// every Prev/Next click. Returns null if the caller cancelled mid-flight.
+async function fetchWeeklyTotalsByYear(
+  apolloClient: GarminApolloClient,
+  yearList: number[],
+  weekStart: Date,
+  weekEnd: Date,
+  isCancelled: () => boolean,
+): Promise<ChartBucket[] | null> {
+  const baseEndYear = weekEnd.getFullYear()
+  const CONCURRENCY = 4
+  const results: ChartBucket[] = new Array(yearList.length)
+  for (let i = 0; i < yearList.length; i += CONCURRENCY) {
+    if (isCancelled()) return null
+    const batch = yearList.slice(i, i + CONCURRENCY)
+    const batchResults = await Promise.all(
+      batch.map((year) =>
+        fetchYearWeeklyTotal(
+          apolloClient,
+          year,
+          weekStart,
+          weekEnd,
+          baseEndYear,
+        ),
+      ),
+    )
+    batchResults.forEach((b, j) => {
+      results[i + j] = b
+    })
+  }
+  if (isCancelled()) return null
+  return trimLeadingEmptyBuckets(
+    results.sort((a, b) => a.label.localeCompare(b.label)),
+  )
+}
+
+interface RelevantBucket {
+  bucket: ChartBucket
+  year: string
+}
+
+function mapTotalsToBuckets(
+  totals: GarminActivityTotalsQuery['garminActivityTotals'],
+  period: Period,
+): ChartBucket[] {
+  return totals.map((t) => ({
+    period_start: t.period_start,
+    label: formatBucketLabel(t.period_start, period),
+    activity_count: t.activity_count,
+    distance_km: t.total_distance_km ?? 0,
+    duration_hours: (t.total_duration_seconds ?? 0) / 3600,
+    total_ascent_m: t.total_ascent_m ?? 0,
+    total_calories: t.total_calories ?? 0,
+  }))
+}
+
+// Keep buckets that fall within the selected month (when applicable) and
+// carry a parseable date, tagging each with its calendar year.
+function buildRelevantBuckets(
+  mapped: ChartBucket[],
+  period: Period,
+  selectedMonth: number,
+): RelevantBucket[] {
+  return mapped.flatMap((bucket) => {
+    const bucketDate = parseISO(bucket.period_start)
+    if (Number.isNaN(bucketDate.getTime())) {
+      return []
+    }
+    if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
+      return []
+    }
+    return [{ bucket, year: format(bucketDate, 'yyyy') }]
+  })
+}
+
+// Date-range metadata and imported outliers can predate the intended dashboard
+// history. Return the first activity year from the display floor onward, or
+// null when there is no real data to anchor on.
+function findEarliestDataYear(
+  relevantBuckets: RelevantBucket[],
+): number | null {
+  const dataYears = relevantBuckets
+    .filter(
+      ({ bucket, year }) =>
+        Number(year) >= ACTIVITY_TOTALS_START_YEAR && hasBucketData(bucket),
+    )
+    .map(({ year }) => Number(year))
+  return dataYears.length === 0 ? null : Math.min(...dataYears)
+}
+
+// Seed a zero-filled bucket for every year from the earliest data year onward
+// so the chart remains continuous even for years without activities.
+function buildYearScaffold(
+  yearList: number[],
+  earliestDataYear: number,
+  period: Period,
+  selectedMonth: number,
+): Map<string, ChartBucket> {
+  const byYear = new Map<string, ChartBucket>()
+  for (const year of yearList) {
+    if (year < earliestDataYear) {
+      continue
+    }
+    const yearStr = String(year)
+    const periodStart =
+      period === 'month'
+        ? `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+        : `${yearStr}-01-01`
+    byYear.set(yearStr, {
+      period_start: periodStart,
+      label: yearStr,
+      activity_count: 0,
+      distance_km: 0,
+      duration_hours: 0,
+      total_ascent_m: 0,
+      total_calories: 0,
+    })
+  }
+  return byYear
+}
+
+// Accumulate each relevant bucket into its year, summing metrics when a year
+// already has an entry from the scaffold or a prior bucket.
+function mergeRelevantBuckets(
+  byYear: Map<string, ChartBucket>,
+  relevantBuckets: RelevantBucket[],
+  earliestDataYear: number,
+): void {
+  for (const { bucket, year } of relevantBuckets) {
+    if (Number(year) < earliestDataYear) {
+      continue
+    }
+    const existing = byYear.get(year)
+    if (!existing) {
+      byYear.set(year, { ...bucket, label: year })
+      continue
+    }
+    byYear.set(year, {
+      ...existing,
+      activity_count: existing.activity_count + bucket.activity_count,
+      distance_km: existing.distance_km + bucket.distance_km,
+      duration_hours: existing.duration_hours + bucket.duration_hours,
+      total_ascent_m: existing.total_ascent_m + bucket.total_ascent_m,
+      total_calories: existing.total_calories + bucket.total_calories,
+    })
+  }
+}
+
+// Aggregate mapped buckets into one entry per year for monthly/yearly views,
+// preserving the "no Garmin data" empty state.
+function aggregateYearlyChartData(
+  mapped: ChartBucket[],
+  period: Period,
+  selectedMonth: number,
+  yearList: number[],
+): ChartBucket[] {
+  if (mapped.length === 0) {
+    return []
+  }
+  const relevantBuckets = buildRelevantBuckets(mapped, period, selectedMonth)
+  if (relevantBuckets.length === 0) {
+    return []
+  }
+  const earliestDataYear = findEarliestDataYear(relevantBuckets)
+  if (earliestDataYear === null) {
+    return []
+  }
+  const byYear = buildYearScaffold(
+    yearList,
+    earliestDataYear,
+    period,
+    selectedMonth,
+  )
+  mergeRelevantBuckets(byYear, relevantBuckets, earliestDataYear)
+  return Array.from(byYear.values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  )
+}
+
 export function GarminActivityTotals() {
   const [period, setPeriod] = useState<Period>('month')
   const [metric, setMetric] = useState<Metric>('distance')
@@ -295,86 +540,19 @@ export function GarminActivityTotals() {
     if (period !== 'week') return
     let cancelled = false
 
-    const baseEndYear = weekEnd.getFullYear()
-
-    // Project a date into a target year by preserving month/day and clamping
-    // invalid dates (e.g. Feb 29 in a non-leap year) to the last valid day of
-    // that month. Avoids the silent date-shift produced by Date#setFullYear.
-    const projectToYear = (source: Date, targetYear: number): Date => {
-      const month = source.getMonth()
-      const day = source.getDate()
-      // Day 0 of next month yields the last day of the current month.
-      const lastDay = new Date(targetYear, month + 1, 0).getDate()
-      return new Date(targetYear, month, Math.min(day, lastDay))
-    }
-
     const run = async () => {
       setWeeklyLoading(true)
       setWeeklyError(null)
-
-      const fetchYear = async (year: number): Promise<ChartBucket> => {
-        const ws = projectToYear(
-          weekStart,
-          weekStart.getFullYear() + (year - baseEndYear),
-        )
-        const we = projectToYear(weekEnd, year)
-        const result = await apolloClient.query<
-          GarminActivityTotalsQuery,
-          GarminActivityTotalsQueryVariables
-        >({
-          query: GarminActivityTotalsDocument,
-          variables: {
-            period: 'week',
-            date_from: format(ws, 'yyyy-MM-dd'),
-            date_to: format(we, 'yyyy-MM-dd'),
-          },
-          fetchPolicy: 'cache-first',
-        })
-        const buckets = result.data?.garminActivityTotals ?? []
-        return buckets.reduce<ChartBucket>(
-          (acc, b) => ({
-            period_start: acc.period_start,
-            label: String(year),
-            activity_count: acc.activity_count + b.activity_count,
-            distance_km: acc.distance_km + (b.total_distance_km ?? 0),
-            duration_hours:
-              acc.duration_hours + (b.total_duration_seconds ?? 0) / 3600,
-            total_ascent_m: acc.total_ascent_m + (b.total_ascent_m ?? 0),
-            total_calories: acc.total_calories + (b.total_calories ?? 0),
-          }),
-          {
-            period_start: format(ws, 'yyyy-MM-dd'),
-            label: String(year),
-            activity_count: 0,
-            distance_km: 0,
-            duration_hours: 0,
-            total_ascent_m: 0,
-            total_calories: 0,
-          },
-        )
-      }
-
-      // Limit concurrency so dashboards with long Garmin history don't fan
-      // out N parallel requests on every Prev/Next click. Apollo's cache-first
-      // policy means subsequent renders short-circuit; the limit only affects
-      // initial loads of unseen windows.
-      const CONCURRENCY = 4
-      const results: ChartBucket[] = new Array(yearList.length)
       try {
-        for (let i = 0; i < yearList.length; i += CONCURRENCY) {
-          if (cancelled) return
-          const batch = yearList.slice(i, i + CONCURRENCY)
-          const batchResults = await Promise.all(batch.map(fetchYear))
-          batchResults.forEach((b, j) => {
-            results[i + j] = b
-          })
-        }
-        if (cancelled) return
-        setWeeklyByYear(
-          trimLeadingEmptyBuckets(
-            results.sort((a, b) => a.label.localeCompare(b.label)),
-          ),
+        const results = await fetchWeeklyTotalsByYear(
+          apolloClient,
+          yearList,
+          weekStart,
+          weekEnd,
+          () => cancelled,
         )
+        if (results === null || cancelled) return
+        setWeeklyByYear(results)
         setWeeklyLoading(false)
       } catch (err) {
         if (cancelled) return
@@ -398,105 +576,11 @@ export function GarminActivityTotals() {
     if (period === 'week') {
       return weeklyByYear
     }
-    const totals = data?.garminActivityTotals ?? []
-    const mapped = totals.map((t) => ({
-      period_start: t.period_start,
-      label: formatBucketLabel(t.period_start, period),
-      activity_count: t.activity_count,
-      distance_km: t.total_distance_km ?? 0,
-      duration_hours: (t.total_duration_seconds ?? 0) / 3600,
-      total_ascent_m: t.total_ascent_m ?? 0,
-      total_calories: t.total_calories ?? 0,
-    }))
-
+    const mapped = mapTotalsToBuckets(data?.garminActivityTotals ?? [], period)
     if (period !== 'month' && period !== 'year') {
       return mapped
     }
-
-    // Preserve the "no Garmin data" empty state — if the API returned no
-    // buckets at all, render nothing rather than zero-filled bars.
-    if (mapped.length === 0) {
-      return []
-    }
-
-    const relevantBuckets = mapped.flatMap((bucket) => {
-      const bucketDate = parseISO(bucket.period_start)
-      if (Number.isNaN(bucketDate.getTime())) {
-        return []
-      }
-
-      if (period === 'month' && bucketDate.getMonth() !== selectedMonth) {
-        return []
-      }
-
-      return [{ bucket, year: format(bucketDate, 'yyyy') }]
-    })
-
-    if (relevantBuckets.length === 0) {
-      return []
-    }
-
-    // Date-range metadata and imported outliers can predate the intended
-    // dashboard history. Start at the first activity bucket from the display
-    // floor onward, then zero-fill later years so the chart remains continuous.
-    const dataYears = relevantBuckets
-      .filter(
-        ({ bucket, year }) =>
-          Number(year) >= ACTIVITY_TOTALS_START_YEAR && hasBucketData(bucket),
-      )
-      .map(({ year }) => Number(year))
-
-    if (dataYears.length === 0) {
-      return []
-    }
-
-    const earliestDataYear = Math.min(...dataYears)
-    const byYear = new Map<string, ChartBucket>()
-    for (const year of yearList) {
-      if (year < earliestDataYear) {
-        continue
-      }
-      const yearStr = String(year)
-      const periodStart =
-        period === 'month'
-          ? `${yearStr}-${String(selectedMonth + 1).padStart(2, '0')}-01`
-          : `${yearStr}-01-01`
-      byYear.set(yearStr, {
-        period_start: periodStart,
-        label: yearStr,
-        activity_count: 0,
-        distance_km: 0,
-        duration_hours: 0,
-        total_ascent_m: 0,
-        total_calories: 0,
-      })
-    }
-
-    for (const { bucket, year } of relevantBuckets) {
-      if (Number(year) < earliestDataYear) {
-        continue
-      }
-
-      const existing = byYear.get(year)
-
-      if (!existing) {
-        byYear.set(year, { ...bucket, label: year })
-        continue
-      }
-
-      byYear.set(year, {
-        ...existing,
-        activity_count: existing.activity_count + bucket.activity_count,
-        distance_km: existing.distance_km + bucket.distance_km,
-        duration_hours: existing.duration_hours + bucket.duration_hours,
-        total_ascent_m: existing.total_ascent_m + bucket.total_ascent_m,
-        total_calories: existing.total_calories + bucket.total_calories,
-      })
-    }
-
-    return Array.from(byYear.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    )
+    return aggregateYearlyChartData(mapped, period, selectedMonth, yearList)
   }, [data, period, selectedMonth, weeklyByYear, yearList])
 
   const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0]
