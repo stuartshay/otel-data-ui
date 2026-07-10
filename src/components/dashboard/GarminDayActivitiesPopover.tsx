@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
+import type { ReactNode } from 'react'
 
 import { useGarminActivitiesQuery } from '@/__generated__/graphql'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
@@ -36,6 +37,37 @@ export function GarminDayActivitiesPopover({
     ? format(new Date(`${date}T00:00:00`), 'EEE, MMM d, yyyy')
     : ''
 
+  let statusNode: ReactNode = null
+  if (loading) {
+    statusNode = (
+      <div
+        className="flex h-20 items-center justify-center gap-2 text-sm text-muted-foreground"
+        data-testid="garmin-day-popover-loading"
+      >
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading...
+      </div>
+    )
+  } else if (error) {
+    statusNode = (
+      <div
+        className="flex h-20 items-center justify-center px-3 text-center text-sm text-destructive"
+        data-testid="garmin-day-popover-error"
+      >
+        Failed to load activities
+      </div>
+    )
+  } else if (activities.length === 0) {
+    statusNode = (
+      <div
+        className="flex h-20 items-center justify-center text-sm text-muted-foreground"
+        data-testid="garmin-day-popover-empty"
+      >
+        No activities.
+      </div>
+    )
+  }
+
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -67,29 +99,7 @@ export function GarminDayActivitiesPopover({
           )}
         </div>
 
-        {loading ? (
-          <div
-            className="flex h-20 items-center justify-center gap-2 text-sm text-muted-foreground"
-            data-testid="garmin-day-popover-loading"
-          >
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading...
-          </div>
-        ) : error ? (
-          <div
-            className="flex h-20 items-center justify-center px-3 text-center text-sm text-destructive"
-            data-testid="garmin-day-popover-error"
-          >
-            Failed to load activities
-          </div>
-        ) : activities.length === 0 ? (
-          <div
-            className="flex h-20 items-center justify-center text-sm text-muted-foreground"
-            data-testid="garmin-day-popover-empty"
-          >
-            No activities.
-          </div>
-        ) : (
+        {statusNode ?? (
           <div
             className="max-h-72 overflow-y-auto"
             data-testid="garmin-day-popover-list"

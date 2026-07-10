@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -126,6 +126,25 @@ export function GarminSegmentDetailPage() {
     )
   }
 
+  let effortsStatusNode: ReactNode = null
+  if (effortsLoading && !effortsData) {
+    effortsStatusNode = <LoadingState message="Loading efforts..." />
+  } else if (effortsError) {
+    effortsStatusNode = (
+      <ErrorState
+        message={effortsError.message}
+        onRetry={() => refetchEfforts()}
+      />
+    )
+  } else if (efforts.length === 0) {
+    effortsStatusNode = (
+      <EmptyState
+        title="No efforts yet"
+        message="No activities have traversed this segment's corridor."
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
       {backLink}
@@ -195,19 +214,7 @@ export function GarminSegmentDetailPage() {
             <CardTitle>Effort leaderboard</CardTitle>
           </CardHeader>
           <CardContent>
-            {effortsLoading && !effortsData ? (
-              <LoadingState message="Loading efforts..." />
-            ) : effortsError ? (
-              <ErrorState
-                message={effortsError.message}
-                onRetry={() => refetchEfforts()}
-              />
-            ) : efforts.length === 0 ? (
-              <EmptyState
-                title="No efforts yet"
-                message="No activities have traversed this segment's corridor."
-              />
-            ) : (
+            {effortsStatusNode ?? (
               <SegmentEffortsLeaderboard efforts={efforts} />
             )}
           </CardContent>
