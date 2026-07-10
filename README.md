@@ -128,6 +128,10 @@ VITE_COGNITO_DOMAIN=homelab-auth.auth.us-east-1.amazoncognito.com
 VITE_COGNITO_CLIENT_ID=5j475mtdcm4qevh7q115qf1sfj
 VITE_COGNITO_REDIRECT_URI=https://data-ui.lab.informationcart.com/callback
 VITE_COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K
+SONAR_HOST_URL=https://sonar.lab.informationcart.com
+SONAR_PROJECT_KEY=otel-data-ui
+SONAR_PROJECT_NAME=otel-data-ui
+SONAR_TOKEN=<generated SonarQube user token>
 ```
 
 ## Commands
@@ -144,7 +148,12 @@ npm run test          # Vitest watch mode
 npm run test:coverage # Vitest coverage run
 npm run type-check    # TypeScript check
 npm run lint:all      # All linters
+make sonar            # Coverage + SonarQube analysis
 ```
+
+`make sonar` loads `.env.local`, requires `SONAR_TOKEN`, generates Vitest
+coverage, and runs the local `@sonar/scan` CLI against
+`https://sonar.lab.informationcart.com`.
 
 ## Testing
 
