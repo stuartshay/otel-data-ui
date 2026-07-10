@@ -55,6 +55,7 @@
     "@graphql-codegen/typescript-operations": "^6.0.4",
     "@graphql-codegen/typescript-react-apollo": "^4.4.1",
     "@playwright/test": "^1.61.0",
+    "@sonar/scan": "^4.3.8",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

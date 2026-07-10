@@ -21,6 +21,16 @@ echo ""
 
 REQUIRED_NODE_VERSION="24"
 
+ensure_env_local_entry() {
+    local key="$1"
+    local value="$2"
+
+    if ! grep -q "^${key}=" .env.local; then
+        printf "%s=%s\n" "$key" "$value" >> .env.local
+        echo -e "${GREEN}✓ Added ${key} to .env.local${NC}"
+    fi
+}
+
 # Step 1: Check git
 echo -e "${BLUE}Step 1: Checking git...${NC}"
 if ! command -v git &> /dev/null; then
@@ -120,11 +130,20 @@ VITE_COGNITO_DOMAIN=homelab-auth.auth.us-east-1.amazoncognito.com
 VITE_COGNITO_CLIENT_ID=5j475mtdcm4qevh7q115qf1sfj
 VITE_COGNITO_REDIRECT_URI=http://localhost:5173/callback
 VITE_COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K
+SONAR_HOST_URL=https://sonar.lab.informationcart.com
+SONAR_PROJECT_KEY=otel-data-ui
+SONAR_PROJECT_NAME=otel-data-ui
+SONAR_TOKEN=
 EOF
     echo -e "${GREEN}✓ Template .env.local created${NC}"
 else
     echo -e "${YELLOW}.env.local already exists${NC}"
 fi
+
+ensure_env_local_entry "SONAR_HOST_URL" "https://sonar.lab.informationcart.com"
+ensure_env_local_entry "SONAR_PROJECT_KEY" "otel-data-ui"
+ensure_env_local_entry "SONAR_PROJECT_NAME" "otel-data-ui"
+ensure_env_local_entry "SONAR_TOKEN" ""
 echo ""
 
 # Step 7: Build validation
@@ -165,5 +184,6 @@ echo "  make lint-all      - Run all linters"
 echo "  make format        - Format code with Prettier"
 echo "  make type-check    - TypeScript type checking"
 echo "  make build         - Production build"
+echo "  make sonar         - Run SonarQube analysis"
 echo "  make docker-build  - Build Docker image"
 echo ""
