@@ -10,6 +10,7 @@ import {
   useGarminActivityLapsQuery,
   useGarminExportPointsLazyQuery,
   type GarminActivityClimbsQuery,
+  type GarminExportPointsQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -258,6 +259,192 @@ function ActivityClimbsTable({
   )
 }
 
+type GarminExportPoint =
+  GarminExportPointsQuery['garminTrackPoints']['items'][number]
+
+const EXPORT_CSV_HEADERS = [
+  'activity_id',
+  'track_point_id',
+  'timestamp',
+  'latitude',
+  'longitude',
+  'altitude',
+  'distance_from_start_km',
+  'speed_kmh',
+  'heart_rate',
+  'hr_zone',
+  'respiration_rate',
+  'cadence',
+  'temperature_c',
+  'is_climb_point',
+  'climb_id',
+  'climb_index',
+  'climb_label',
+  'climb_type',
+  'climb_difficulty',
+  'surface_type',
+  'effort_level',
+  'created_at',
+  'geocode_status',
+  'confidence',
+  'waypoint_kind',
+  'display_address',
+  'street',
+  'housenumber',
+  'neighbourhood',
+  'locality',
+  'region',
+  'country',
+  'postalcode',
+  'geocoded_at',
+]
+
+// Page through all track points in batches to avoid the 25 k hard limit.
+// Returns every point across all pages.
+async function fetchAllExportPoints(
+  fetchPage: (
+    offset: number,
+  ) => Promise<GarminExportPointsQuery['garminTrackPoints'] | null | undefined>,
+): Promise<GarminExportPoint[]> {
+  const allPoints: GarminExportPoint[] = []
+  let offset = 0
+  let total = Infinity
+
+  while (offset < total) {
+    const page = await fetchPage(offset)
+    if (!page) break
+    total = page.total
+    allPoints.push(...(page.items ?? []))
+    offset += EXPORT_PAGE_SIZE
+    if (allPoints.length >= total) break
+  }
+
+  return allPoints
+}
+
+function buildTrackPointsCsv(
+  points: GarminExportPoint[],
+  climbMarkers: Map<number, ClimbExportMarker>,
+): string {
+  const rows = points.map((p) => {
+    const marker = climbMarkers.get(p.id)
+    return [
+      p.activity_id,
+      p.id,
+      p.timestamp,
+      p.latitude,
+      p.longitude,
+      p.altitude,
+      p.distance_from_start_km,
+      p.speed_kmh,
+      p.heart_rate,
+      p.hr_zone,
+      p.respiration_rate,
+      p.cadence,
+      p.temperature_c,
+      marker?.isClimbPoint ?? false,
+      marker?.climbId,
+      marker?.climbIndex,
+      marker?.climbLabel,
+      marker?.climbType,
+      marker?.climbDifficulty,
+      p.surface_type,
+      p.effort_level,
+      p.created_at,
+      p.address?.status ?? '',
+      p.address?.confidence,
+      p.address?.waypoint_kind,
+      p.address?.display_address,
+      p.address?.street,
+      p.address?.housenumber,
+      p.address?.neighbourhood,
+      p.address?.locality,
+      p.address?.region,
+      p.address?.country,
+      p.address?.postalcode,
+      p.address?.geocoded_at,
+    ]
+      .map(escapeCsvValue)
+      .join(',')
+  })
+  return [EXPORT_CSV_HEADERS.join(','), ...rows].join('\n')
+}
+
+function buildTrackPointsGeoJson(
+  points: GarminExportPoint[],
+  climbMarkers: Map<number, ClimbExportMarker>,
+): string {
+  const geojson = {
+    type: 'FeatureCollection' as const,
+    features: points.map((p) => {
+      const marker = climbMarkers.get(p.id)
+      return {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [p.longitude, p.latitude],
+        },
+        properties: {
+          activity_id: p.activity_id,
+          track_point_id: p.id,
+          timestamp: p.timestamp,
+          altitude: p.altitude,
+          distance_from_start_km: p.distance_from_start_km,
+          speed_kmh: p.speed_kmh,
+          heart_rate: p.heart_rate,
+          hr_zone: p.hr_zone,
+          respiration_rate: p.respiration_rate,
+          cadence: p.cadence,
+          temperature_c: p.temperature_c,
+          is_climb_point: marker?.isClimbPoint ?? false,
+          climb_id: marker?.climbId ?? null,
+          climb_index: marker?.climbIndex ?? null,
+          climb_label: marker?.climbLabel ?? null,
+          climb_type: marker?.climbType ?? null,
+          climb_difficulty: marker?.climbDifficulty ?? null,
+          surface_type: p.surface_type,
+          effort_level: p.effort_level,
+          created_at: p.created_at,
+          geocode_status: p.address?.status ?? null,
+          confidence: p.address?.confidence ?? null,
+          waypoint_kind: p.address?.waypoint_kind ?? null,
+          display_address: p.address?.display_address ?? null,
+          street: p.address?.street ?? null,
+          housenumber: p.address?.housenumber ?? null,
+          neighbourhood: p.address?.neighbourhood ?? null,
+          locality: p.address?.locality ?? null,
+          region: p.address?.region ?? null,
+          country: p.address?.country ?? null,
+          postalcode: p.address?.postalcode ?? null,
+          geocoded_at: p.address?.geocoded_at ?? null,
+        },
+      }
+    }),
+  }
+  return JSON.stringify(geojson, null, 2)
+}
+
+function exportGarminTrackPoints(
+  format: 'csv' | 'geojson',
+  points: GarminExportPoint[],
+  climbMarkers: Map<number, ClimbExportMarker>,
+  activityId: string,
+): void {
+  if (format === 'csv') {
+    triggerDownload(
+      buildTrackPointsCsv(points, climbMarkers),
+      'text/csv',
+      `garmin_activity_${activityId}_points.csv`,
+    )
+    return
+  }
+  triggerDownload(
+    buildTrackPointsGeoJson(points, climbMarkers),
+    'application/geo+json',
+    `garmin_activity_${activityId}_points.geojson`,
+  )
+}
+
 export function GarminDetailPage() {
   const { activityId } = useParams<{ activityId: string }>()
   const location = useLocation()
@@ -326,15 +513,7 @@ export function GarminDetailPage() {
     exportInFlightRef.current = true
     setActiveExport(format)
     try {
-      // Page through all track points in batches to avoid the 25 k hard limit.
-      type TrackItem = NonNullable<
-        Awaited<ReturnType<typeof fetchExportPoints>>['data']
-      >['garminTrackPoints']['items'][number]
-      const allPoints: TrackItem[] = []
-      let offset = 0
-      let total = Infinity
-
-      while (offset < total) {
+      const points = await fetchAllExportPoints(async (offset) => {
         const result = await fetchExportPoints({
           variables: {
             activity_id: activityId,
@@ -342,15 +521,9 @@ export function GarminDetailPage() {
             offset,
           },
         })
-        const page = result.data?.garminTrackPoints
-        if (!page) break
-        total = page.total
-        allPoints.push(...(page.items ?? []))
-        offset += EXPORT_PAGE_SIZE
-        if (allPoints.length >= total) break
-      }
+        return result.data?.garminTrackPoints
+      })
 
-      const points = allPoints
       const climbWindows = buildClimbExportWindows(mainClimbsRef.current)
       const climbMarkers = new Map(
         points.map((point) => [
@@ -364,141 +537,7 @@ export function GarminDetailPage() {
         })
       }
 
-      if (format === 'csv') {
-        const headers = [
-          'activity_id',
-          'track_point_id',
-          'timestamp',
-          'latitude',
-          'longitude',
-          'altitude',
-          'distance_from_start_km',
-          'speed_kmh',
-          'heart_rate',
-          'hr_zone',
-          'respiration_rate',
-          'cadence',
-          'temperature_c',
-          'is_climb_point',
-          'climb_id',
-          'climb_index',
-          'climb_label',
-          'climb_type',
-          'climb_difficulty',
-          'surface_type',
-          'effort_level',
-          'created_at',
-          'geocode_status',
-          'confidence',
-          'waypoint_kind',
-          'display_address',
-          'street',
-          'housenumber',
-          'neighbourhood',
-          'locality',
-          'region',
-          'country',
-          'postalcode',
-          'geocoded_at',
-        ]
-        const rows = points.map((p) => {
-          const marker = climbMarkers.get(p.id)
-          return [
-            p.activity_id,
-            p.id,
-            p.timestamp,
-            p.latitude,
-            p.longitude,
-            p.altitude,
-            p.distance_from_start_km,
-            p.speed_kmh,
-            p.heart_rate,
-            p.hr_zone,
-            p.respiration_rate,
-            p.cadence,
-            p.temperature_c,
-            marker?.isClimbPoint ?? false,
-            marker?.climbId,
-            marker?.climbIndex,
-            marker?.climbLabel,
-            marker?.climbType,
-            marker?.climbDifficulty,
-            p.surface_type,
-            p.effort_level,
-            p.created_at,
-            p.address?.status ?? '',
-            p.address?.confidence,
-            p.address?.waypoint_kind,
-            p.address?.display_address,
-            p.address?.street,
-            p.address?.housenumber,
-            p.address?.neighbourhood,
-            p.address?.locality,
-            p.address?.region,
-            p.address?.country,
-            p.address?.postalcode,
-            p.address?.geocoded_at,
-          ]
-            .map(escapeCsvValue)
-            .join(',')
-        })
-        const csv = [headers.join(','), ...rows].join('\n')
-        triggerDownload(
-          csv,
-          'text/csv',
-          `garmin_activity_${activityId}_points.csv`,
-        )
-      } else {
-        const geojson = {
-          type: 'FeatureCollection' as const,
-          features: points.map((p) => ({
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: [p.longitude, p.latitude],
-            },
-            properties: {
-              activity_id: p.activity_id,
-              track_point_id: p.id,
-              timestamp: p.timestamp,
-              altitude: p.altitude,
-              distance_from_start_km: p.distance_from_start_km,
-              speed_kmh: p.speed_kmh,
-              heart_rate: p.heart_rate,
-              hr_zone: p.hr_zone,
-              respiration_rate: p.respiration_rate,
-              cadence: p.cadence,
-              temperature_c: p.temperature_c,
-              is_climb_point: climbMarkers.get(p.id)?.isClimbPoint ?? false,
-              climb_id: climbMarkers.get(p.id)?.climbId ?? null,
-              climb_index: climbMarkers.get(p.id)?.climbIndex ?? null,
-              climb_label: climbMarkers.get(p.id)?.climbLabel ?? null,
-              climb_type: climbMarkers.get(p.id)?.climbType ?? null,
-              climb_difficulty: climbMarkers.get(p.id)?.climbDifficulty ?? null,
-              surface_type: p.surface_type,
-              effort_level: p.effort_level,
-              created_at: p.created_at,
-              geocode_status: p.address?.status ?? null,
-              confidence: p.address?.confidence ?? null,
-              waypoint_kind: p.address?.waypoint_kind ?? null,
-              display_address: p.address?.display_address ?? null,
-              street: p.address?.street ?? null,
-              housenumber: p.address?.housenumber ?? null,
-              neighbourhood: p.address?.neighbourhood ?? null,
-              locality: p.address?.locality ?? null,
-              region: p.address?.region ?? null,
-              country: p.address?.country ?? null,
-              postalcode: p.address?.postalcode ?? null,
-              geocoded_at: p.address?.geocoded_at ?? null,
-            },
-          })),
-        }
-        triggerDownload(
-          JSON.stringify(geojson, null, 2),
-          'application/geo+json',
-          `garmin_activity_${activityId}_points.geojson`,
-        )
-      }
+      exportGarminTrackPoints(format, points, climbMarkers, activityId)
     } catch (error) {
       toast.error(`Export ${format.toUpperCase()} failed`, {
         description:
