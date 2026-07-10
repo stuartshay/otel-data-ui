@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { addDays, endOfMonth, format, parseISO, subDays } from 'date-fns'
 import {
   Bar,
@@ -601,6 +601,21 @@ export function GarminActivityTotals() {
     }
   }
 
+  let statusNode: ReactNode = null
+  if (isLoading) {
+    statusNode = <LoadingState message="Loading activity totals..." />
+  } else if (activeError) {
+    statusNode = (
+      <ErrorState message={activeError.message} onRetry={handleRetry} />
+    )
+  } else if (chartData.length === 0) {
+    statusNode = (
+      <p className="py-12 text-center text-sm text-muted-foreground">
+        No activities found for this period.
+      </p>
+    )
+  }
+
   return (
     <Card data-testid="activity-totals-card">
       <CardHeader>
@@ -694,15 +709,7 @@ export function GarminActivityTotals() {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <LoadingState message="Loading activity totals..." />
-        ) : activeError ? (
-          <ErrorState message={activeError.message} onRetry={handleRetry} />
-        ) : chartData.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            No activities found for this period.
-          </p>
-        ) : (
+        {statusNode ?? (
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart

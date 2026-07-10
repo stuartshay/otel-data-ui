@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, type ReactNode } from 'react'
 import CalendarHeatmap from 'react-calendar-heatmap'
 import { format } from 'date-fns'
 import { Activity } from 'lucide-react'
@@ -88,6 +88,23 @@ export function GarminActivityHeatmap() {
   const totalActivities = heatmapValues.reduce((sum, v) => sum + v.count, 0)
   const activeDays = heatmapValues.filter((v) => v.count > 0).length
 
+  let statusNode: ReactNode = null
+  if (loading) {
+    statusNode = (
+      <div className="flex h-32 items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          Loading activity data...
+        </p>
+      </div>
+    )
+  } else if (error) {
+    statusNode = (
+      <div className="flex h-32 items-center justify-center">
+        <p className="text-sm text-destructive">Failed to load activity data</p>
+      </div>
+    )
+  }
+
   return (
     <Card data-testid="garmin-heatmap-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -119,19 +136,7 @@ export function GarminActivityHeatmap() {
         </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Loading activity data...
-            </p>
-          </div>
-        ) : error ? (
-          <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-destructive">
-              Failed to load activity data
-            </p>
-          </div>
-        ) : (
+        {statusNode ?? (
           <div
             className="garmin-heatmap"
             onClickCapture={(e) => {

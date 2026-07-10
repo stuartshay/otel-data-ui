@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { format as formatDate } from 'date-fns'
 import {
@@ -85,6 +85,22 @@ export function LapComparisonPage() {
   const total = data?.garminLapsComparison?.total ?? 0
   const metricUnit = getMetricDef(metric).unit
 
+  let statusNode: ReactNode = null
+  if (loading && !data) {
+    statusNode = <LoadingState message="Loading laps..." />
+  } else if (error) {
+    statusNode = (
+      <ErrorState message={error.message} onRetry={() => refetch()} />
+    )
+  } else if (items.length === 0) {
+    statusNode = (
+      <EmptyState
+        title="No laps to compare"
+        message="No cycling laps found for this date range."
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -126,16 +142,7 @@ export function LapComparisonPage() {
         </div>
       </div>
 
-      {loading && !data ? (
-        <LoadingState message="Loading laps..." />
-      ) : error ? (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
-      ) : items.length === 0 ? (
-        <EmptyState
-          title="No laps to compare"
-          message="No cycling laps found for this date range."
-        />
-      ) : (
+      {statusNode ?? (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             {items.length} of {total.toLocaleString()} activities

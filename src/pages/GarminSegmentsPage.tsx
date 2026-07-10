@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Route } from 'lucide-react'
 import { useGarminSegmentsQuery } from '@/__generated__/graphql'
@@ -23,6 +23,22 @@ export function GarminSegmentsPage() {
   const { data, loading, error, refetch } = useGarminSegmentsQuery()
   const segments = data?.garminSegments ?? []
 
+  let statusNode: ReactNode = null
+  if (loading && !data) {
+    statusNode = <LoadingState message="Loading segments..." />
+  } else if (error) {
+    statusNode = (
+      <ErrorState message={error.message} onRetry={() => refetch()} />
+    )
+  } else if (segments.length === 0) {
+    statusNode = (
+      <EmptyState
+        title="No saved segments"
+        message="Saved segments will appear here. Creating a segment from an activity lap or climb is coming soon."
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -32,16 +48,7 @@ export function GarminSegmentsPage() {
         </p>
       </div>
 
-      {loading && !data ? (
-        <LoadingState message="Loading segments..." />
-      ) : error ? (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
-      ) : segments.length === 0 ? (
-        <EmptyState
-          title="No saved segments"
-          message="Saved segments will appear here. Creating a segment from an activity lap or climb is coming soon."
-        />
-      ) : (
+      {statusNode ?? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {segments.map((segment) => (
             <Link
