@@ -25,9 +25,15 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() {
+    // no-op: jsdom does not implement ResizeObserver
+  }
+  unobserve() {
+    // no-op: jsdom does not implement ResizeObserver
+  }
+  disconnect() {
+    // no-op: jsdom does not implement ResizeObserver
+  }
 }
 
 vi.stubGlobal('ResizeObserver', ResizeObserverMock)
