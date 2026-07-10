@@ -28,6 +28,11 @@ const RECENT_DAYS = 28
 // Weekday initial keyed by Date#getDay() (0 = Sunday).
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
+// Pluralize the recent-ride count word.
+function pluralizeRides(count: number): string {
+  return count === 1 ? 'ride' : 'rides'
+}
+
 interface DayBucket {
   /** ISO date for the bucket (yyyy-MM-dd). */
   date: string
@@ -280,9 +285,7 @@ export function CyclingInFocus() {
               <div
                 data-testid="in-focus-activity-strip"
                 className="flex items-center justify-between"
-                aria-label={`${recentRideCount} ride${
-                  recentRideCount === 1 ? '' : 's'
-                } in the last 4 weeks`}
+                aria-label={`${recentRideCount} ${pluralizeRides(recentRideCount)} in the last 4 weeks`}
               >
                 {recentDays.map((day) => (
                   <span
@@ -297,9 +300,7 @@ export function CyclingInFocus() {
               <span className="block text-xs text-muted-foreground">
                 {recentLoading
                   ? 'Loading…'
-                  : `Last 4w · ${recentRideCount} ${
-                      recentRideCount === 1 ? 'ride' : 'rides'
-                    }`}
+                  : `Last 4w · ${recentRideCount} ${pluralizeRides(recentRideCount)}`}
               </span>
             </div>
           </>

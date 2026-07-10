@@ -81,11 +81,10 @@ export function toChartDataPoint(
   hasReliableDistance: boolean,
 ): ChartDataPoint {
   return {
-    distance: hasReliableDistance
-      ? pt.distance_from_start_km != null
+    distance:
+      hasReliableDistance && pt.distance_from_start_km != null
         ? kmToMi(pt.distance_from_start_km)
-        : null
-      : null,
+        : null,
     distanceKm: pt.distance_from_start_km ?? null,
     time: (new Date(pt.timestamp).getTime() - startTime) / 60000,
     elevation: pt.altitude != null ? metersToFeet(pt.altitude) : null,
