@@ -172,12 +172,11 @@ interface ChartBucket {
   total_calories: number
 }
 
-function getDateRange(period: 'year'): {
+function getDateRange(): {
   date_from?: string
   date_to?: string
 } {
-  // 'year' — let the API return all available history
-  void period
+  // 'year' period — let the API return all available history
   return {}
 }
 
@@ -255,7 +254,7 @@ export function GarminActivityTotals() {
       }
     }
     if (period === 'year') {
-      return getDateRange('year')
+      return getDateRange()
     }
     // 'week' uses a separate per-year fetch path; no main-query range.
     return {}
