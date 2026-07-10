@@ -77,10 +77,14 @@ export function SpatialPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="nearby-lat"
+                      className="text-xs text-muted-foreground"
+                    >
                       Latitude
                     </label>
                     <input
+                      id="nearby-lat"
                       type="text"
                       value={nearbyLat}
                       onChange={(e) => setNearbyLat(e.target.value)}
@@ -88,10 +92,14 @@ export function SpatialPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="nearby-lon"
+                      className="text-xs text-muted-foreground"
+                    >
                       Longitude
                     </label>
                     <input
+                      id="nearby-lon"
                       type="text"
                       value={nearbyLon}
                       onChange={(e) => setNearbyLon(e.target.value)}
@@ -99,10 +107,14 @@ export function SpatialPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="nearby-radius"
+                      className="text-xs text-muted-foreground"
+                    >
                       Radius (m)
                     </label>
                     <input
+                      id="nearby-radius"
                       type="text"
                       value={nearbyRadius}
                       onChange={(e) => setNearbyRadius(e.target.value)}
@@ -157,10 +169,14 @@ export function SpatialPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="distance-from-lat"
+                      className="text-xs text-muted-foreground"
+                    >
                       From Lat
                     </label>
                     <input
+                      id="distance-from-lat"
                       type="text"
                       value={fromLat}
                       onChange={(e) => setFromLat(e.target.value)}
@@ -168,10 +184,14 @@ export function SpatialPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="distance-from-lon"
+                      className="text-xs text-muted-foreground"
+                    >
                       From Lon
                     </label>
                     <input
+                      id="distance-from-lon"
                       type="text"
                       value={fromLon}
                       onChange={(e) => setFromLon(e.target.value)}
@@ -179,10 +199,14 @@ export function SpatialPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="distance-to-lat"
+                      className="text-xs text-muted-foreground"
+                    >
                       To Lat
                     </label>
                     <input
+                      id="distance-to-lat"
                       type="text"
                       value={toLat}
                       onChange={(e) => setToLat(e.target.value)}
@@ -190,10 +214,14 @@ export function SpatialPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <label
+                      htmlFor="distance-to-lon"
+                      className="text-xs text-muted-foreground"
+                    >
                       To Lon
                     </label>
                     <input
+                      id="distance-to-lon"
                       type="text"
                       value={toLon}
                       onChange={(e) => setToLon(e.target.value)}
