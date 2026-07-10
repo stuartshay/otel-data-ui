@@ -51,8 +51,14 @@ export function ReverseGeocode() {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-muted-foreground">Latitude</label>
+            <label
+              htmlFor="reverse-geocode-lat"
+              className="text-xs text-muted-foreground"
+            >
+              Latitude
+            </label>
             <input
+              id="reverse-geocode-lat"
               type="text"
               value={lat}
               onChange={(e) => setLat(e.target.value)}
@@ -60,8 +66,14 @@ export function ReverseGeocode() {
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Longitude</label>
+            <label
+              htmlFor="reverse-geocode-lon"
+              className="text-xs text-muted-foreground"
+            >
+              Longitude
+            </label>
             <input
+              id="reverse-geocode-lon"
               type="text"
               value={lon}
               onChange={(e) => setLon(e.target.value)}
