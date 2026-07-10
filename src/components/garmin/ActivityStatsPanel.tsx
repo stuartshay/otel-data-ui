@@ -205,7 +205,7 @@ function TrainingEffectGraphic({
             <div className="flex items-baseline justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                Aerobic
+                <span>Aerobic</span>
               </div>
               <div className="text-2xl font-semibold tabular-nums">
                 {formatTrainingEffect(aerobic)}
@@ -216,7 +216,7 @@ function TrainingEffectGraphic({
             <div className="flex items-baseline justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
-                Anaerobic
+                <span>Anaerobic</span>
               </div>
               <div className="text-2xl font-semibold tabular-nums">
                 {formatTrainingEffect(anaerobic)}

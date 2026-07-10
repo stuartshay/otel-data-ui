@@ -171,7 +171,7 @@ export function GeocodingPage() {
                     onChange={(e) => setRetryFailed(e.target.checked)}
                     className="rounded border"
                   />
-                  Retry failed
+                  <span>Retry failed</span>
                 </label>
 
                 <Button onClick={handleTrigger} disabled={triggering}>
