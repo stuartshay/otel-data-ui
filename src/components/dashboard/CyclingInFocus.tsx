@@ -285,9 +285,7 @@ export function CyclingInFocus() {
               <div
                 data-testid="in-focus-activity-strip"
                 className="flex items-center justify-between"
-                aria-label={`${recentRideCount} ride${
-                  recentRideCount === 1 ? '' : 's'
-                } in the last 4 weeks`}
+                aria-label={`${recentRideCount} ${pluralizeRides(recentRideCount)} in the last 4 weeks`}
               >
                 {recentDays.map((day) => (
                   <span

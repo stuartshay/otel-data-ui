@@ -145,7 +145,10 @@ function normalizeTooltipIndex(
   raw: number | string | null | undefined,
 ): number {
   if (typeof raw === 'number') return raw
-  if (typeof raw === 'string' && raw !== '') return Number(raw)
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    return trimmed === '' ? NaN : Number(trimmed)
+  }
   return NaN
 }
 
