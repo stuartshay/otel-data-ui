@@ -61,9 +61,9 @@ function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180
 }
 
-function isFiniteCoordinate(
-  point: ActivityChartTrackPoint,
-): point is ActivityChartTrackPoint & { latitude: number; longitude: number } {
+function isFiniteCoordinate<
+  T extends { latitude?: number | null; longitude?: number | null },
+>(point: T): point is T & { latitude: number; longitude: number } {
   return (
     point.latitude != null &&
     point.longitude != null &&
@@ -481,7 +481,7 @@ function resolveSelectedClimbId(
 function computeHasHrData(
   avgHeartRate: number | null | undefined,
   maxHeartRate: number | null | undefined,
-  chartPoints: { heart_rate?: number | null }[],
+  chartPoints: ActivityChartTrackPoint[],
 ): boolean {
   return (
     avgHeartRate != null ||
@@ -498,22 +498,21 @@ function isSavedPoint(
   return point != null && savedPoints.some((p) => p.id === point.timestamp)
 }
 
+interface SavedMapPoint {
+  id: string
+  lat: number
+  lng: number
+  color: string
+}
+
 // Saved points that have finite coordinates, shaped for the map layer.
-function toSavedMapPoints(savedPoints: SavedPoint[]) {
-  return savedPoints
-    .filter(
-      (p) =>
-        p.latitude != null &&
-        p.longitude != null &&
-        Number.isFinite(p.latitude) &&
-        Number.isFinite(p.longitude),
-    )
-    .map((p) => ({
-      id: p.id,
-      lat: p.latitude as number,
-      lng: p.longitude as number,
-      color: p.color,
-    }))
+function toSavedMapPoints(savedPoints: SavedPoint[]): SavedMapPoint[] {
+  return savedPoints.filter(isFiniteCoordinate).map((p) => ({
+    id: p.id,
+    lat: p.latitude,
+    lng: p.longitude,
+    color: p.color,
+  }))
 }
 
 export function GarminDetailPage() {
