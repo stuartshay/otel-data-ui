@@ -3,10 +3,14 @@
 
 VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 IMAGE_NAME := stuartshay/otel-data-ui
+SONAR_TOKEN_FROM_ENV := $(SONAR_TOKEN)
 
 ifneq (,$(wildcard .env.local))
 include .env.local
-export
+endif
+
+ifneq ($(SONAR_TOKEN_FROM_ENV),)
+SONAR_TOKEN := $(SONAR_TOKEN_FROM_ENV)
 endif
 
 SONAR_HOST_URL ?= https://sonar.lab.informationcart.com
@@ -17,6 +21,7 @@ SONAR_TESTS ?= src
 SONAR_TEST_INCLUSIONS ?= **/*.test.ts,**/*.test.tsx
 SONAR_EXCLUSIONS ?= src/__generated__/**,node_modules/**,dist/**,coverage/**,e2e/**
 SONAR_COVERAGE_REPORT ?= coverage/lcov.info
+export SONAR_HOST_URL SONAR_PROJECT_KEY SONAR_PROJECT_NAME SONAR_TOKEN
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -55,7 +60,7 @@ sonar-check-token: ## Validate SonarQube token configuration
 	fi
 
 sonar-coverage: ## Generate coverage for SonarQube
-	npm run test:coverage
+	npm run test:coverage -- --coverage.reporter=lcov
 
 sonar-scan: sonar-check-token sonar-coverage ## Run SonarQube scanner CLI
 	npx sonar \
