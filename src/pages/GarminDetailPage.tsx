@@ -370,6 +370,38 @@ function buildTrackPointsCsv(
   return [EXPORT_CSV_HEADERS.join(','), ...rows].join('\n')
 }
 
+// Climb-related GeoJSON properties for a track point, defaulting to
+// null/false when the point falls outside any climb window.
+function buildClimbGeoJsonProperties(marker: ClimbExportMarker | undefined) {
+  return {
+    is_climb_point: marker?.isClimbPoint ?? false,
+    climb_id: marker?.climbId ?? null,
+    climb_index: marker?.climbIndex ?? null,
+    climb_label: marker?.climbLabel ?? null,
+    climb_type: marker?.climbType ?? null,
+    climb_difficulty: marker?.climbDifficulty ?? null,
+  }
+}
+
+// Geocode/address GeoJSON properties for a track point, defaulting missing
+// fields to null.
+function buildAddressGeoJsonProperties(address: GarminExportPoint['address']) {
+  return {
+    geocode_status: address?.status ?? null,
+    confidence: address?.confidence ?? null,
+    waypoint_kind: address?.waypoint_kind ?? null,
+    display_address: address?.display_address ?? null,
+    street: address?.street ?? null,
+    housenumber: address?.housenumber ?? null,
+    neighbourhood: address?.neighbourhood ?? null,
+    locality: address?.locality ?? null,
+    region: address?.region ?? null,
+    country: address?.country ?? null,
+    postalcode: address?.postalcode ?? null,
+    geocoded_at: address?.geocoded_at ?? null,
+  }
+}
+
 function buildTrackPointsGeoJson(
   points: GarminExportPoint[],
   climbMarkers: Map<number, ClimbExportMarker>,
@@ -396,27 +428,11 @@ function buildTrackPointsGeoJson(
           respiration_rate: p.respiration_rate,
           cadence: p.cadence,
           temperature_c: p.temperature_c,
-          is_climb_point: marker?.isClimbPoint ?? false,
-          climb_id: marker?.climbId ?? null,
-          climb_index: marker?.climbIndex ?? null,
-          climb_label: marker?.climbLabel ?? null,
-          climb_type: marker?.climbType ?? null,
-          climb_difficulty: marker?.climbDifficulty ?? null,
+          ...buildClimbGeoJsonProperties(marker),
           surface_type: p.surface_type,
           effort_level: p.effort_level,
           created_at: p.created_at,
-          geocode_status: p.address?.status ?? null,
-          confidence: p.address?.confidence ?? null,
-          waypoint_kind: p.address?.waypoint_kind ?? null,
-          display_address: p.address?.display_address ?? null,
-          street: p.address?.street ?? null,
-          housenumber: p.address?.housenumber ?? null,
-          neighbourhood: p.address?.neighbourhood ?? null,
-          locality: p.address?.locality ?? null,
-          region: p.address?.region ?? null,
-          country: p.address?.country ?? null,
-          postalcode: p.address?.postalcode ?? null,
-          geocoded_at: p.address?.geocoded_at ?? null,
+          ...buildAddressGeoJsonProperties(p.address),
         },
       }
     }),
