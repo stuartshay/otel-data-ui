@@ -9,11 +9,35 @@
  */
 export function escapeCsvValue(value: unknown): string {
   if (value == null) return ''
-  const str = String(value)
-  if (/[,"\n\r]/.test(str)) {
-    return `"${str.replaceAll('"', '""')}"`
+
+  const quoteIfNeeded = (str: string) =>
+    /[,"\n\r]/.test(str) ? `"${str.replaceAll('"', '""')}"` : str
+
+  if (typeof value === 'object') {
+    return quoteIfNeeded(JSON.stringify(value) ?? '')
   }
-  return str
+
+  if (typeof value === 'string') {
+    return quoteIfNeeded(value)
+  }
+
+  if (typeof value === 'symbol') {
+    return quoteIfNeeded(value.description ?? value.toString())
+  }
+
+  if (typeof value === 'function') {
+    return quoteIfNeeded(value.name)
+  }
+
+  if (typeof value === 'number') {
+    return quoteIfNeeded(value.toString())
+  }
+
+  if (typeof value === 'bigint') {
+    return quoteIfNeeded(value.toString())
+  }
+
+  return quoteIfNeeded(value ? 'true' : 'false')
 }
 
 /**

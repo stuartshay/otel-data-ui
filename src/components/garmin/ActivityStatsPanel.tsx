@@ -566,8 +566,8 @@ export function ActivityStatsPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {section.rows.map((row, i) => (
-              <div key={i} className="flex justify-between text-sm">
+            {section.rows.map((row) => (
+              <div key={row.label} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{row.label}</span>
                 <span className="flex items-center gap-1.5 font-medium">
                   {row.value}

@@ -25,7 +25,7 @@ export function SegmentMiniMap({
   label,
   route,
 }: SegmentMiniMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<HTMLElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   const routeLatLngs = useMemo<L.LatLngTuple[]>(
@@ -120,12 +120,11 @@ export function SegmentMiniMap({
   }, [startLat, startLon, endLat, endLon, routeLatLngs])
 
   return (
-    <div
+    <figure
       ref={mapRef}
       aria-label={`${label} segment map`}
-      role="img"
       data-testid="segment-mini-map"
-      className="h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 sm:h-28 sm:w-32"
+      className="m-0 h-24 w-28 shrink-0 overflow-hidden rounded-md border border-border/70 sm:h-28 sm:w-32"
     />
   )
 }
