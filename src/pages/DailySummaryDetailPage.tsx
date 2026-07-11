@@ -178,10 +178,10 @@ function useDayKeyboardNavigation(
 function DayNavButton({
   iso,
   direction,
-}: {
+}: Readonly<{
   iso: string | undefined
   direction: 'prev' | 'next'
-}) {
+}>) {
   const text = direction === 'prev' ? 'Previous Day' : 'Next Day'
   // Accessible name intentionally lower-cases "day" to match existing labels.
   const name = direction === 'prev' ? 'Previous day' : 'Next day'
@@ -240,7 +240,7 @@ function DayDetailHeader({
   garminTotal,
   prevDayIso,
   nextDayIso,
-}: {
+}: Readonly<{
   routeDate: Date
   displayed: number
   total: number
@@ -249,7 +249,7 @@ function DayDetailHeader({
   garminTotal: number
   prevDayIso: string | undefined
   nextDayIso: string | undefined
-}) {
+}>) {
   const showBreakdown = !sourceFilter && (ownTracksTotal > 0 || garminTotal > 0)
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -289,9 +289,9 @@ function DayDetailHeader({
 
 function DaySummaryStats({
   summary,
-}: {
+}: Readonly<{
   summary: DailySummaryItem | undefined
-}) {
+}>) {
   if (!summary) return null
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -345,7 +345,7 @@ function DayFilterBar({
   onToggleTrack,
   onColorBy,
   onExport,
-}: {
+}: Readonly<{
   sourceFilter: SourceFilter | undefined
   sortOrder: SortOrder
   showTrack: boolean
@@ -357,7 +357,7 @@ function DayFilterBar({
   onToggleTrack: () => void
   onColorBy: (value: ColorBy) => void
   onExport: (formatType: ExportFormat) => void
-}) {
+}>) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -455,12 +455,12 @@ function DayPointRow({
   index,
   focusKey,
   onFocus,
-}: {
+}: Readonly<{
   point: UnifiedGpsItem
   index: number
   focusKey: string | undefined
   onFocus: (key: string) => void
-}) {
+}>) {
   const rowKey = `${point.source}-${point.identifier}-${point.timestamp}-${index}`
   const isFocused = rowKey === focusKey
   return (
@@ -502,8 +502,8 @@ function DayPointsSection({
   onFocus,
   onClearFilter,
   onResetPage,
-}: {
-  points: UnifiedGpsItem[]
+}: Readonly<{
+  points: ReadonlyArray<UnifiedGpsItem>
   isPageOutOfRange: boolean
   lastPage: number
   hasFilter: boolean
@@ -511,7 +511,7 @@ function DayPointsSection({
   onFocus: (key: string) => void
   onClearFilter: () => void
   onResetPage: () => void
-}) {
+}>) {
   if (isPageOutOfRange) {
     return (
       <div className="rounded-md border">
@@ -576,13 +576,13 @@ function DayPagination({
   offset,
   isPageOutOfRange,
   onPageChange,
-}: {
+}: Readonly<{
   page: number
   total: number
   offset: number
   isPageOutOfRange: boolean
   onPageChange: (next: number) => void
-}) {
+}>) {
   if (total <= 0 || isPageOutOfRange) return null
   return (
     <div className="flex items-center justify-between">
