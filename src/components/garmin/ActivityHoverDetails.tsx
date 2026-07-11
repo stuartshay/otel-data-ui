@@ -54,7 +54,7 @@ export function ActivityHoverDetails({
   point,
   isSaved = false,
   onToggleSave,
-}: ActivityHoverDetailsProps) {
+}: Readonly<ActivityHoverDetailsProps>) {
   const target = useMemo(() => coordKey(point), [point])
   const [pendingState, setPendingState] = useState<{
     key: string
@@ -220,7 +220,7 @@ function formatHoverDistance(point: ChartDataPoint): string {
   return `${point.distance.toFixed(2)} mi${km}`
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex flex-col">
       <span className="text-muted-foreground">{label}</span>

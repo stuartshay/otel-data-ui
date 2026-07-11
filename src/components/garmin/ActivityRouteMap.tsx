@@ -55,7 +55,7 @@ export function ActivityRouteMap({
   savedPoints = [],
   onSavedPointRemove,
   onMapPointSelect,
-}: ActivityRouteMapProps) {
+}: Readonly<ActivityRouteMapProps>) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const hoverMarkerRef = useRef<L.CircleMarker | null>(null)

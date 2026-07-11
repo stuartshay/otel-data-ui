@@ -95,7 +95,7 @@ function surfacePercent(
   return (surfaceMeters / distanceMeters) * 100
 }
 
-function LapStat({ label, value }: { label: string; value: string }) {
+function LapStat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div>
       <div className="text-xl font-semibold leading-none">{value}</div>
@@ -109,12 +109,12 @@ function ActivityLapDetailsPanel({
   laps,
   chartPoints,
   sport,
-}: {
+}: Readonly<{
   lap: ActivityLap
   laps: ActivityLap[]
   chartPoints: ActivityChartTrackPoint[]
   sport?: string | null
-}) {
+}>) {
   const segmentPoints = useMemo(
     () => getLapSegmentPoints(lap, chartPoints, laps),
     [lap, chartPoints, laps],
@@ -231,7 +231,7 @@ export function ActivityLapsTable({
   laps,
   chartPoints = [],
   sport,
-}: ActivityLapsTableProps) {
+}: Readonly<ActivityLapsTableProps>) {
   const [selectedLapIndex, setSelectedLapIndex] = useState<number | null>(null)
   const orderedLaps = useMemo(
     () => [...laps].sort((a, b) => a.lap_index - b.lap_index),
