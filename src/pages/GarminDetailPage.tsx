@@ -189,11 +189,11 @@ function ActivityClimbsTable({
   climbs,
   selectedClimbId,
   onSelectClimb,
-}: {
+}: Readonly<{
   climbs: ActivityClimb[]
   selectedClimbId: number | null
   onSelectClimb: (climbId: number) => void
-}) {
+}>) {
   if (climbs.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">

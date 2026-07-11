@@ -154,7 +154,10 @@ function axisTicks(min: number, max: number, count: number): number[] {
   return Array.from({ length: count }, (_, index) => min + step * index)
 }
 
-function ClimbStat({ label, value }: { label: string; value: string }) {
+function ClimbStat({
+  label,
+  value,
+}: Readonly<{ label: string; value: string }>) {
   return (
     <div>
       <div className="text-2xl font-semibold leading-none">{value}</div>
@@ -363,7 +366,9 @@ const METRIC_OPTIONS: ClimbMapMetricOption[] = [
   },
 ]
 
-function ClimbElevationGradeChart({ points }: { points: ClimbGraphPoint[] }) {
+function ClimbElevationGradeChart({
+  points,
+}: Readonly<{ points: ClimbGraphPoint[] }>) {
   if (points.length < 2) {
     return (
       <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
@@ -519,7 +524,7 @@ function ClimbElevationGradeChart({ points }: { points: ClimbGraphPoint[] }) {
   )
 }
 
-function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
+function ClimbSegmentMap({ points }: Readonly<{ points: ClimbMapPoint[] }>) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
@@ -695,7 +700,7 @@ export function ClimbDetailsPanel({
   canPrevious,
   canNext,
   sport,
-}: ClimbDetailsPanelProps) {
+}: Readonly<ClimbDetailsPanelProps>) {
   const segmentPoints = useMemo(
     () => getClimbSegmentPoints(climb, chartPoints),
     [climb, chartPoints],

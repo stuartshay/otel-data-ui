@@ -140,11 +140,11 @@ function TrainingEffectGauge({
   label,
   value,
   markerClassName,
-}: {
+}: Readonly<{
   label: string
   value: number | null | undefined
   markerClassName: string
-}) {
+}>) {
   const safeValue = hasTrainingEffect(value) ? value : null
   const markerPosition = safeValue != null ? (safeValue / 5) * 100 : null
 
@@ -187,10 +187,10 @@ function TrainingEffectGauge({
 function TrainingEffectGraphic({
   aerobic,
   anaerobic,
-}: {
+}: Readonly<{
   aerobic: number | null | undefined
   anaerobic: number | null | undefined
-}) {
+}>) {
   if (!hasTrainingEffect(aerobic) && !hasTrainingEffect(anaerobic)) {
     return null
   }
@@ -254,9 +254,9 @@ function formatObservedRange(
 
 function HeartRateZoneBreakdown({
   summaries,
-}: {
+}: Readonly<{
   summaries: HeartRateZoneSummary[]
-}) {
+}>) {
   const hasZoneTime = summaries.some((summary) => summary.seconds > 0)
   if (!hasZoneTime) return null
 
@@ -550,7 +550,7 @@ function buildStatSections(
 export function ActivityStatsPanel({
   activity: a,
   heartRateZonePoints = [],
-}: ActivityStatsPanelProps) {
+}: Readonly<ActivityStatsPanelProps>) {
   const hasHeartRateSamples = heartRateZonePoints.some((point) =>
     isValidHeartRate(point.heart_rate),
   )
