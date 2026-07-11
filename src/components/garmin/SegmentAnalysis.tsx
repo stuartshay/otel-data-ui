@@ -60,7 +60,7 @@ export function SegmentAnalysis({
   points,
   activityId,
   sport,
-}: SegmentAnalysisProps) {
+}: Readonly<SegmentAnalysisProps>) {
   const segments = buildSavedSegments(points)
   if (segments.length === 0) return null
 

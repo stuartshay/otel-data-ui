@@ -18,7 +18,7 @@ export function SavedPointsList({
   points,
   onRemove,
   onClear,
-}: SavedPointsListProps) {
+}: Readonly<SavedPointsListProps>) {
   if (points.length === 0) return null
 
   return (

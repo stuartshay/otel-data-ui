@@ -37,7 +37,7 @@ export function ActivityHeader({
   deviceManufacturer,
   device,
   backTo = '/garmin',
-}: ActivityHeaderProps) {
+}: Readonly<ActivityHeaderProps>) {
   const icon = sportIcons[sport] ?? <Activity className="h-6 w-6" />
 
   const deviceModel = device?.model
