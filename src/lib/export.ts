@@ -14,7 +14,11 @@ export function escapeCsvValue(value: unknown): string {
     /[,"\n\r]/.test(str) ? `"${str.replaceAll('"', '""')}"` : str
 
   if (typeof value === 'object') {
-    return quoteIfNeeded(JSON.stringify(value) ?? '')
+    try {
+      return quoteIfNeeded(JSON.stringify(value) ?? '')
+    } catch {
+      return ''
+    }
   }
 
   if (typeof value === 'string') {
