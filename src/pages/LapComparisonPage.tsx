@@ -22,7 +22,7 @@ import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
 const MAX_ACTIVITIES = 50
 
-function HeatLegend({ metricUnit }: { metricUnit: string }) {
+function HeatLegend({ metricUnit }: Readonly<{ metricUnit: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <div className="flex items-center gap-1">

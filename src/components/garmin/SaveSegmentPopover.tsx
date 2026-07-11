@@ -46,7 +46,7 @@ export function SaveSegmentPopover({
   sourceLapIndex = null,
   sourceClimbIndex = null,
   sourceLabel,
-}: SaveSegmentPopoverProps) {
+}: Readonly<SaveSegmentPopoverProps>) {
   const { isAuthenticated, login } = useAuth()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(defaultName)

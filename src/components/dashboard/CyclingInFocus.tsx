@@ -52,10 +52,10 @@ interface DayBucket {
 function ActivityTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean
   payload?: Array<{ payload: DayBucket }>
-}) {
+}>) {
   const day = payload?.[0]?.payload
   if (!active || !day) return null
 

@@ -31,7 +31,7 @@ interface SegmentEffortsLeaderboardProps {
 
 export function SegmentEffortsLeaderboard({
   efforts,
-}: SegmentEffortsLeaderboardProps) {
+}: Readonly<SegmentEffortsLeaderboardProps>) {
   const [sort, setSort] = useState<EffortSort>('date')
 
   const bestActivityId = useMemo(() => bestEffortActivityId(efforts), [efforts])

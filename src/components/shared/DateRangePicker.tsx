@@ -62,7 +62,7 @@ export function DateRangePicker({
   onRangeChange,
   minDate,
   maxDate = new Date(),
-}: DateRangePickerProps) {
+}: Readonly<DateRangePickerProps>) {
   const hasRange = dateFrom != null || dateTo != null
 
   const selected: DateRange | undefined =

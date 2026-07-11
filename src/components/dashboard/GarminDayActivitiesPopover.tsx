@@ -18,7 +18,7 @@ export function GarminDayActivitiesPopover({
   open,
   onOpenChange,
   anchorPos,
-}: GarminDayActivitiesPopoverProps) {
+}: Readonly<GarminDayActivitiesPopoverProps>) {
   const { data, loading, error } = useGarminActivitiesQuery({
     variables: {
       date_from: date ?? undefined,
