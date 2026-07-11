@@ -503,7 +503,7 @@ function DayPointsSection({
   onClearFilter,
   onResetPage,
 }: Readonly<{
-  points: UnifiedGpsItem[]
+  points: ReadonlyArray<UnifiedGpsItem>
   isPageOutOfRange: boolean
   lastPage: number
   hasFilter: boolean
