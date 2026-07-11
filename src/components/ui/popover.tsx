@@ -58,7 +58,7 @@ function PopoverTitle({
   children,
   ...props
 }: Readonly<React.ComponentProps<'h2'>>) {
-  if (children == null || children === '') return null
+  if (children == null || children === false || children === '') return null
 
   return (
     <h2
