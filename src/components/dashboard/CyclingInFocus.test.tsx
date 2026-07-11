@@ -31,7 +31,7 @@ vi.mock('recharts', () => ({
     return <div data-testid="bar-chart">{children}</div>
   },
   Bar: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  Cell: () => null,
+  Rectangle: (props: React.SVGProps<SVGRectElement>) => <rect {...props} />,
   XAxis: (props: Record<string, unknown>) => {
     latestXAxisProps = props
     return null

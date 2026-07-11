@@ -12,6 +12,7 @@ const dashboardHooks = vi.hoisted(() => ({
   useGarminActivitiesQuery: vi.fn(),
   useGarminActivityTotalsQuery: vi.fn(),
   useGarminDateRangeQuery: vi.fn(),
+  GarminActivityTotalsDocument: { kind: 'Document' },
   useTriggerGarminSyncMutation: vi
     .fn()
     .mockReturnValue([vi.fn(), { loading: false }]),
@@ -39,7 +40,9 @@ import { DashboardPage } from './DashboardPage'
 
 describe('DashboardPage', () => {
   beforeEach(() => {
-    Object.values(dashboardHooks).forEach((mock) => mock.mockReset())
+    Object.values(dashboardHooks).forEach((mock) => {
+      if (typeof mock === 'function') mock.mockReset()
+    })
     dashboardHooks.useTriggerGarminSyncMutation.mockReturnValue([
       vi.fn(),
       { loading: false },

@@ -3,10 +3,11 @@ import { addDays, differenceInCalendarDays, format, subDays } from 'date-fns'
 import {
   Bar,
   BarChart,
-  Cell,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
+  type RectangleProps,
 } from 'recharts'
 import { Bike, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useGarminActivitiesQuery } from '@/__generated__/graphql'
@@ -48,6 +49,10 @@ interface DayBucket {
   activities: GarminActivityTableRow[]
 }
 
+type CyclingBarShapeProps = RectangleProps & {
+  payload?: DayBucket
+}
+
 // Recharts tooltip styled to match the Garmin Activity heatmap day popover.
 function ActivityTooltip({
   active,
@@ -80,6 +85,17 @@ function ActivityTooltip({
         </p>
       )}
     </div>
+  )
+}
+
+function CyclingBarShape(props: CyclingBarShapeProps) {
+  const { payload, ...rectangleProps } = props
+  return (
+    <Rectangle
+      {...rectangleProps}
+      fill={BAR_COLOR}
+      fillOpacity={(payload?.distance_mi ?? 0) > 0 ? 1 : 0.2}
+    />
   )
 }
 
@@ -268,15 +284,11 @@ export function CyclingInFocus() {
                     cursor={{ fill: 'transparent' }}
                     content={<ActivityTooltip />}
                   />
-                  <Bar dataKey="distance_mi" radius={[4, 4, 0, 0]}>
-                    {days.map((day) => (
-                      <Cell
-                        key={day.date}
-                        fill={BAR_COLOR}
-                        fillOpacity={day.distance_mi > 0 ? 1 : 0.2}
-                      />
-                    ))}
-                  </Bar>
+                  <Bar
+                    dataKey="distance_mi"
+                    radius={[4, 4, 0, 0]}
+                    shape={CyclingBarShape}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
