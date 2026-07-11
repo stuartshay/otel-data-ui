@@ -181,7 +181,8 @@ function valueToBucketColor(
   if (value == null || !Number.isFinite(value)) return fallback
   return (
     stops.find((stop) => value < stop.max)?.color ??
-    stops[stops.length - 1].color
+    stops.at(-1)?.color ??
+    fallback
   )
 }
 
@@ -542,7 +543,8 @@ function ClimbSegmentMap({ points }: { points: ClimbMapPoint[] }) {
     if (!mapRef.current || points.length < 2) return
 
     const first = points[0]
-    const last = points[points.length - 1]
+    const last = points.at(-1)
+    if (!last) return
     const map = L.map(mapRef.current).setView(
       [first.latitude, first.longitude],
       15,

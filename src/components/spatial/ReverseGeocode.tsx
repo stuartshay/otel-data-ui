@@ -12,8 +12,8 @@ export function ReverseGeocode() {
   const [error, setError] = useState<string | null>(null)
 
   const handleLookup = async () => {
-    const latNum = parseFloat(lat)
-    const lonNum = parseFloat(lon)
+    const latNum = Number.parseFloat(lat)
+    const lonNum = Number.parseFloat(lon)
 
     if (
       !Number.isFinite(latNum) ||

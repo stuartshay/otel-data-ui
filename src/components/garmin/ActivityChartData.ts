@@ -59,8 +59,9 @@ function downsample<T>(data: T[], target: number): T[] {
   for (let i = 0; i < target; i++) {
     result.push(data[Math.floor(i * step)])
   }
-  if (result[result.length - 1] !== data[data.length - 1]) {
-    result.push(data[data.length - 1])
+  const lastDataPoint = data.at(-1)!
+  if (result.at(-1) !== lastDataPoint) {
+    result.push(lastDataPoint)
   }
   return result
 }

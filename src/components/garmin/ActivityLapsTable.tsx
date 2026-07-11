@@ -127,7 +127,7 @@ function ActivityLapDetailsPanel({
 
   const canSaveSegment = routePoints.length >= 2
   const segmentStart = canSaveSegment ? routePoints[0] : null
-  const segmentEnd = canSaveSegment ? routePoints[routePoints.length - 1] : null
+  const segmentEnd = canSaveSegment ? routePoints.at(-1) : null
 
   return (
     <div className="space-y-4" data-testid="activity-lap-details-panel">

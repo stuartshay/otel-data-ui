@@ -309,9 +309,9 @@ async function fetchWeeklyTotalsByYear(
     })
   }
   if (isCancelled()) return null
-  return trimLeadingEmptyBuckets(
-    results.sort((a, b) => a.label.localeCompare(b.label)),
-  )
+  const sortedResults = [...results]
+  sortedResults.sort((a, b) => a.label.localeCompare(b.label))
+  return trimLeadingEmptyBuckets(sortedResults)
 }
 
 interface RelevantBucket {
@@ -658,7 +658,7 @@ export function GarminActivityTotals() {
                 </SelectTrigger>
                 <SelectContent>
                   {MONTH_LABELS.map((label, index) => (
-                    <SelectItem key={index} value={String(index)}>
+                    <SelectItem key={label} value={String(index)}>
                       {label}
                     </SelectItem>
                   ))}

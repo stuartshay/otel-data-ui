@@ -115,7 +115,8 @@ export function ActivityRouteMap({
     }
 
     // Extend bounds with last point
-    const last = trackPoints[trackPoints.length - 1]
+    const last = trackPoints.at(-1)
+    if (!last) return
     bounds.extend([last.latitude, last.longitude])
 
     // Start marker (green circle)
