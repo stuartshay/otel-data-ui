@@ -24,7 +24,7 @@ export function SegmentMiniMap({
   endLon,
   label,
   route,
-}: SegmentMiniMapProps) {
+}: Readonly<SegmentMiniMapProps>) {
   const mapRef = useRef<HTMLElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 

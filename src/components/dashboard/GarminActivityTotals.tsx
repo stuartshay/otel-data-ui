@@ -48,7 +48,7 @@ function SegmentedControl<T extends string>({
   value,
   onChange,
   options,
-}: SegmentedControlProps<T>) {
+}: Readonly<SegmentedControlProps<T>>) {
   return (
     <div
       role="radiogroup"

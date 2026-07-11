@@ -34,7 +34,7 @@ export function GarminActivitiesTable({
   onSportClick,
   rowTestId = 'garmin-activity-table-row',
   sportLinkTestId = 'garmin-activity-table-sport-link',
-}: GarminActivitiesTableProps) {
+}: Readonly<GarminActivitiesTableProps>) {
   return (
     <table className="w-full text-xs">
       <thead className="sticky top-0 bg-popover">

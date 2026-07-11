@@ -21,7 +21,7 @@ export function DeleteSegmentButton({
   segmentId,
   segmentName,
   onDeleted,
-}: DeleteSegmentButtonProps) {
+}: Readonly<DeleteSegmentButtonProps>) {
   const { isAuthenticated, login } = useAuth()
   const [open, setOpen] = useState(false)
 

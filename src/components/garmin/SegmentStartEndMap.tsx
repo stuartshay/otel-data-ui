@@ -50,7 +50,7 @@ export function SegmentStartEndMap({
   endLat,
   endLon,
   routePoints = [],
-}: SegmentStartEndMapProps) {
+}: Readonly<SegmentStartEndMapProps>) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 

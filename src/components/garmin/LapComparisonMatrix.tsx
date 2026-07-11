@@ -32,7 +32,7 @@ function formatActivityDate(iso: string | null): string {
 export function LapComparisonMatrix({
   items,
   metric,
-}: LapComparisonMatrixProps) {
+}: Readonly<LapComparisonMatrixProps>) {
   const matrix = buildComparisonMatrix(items, metric)
   const lapColumns = Array.from({ length: matrix.lapCount }, (_, i) => i + 1)
 
