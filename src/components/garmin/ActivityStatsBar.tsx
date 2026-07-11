@@ -12,11 +12,11 @@ function StatItem({
   label,
   value,
   unit,
-}: {
+}: Readonly<{
   label: string
   value: string
   unit: string
-}) {
+}>) {
   return (
     <Card className="flex-1">
       <CardContent className="p-4 text-center">
@@ -35,7 +35,7 @@ export function ActivityStatsBar({
   durationSeconds,
   avgSpeedKmh,
   totalAscentM,
-}: ActivityStatsBarProps) {
+}: Readonly<ActivityStatsBarProps>) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <StatItem

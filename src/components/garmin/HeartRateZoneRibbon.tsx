@@ -5,10 +5,10 @@ import { buildHeartRateZoneSegments, ZONE_COLORS } from './heartRateZones'
 export function HeartRateZoneRibbon({
   data,
   xKey,
-}: {
+}: Readonly<{
   data: ChartDataPoint[]
   xKey: 'distance' | 'time'
-}) {
+}>) {
   const segments = buildHeartRateZoneSegments(data, xKey)
   if (segments.length === 0) return null
 
