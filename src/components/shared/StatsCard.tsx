@@ -8,7 +8,12 @@ interface StatsCardProps {
   description?: string
 }
 
-export function StatsCard({ title, value, icon, description }: StatsCardProps) {
+export function StatsCard({
+  title,
+  value,
+  icon,
+  description,
+}: Readonly<StatsCardProps>) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

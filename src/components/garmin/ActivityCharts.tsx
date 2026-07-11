@@ -128,7 +128,12 @@ interface ChartTooltipProps {
   xMode: XAxisMode
 }
 
-function ChartTooltip({ label, payload, chart, xMode }: ChartTooltipProps) {
+function ChartTooltip({
+  label,
+  payload,
+  chart,
+  xMode,
+}: Readonly<ChartTooltipProps>) {
   const metricValue = coerceTooltipMetricValue(payload?.[0]?.value)
   const xValue = formatXAxisValue(label, xMode)
 
@@ -152,8 +157,11 @@ function normalizeTooltipIndex(
   return Number.NaN
 }
 
+type TooltipState =
+  Readonly<{ activeTooltipIndex?: number | string | null }> | undefined
+
 function pointFromTooltipState(
-  state: { activeTooltipIndex?: number | string | null } | undefined,
+  state: TooltipState,
   chartData: ChartDataPoint[],
 ): ChartDataPoint | null {
   const i = normalizeTooltipIndex(state?.activeTooltipIndex)
@@ -168,7 +176,7 @@ export function ActivityCharts({
   onActivePointChange,
   onPointToggle,
   cadenceAverage,
-}: ActivityChartsProps) {
+}: Readonly<ActivityChartsProps>) {
   const [xMode, setXMode] = useState<XAxisMode>('distance')
   const [smoothRespiration, setSmoothRespiration] = useState(false)
   const [collapsedCharts, setCollapsedCharts] = useState<Set<MetricKey>>(
