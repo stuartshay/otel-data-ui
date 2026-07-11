@@ -117,7 +117,7 @@ export function UnifiedGpsMap({
   colorBy = 'source',
   focusKey,
   onMarkerClick,
-}: UnifiedGpsMapProps) {
+}: Readonly<UnifiedGpsMapProps>) {
   const mapInstanceRef = useRef<L.Map | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const markersRef = useRef<Map<string, L.CircleMarker>>(new Map())
