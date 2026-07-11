@@ -56,6 +56,7 @@ interface ActivityStatsPanelProps {
 }
 
 interface StatRow {
+  id?: string
   label: string
   value: string
   badge?: string
@@ -327,10 +328,15 @@ function buildStatSections(
       title: 'Distance',
       rows: [
         {
+          id: 'total-distance-mi',
           label: 'Total Distance',
           value: fmtConverted(a.distance_km, kmToMi, 2, 'mi'),
         },
-        { label: 'Total Distance', value: fmt(a.distance_km, 2, 'km') },
+        {
+          id: 'total-distance-km',
+          label: 'Total Distance',
+          value: fmt(a.distance_km, 2, 'km'),
+        },
       ],
     },
     {
@@ -361,8 +367,16 @@ function buildStatSections(
           label: 'Descent',
           value: fmtConverted(a.total_descent_m, metersToFeet, 0, 'ft'),
         },
-        { label: 'Ascent', value: fmt(a.total_ascent_m, 0, 'm') },
-        { label: 'Descent', value: fmt(a.total_descent_m, 0, 'm') },
+        {
+          id: 'ascent-m',
+          label: 'Ascent',
+          value: fmt(a.total_ascent_m, 0, 'm'),
+        },
+        {
+          id: 'descent-m',
+          label: 'Descent',
+          value: fmt(a.total_descent_m, 0, 'm'),
+        },
       ],
     },
     {
@@ -377,8 +391,16 @@ function buildStatSections(
           value: fmtConverted(a.max_speed_kmh, kmhToMph, 1, 'mph'),
         },
         { label: 'Avg Pace', value: formatPace(a.avg_speed_kmh ?? null) },
-        { label: 'Avg Speed', value: fmt(a.avg_speed_kmh, 1, 'km/h') },
-        { label: 'Max Speed', value: fmt(a.max_speed_kmh, 1, 'km/h') },
+        {
+          id: 'avg-speed-kmh',
+          label: 'Avg Speed',
+          value: fmt(a.avg_speed_kmh, 1, 'km/h'),
+        },
+        {
+          id: 'max-speed-kmh',
+          label: 'Max Speed',
+          value: fmt(a.max_speed_kmh, 1, 'km/h'),
+        },
       ],
     },
     ...(hrAvailable
@@ -414,6 +436,7 @@ function buildStatSections(
       title: 'Temperature',
       rows: [
         {
+          id: 'avg-temperature-f',
           label: 'Avg Temperature',
           value: fmtConverted(
             a.avg_temperature_c,
@@ -441,6 +464,7 @@ function buildStatSections(
           ),
         },
         {
+          id: 'avg-temperature-c',
           label: 'Avg Temperature',
           value: fmtUnit(a.avg_temperature_c, '°C'),
         },
@@ -566,8 +590,11 @@ export function ActivityStatsPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {section.rows.map((row, i) => (
-              <div key={i} className="flex justify-between text-sm">
+            {section.rows.map((row) => (
+              <div
+                key={`${section.title}-${row.id ?? row.label}`}
+                className="flex justify-between text-sm"
+              >
                 <span className="text-muted-foreground">{row.label}</span>
                 <span className="flex items-center gap-1.5 font-medium">
                   {row.value}

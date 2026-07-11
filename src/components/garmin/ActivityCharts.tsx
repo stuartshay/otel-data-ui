@@ -369,7 +369,6 @@ export function ActivityCharts({
                     aria-label={`About ${chart.title}: ${chart.description}`}
                     className="inline-flex text-muted-foreground"
                     role="note"
-                    tabIndex={0}
                     title={chart.description}
                   >
                     <CircleHelp aria-hidden="true" className="size-4" />
@@ -387,10 +386,9 @@ export function ActivityCharts({
                       {formatNumber(stats.minimum, 0)} · Max{' '}
                       {formatNumber(stats.maximum, 0)} breaths/min
                     </div>
-                    <div
+                    <fieldset
                       aria-label="Respiration rate display"
                       className="flex rounded border p-0.5"
-                      role="group"
                     >
                       <Button
                         aria-pressed={!smoothRespiration}
@@ -410,7 +408,7 @@ export function ActivityCharts({
                       >
                         Smoothed
                       </Button>
-                    </div>
+                    </fieldset>
                   </>
                 ) : (
                   <div
@@ -508,14 +506,9 @@ export function ActivityCharts({
                 />
                 <Tooltip
                   cursor={{ stroke: 'currentColor', strokeOpacity: 0.4 }}
-                  content={({ label, payload }) => (
-                    <ChartTooltip
-                      label={label}
-                      payload={payload}
-                      chart={chart}
-                      xMode={effectiveXMode}
-                    />
-                  )}
+                  content={
+                    <ChartTooltip chart={chart} xMode={effectiveXMode} />
+                  }
                 />
                 {chart.dataKey === 'respirationRate' &&
                   stats.average != null && (

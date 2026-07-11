@@ -202,9 +202,7 @@ export function GarminPage() {
                         ? `${a.avg_heart_rate} bpm`
                         : '—'}
                     </TableCell>
-                    <TableCell>
-                      {a.calories != null ? a.calories : '—'}
-                    </TableCell>
+                    <TableCell>{a.calories ?? '—'}</TableCell>
                     <TableCell>
                       {a.track_point_count != null
                         ? a.track_point_count.toLocaleString()

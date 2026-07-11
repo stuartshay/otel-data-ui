@@ -87,47 +87,22 @@ describe('AppLayout', () => {
     expect(login).toHaveBeenCalledTimes(1)
   })
 
-  it('cycles the theme toggle using the current theme', async () => {
+  it.each([
+    ['dark', 'system'],
+    ['light', 'dark'],
+    ['system', 'light'],
+  ] as const)('cycles %s theme to %s', async (theme, expectedTheme) => {
     const user = userEvent.setup()
     const setTheme = vi.fn()
     useThemeMock.mockReturnValue({
-      theme: 'dark',
-      setTheme,
-    })
-
-    renderLayout()
-    await user.click(screen.getByTitle('Theme: dark'))
-
-    expect(setTheme).toHaveBeenCalledWith('system')
-  })
-
-  it('cycles light theme to dark', async () => {
-    const user = userEvent.setup()
-    const setTheme = vi.fn()
-    useThemeMock.mockReturnValue({
-      theme: 'light',
+      theme,
       setTheme,
     })
 
     renderLayout()
 
-    await user.click(screen.getByTitle('Theme: light'))
-    expect(setTheme).toHaveBeenCalledWith('dark')
-  })
-
-  it('cycles system theme to light', async () => {
-    const user = userEvent.setup()
-    const setTheme = vi.fn()
-
-    useThemeMock.mockReturnValue({
-      theme: 'system',
-      setTheme,
-    })
-
-    renderLayout()
-
-    await user.click(screen.getByTitle('Theme: system'))
-    expect(setTheme).toHaveBeenCalledWith('light')
+    await user.click(screen.getByTitle(`Theme: ${theme}`))
+    expect(setTheme).toHaveBeenCalledWith(expectedTheme)
   })
 
   it('keeps the daily summary nav item active on day detail pages', () => {

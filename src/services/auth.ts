@@ -50,7 +50,7 @@ const userManagerConfig = {
 const userManager = new UserManager(userManagerConfig)
 
 class AuthService {
-  private userManager: UserManager
+  private readonly userManager: UserManager
 
   constructor() {
     this.userManager = userManager

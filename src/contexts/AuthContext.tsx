@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
 import type { User } from 'oidc-client-ts'
 import { authService } from '@/services/auth'
@@ -20,7 +27,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userProfile, setUserProfile] = useState<{
@@ -29,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sub?: string
   } | null>(null)
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const currentUser = await authService.getUser()
       setUser(currentUser)
@@ -46,14 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUser()
-  }, [])
+  }, [loadUser])
 
-  const login = async () => {
+  const login = useCallback(async () => {
     setIsLoading(true)
     try {
       await authService.login()
@@ -62,9 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
       throw error
     }
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setIsLoading(true)
     try {
       await authService.logout()
@@ -76,26 +83,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const getAccessToken = async () => {
+  const getAccessToken = useCallback(async () => {
     return await authService.getAccessToken()
-  }
+  }, [])
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     await loadUser()
-  }
+  }, [loadUser])
 
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: user !== null && !user.expired,
-    isLoading,
-    login,
-    logout,
-    getAccessToken,
-    refreshUser,
-    userProfile,
-  }
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated: user !== null && !user.expired,
+      isLoading,
+      login,
+      logout,
+      getAccessToken,
+      refreshUser,
+      userProfile,
+    }),
+    [getAccessToken, isLoading, login, logout, refreshUser, user, userProfile],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
