@@ -103,12 +103,13 @@ describe('apollo client', () => {
 
     const contextFn = (
       apolloMocks.SetContextLinkMock.mock.calls as unknown[][]
-    )[0][0] as (prev: {
-      headers?: Record<string, string>
-    }) => Promise<{ headers: Record<string, string> }>
+    )[0][0] as (
+      prevContext: { headers?: Record<string, string> },
+      operation: unknown,
+    ) => Promise<{ headers: Record<string, string> }>
 
     apolloMocks.getAccessTokenMock.mockResolvedValue('my-jwt')
-    const result = await contextFn({ headers: { 'X-Custom': 'val' } })
+    const result = await contextFn({ headers: { 'X-Custom': 'val' } }, {})
 
     expect(result.headers).toEqual({
       'X-Custom': 'val',
@@ -122,12 +123,13 @@ describe('apollo client', () => {
 
     const contextFn = (
       apolloMocks.SetContextLinkMock.mock.calls as unknown[][]
-    )[0][0] as (prev: {
-      headers?: Record<string, string>
-    }) => Promise<{ headers: Record<string, string> }>
+    )[0][0] as (
+      prevContext: { headers?: Record<string, string> },
+      operation: unknown,
+    ) => Promise<{ headers: Record<string, string> }>
 
     apolloMocks.getAccessTokenMock.mockResolvedValue(null)
-    const result = await contextFn({})
+    const result = await contextFn({}, {})
 
     expect(result.headers).not.toHaveProperty('Authorization')
   })
