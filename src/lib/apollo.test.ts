@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const apolloMocks = vi.hoisted(() => {
-  const concatMock = vi.fn(function concat(link: unknown) {
-    return { type: 'combined-link', inner: link }
-  })
   return {
     getConfigMock: vi.fn(),
     HttpLinkMock: vi.fn(function HttpLink(options: unknown) {
@@ -22,8 +19,13 @@ const apolloMocks = vi.hoisted(() => {
         options,
       }
     }),
-    setContextMock: vi.fn(() => ({ type: 'auth-link', concat: concatMock })),
-    concatMock,
+    ApolloLinkFromMock: vi.fn((links: unknown[]) => ({
+      type: 'combined-link',
+      links,
+    })),
+    SetContextLinkMock: vi.fn(function SetContextLink(setter: unknown) {
+      return { type: 'auth-link', setter }
+    }),
     getAccessTokenMock: vi.fn().mockResolvedValue(null),
   }
 })
@@ -34,12 +36,13 @@ vi.mock('@/config/runtime', () => ({
 
 vi.mock('@apollo/client', () => ({
   ApolloClient: apolloMocks.ApolloClientMock,
+  ApolloLink: { from: apolloMocks.ApolloLinkFromMock },
   HttpLink: apolloMocks.HttpLinkMock,
   InMemoryCache: apolloMocks.InMemoryCacheMock,
 }))
 
 vi.mock('@apollo/client/link/context', () => ({
-  setContext: apolloMocks.setContextMock,
+  SetContextLink: apolloMocks.SetContextLinkMock,
 }))
 
 vi.mock('@/services/auth', () => ({
@@ -55,8 +58,8 @@ describe('apollo client', () => {
     apolloMocks.HttpLinkMock.mockClear()
     apolloMocks.InMemoryCacheMock.mockClear()
     apolloMocks.ApolloClientMock.mockClear()
-    apolloMocks.setContextMock.mockClear()
-    apolloMocks.concatMock.mockClear()
+    apolloMocks.ApolloLinkFromMock.mockClear()
+    apolloMocks.SetContextLinkMock.mockClear()
     apolloMocks.getAccessTokenMock.mockReset().mockResolvedValue(null)
     apolloMocks.getConfigMock.mockReturnValue(
       'https://graphql.example.com/query',
@@ -87,8 +90,8 @@ describe('apollo client', () => {
     })
     expect(apolloMocks.InMemoryCacheMock).toHaveBeenCalledTimes(1)
     expect(apolloMocks.ApolloClientMock).toHaveBeenCalledTimes(1)
-    expect(apolloMocks.setContextMock).toHaveBeenCalledTimes(1)
-    expect(apolloMocks.concatMock).toHaveBeenCalledTimes(1)
+    expect(apolloMocks.SetContextLinkMock).toHaveBeenCalledTimes(1)
+    expect(apolloMocks.ApolloLinkFromMock).toHaveBeenCalledTimes(1)
     expect(createdOptions.defaultOptions.watchQuery.fetchPolicy).toBe(
       'cache-and-network',
     )
@@ -99,14 +102,13 @@ describe('apollo client', () => {
     getApolloClient()
 
     const contextFn = (
-      apolloMocks.setContextMock.mock.calls as unknown[][]
-    )[0][0] as (
-      req: unknown,
-      prev: { headers?: Record<string, string> },
-    ) => Promise<{ headers: Record<string, string> }>
+      apolloMocks.SetContextLinkMock.mock.calls as unknown[][]
+    )[0][0] as (prev: {
+      headers?: Record<string, string>
+    }) => Promise<{ headers: Record<string, string> }>
 
     apolloMocks.getAccessTokenMock.mockResolvedValue('my-jwt')
-    const result = await contextFn({}, { headers: { 'X-Custom': 'val' } })
+    const result = await contextFn({ headers: { 'X-Custom': 'val' } })
 
     expect(result.headers).toEqual({
       'X-Custom': 'val',
@@ -119,14 +121,13 @@ describe('apollo client', () => {
     getApolloClient()
 
     const contextFn = (
-      apolloMocks.setContextMock.mock.calls as unknown[][]
-    )[0][0] as (
-      req: unknown,
-      prev: { headers?: Record<string, string> },
-    ) => Promise<{ headers: Record<string, string> }>
+      apolloMocks.SetContextLinkMock.mock.calls as unknown[][]
+    )[0][0] as (prev: {
+      headers?: Record<string, string>
+    }) => Promise<{ headers: Record<string, string> }>
 
     apolloMocks.getAccessTokenMock.mockResolvedValue(null)
-    const result = await contextFn({}, {})
+    const result = await contextFn({})
 
     expect(result.headers).not.toHaveProperty('Authorization')
   })

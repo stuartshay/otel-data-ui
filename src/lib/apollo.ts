@@ -1,5 +1,10 @@
-import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client'
-import { setContext } from '@apollo/client/link/context'
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  HttpLink,
+} from '@apollo/client'
+import { SetContextLink } from '@apollo/client/link/context'
 import { getConfig } from '@/config/runtime'
 import { authService } from '@/services/auth'
 
@@ -17,7 +22,7 @@ export function getApolloClient(): ApolloClient {
     uri: graphqlUrl,
   })
 
-  const authLink = setContext(async (_, { headers }) => {
+  const authLink = new SetContextLink(async ({ headers }) => {
     const token = await authService.getAccessToken()
     return {
       headers: {
@@ -28,7 +33,7 @@ export function getApolloClient(): ApolloClient {
   })
 
   client = new ApolloClient({
-    link: authLink.concat(httpLink),
+    link: ApolloLink.from([authLink, httpLink]),
     cache: new InMemoryCache(),
     defaultOptions: {
       watchQuery: {

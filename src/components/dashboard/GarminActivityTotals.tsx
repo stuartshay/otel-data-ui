@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react'
+import type { TypedDocumentNode } from '@apollo/client'
 import { useApolloClient } from '@apollo/client/react'
 import {
   GarminActivityTotalsDocument,
@@ -113,6 +114,11 @@ const MONTH_FULL_NAMES = [
 ]
 
 const ACTIVITY_TOTALS_START_YEAR = 2010
+const GARMIN_ACTIVITY_TOTALS_DOCUMENT =
+  GarminActivityTotalsDocument as TypedDocumentNode<
+    GarminActivityTotalsQuery,
+    GarminActivityTotalsQueryVariables
+  >
 
 interface MetricConfig {
   key: Metric
@@ -241,11 +247,8 @@ async function fetchYearWeeklyTotal(
     weekStart.getFullYear() + (year - baseEndYear),
   )
   const we = projectToYear(weekEnd, year)
-  const result = await apolloClient.query<
-    GarminActivityTotalsQuery,
-    GarminActivityTotalsQueryVariables
-  >({
-    query: GarminActivityTotalsDocument,
+  const result = await apolloClient.query({
+    query: GARMIN_ACTIVITY_TOTALS_DOCUMENT,
     variables: {
       period: 'week',
       date_from: format(ws, 'yyyy-MM-dd'),
