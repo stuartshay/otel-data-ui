@@ -140,6 +140,7 @@ describe('authService', () => {
     await authService.handleCallback()
 
     expect(replaceStateSpy).toHaveBeenCalledWith({}, document.title, '/')
+    replaceStateSpy.mockRestore()
   })
 
   it('derives auth state, access token, and profile from the current user', async () => {
@@ -190,7 +191,17 @@ describe('authService', () => {
     await expect(authService.getUserProfile()).resolves.toBeNull()
   })
 
-  it('removes the current user before redirecting to Cognito logout', async () => {
+  it('rejects profile access when an existing user has no profile', async () => {
+    const { authService } = await import('./auth')
+    authMocks.userManager.getUser.mockResolvedValue({
+      expired: false,
+      profile: undefined,
+    })
+
+    await expect(authService.getUserProfile()).rejects.toThrow(TypeError)
+  })
+
+  it('removes the current user during logout', async () => {
     const { authService } = await import('./auth')
     authMocks.userManager.removeUser.mockResolvedValue(undefined)
 
