@@ -71,7 +71,9 @@ describe('SegmentStartEndMap', () => {
 
     expect(leafletMocks.tileLayer).toHaveBeenCalledWith(
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { attribution: '&copy; OpenStreetMap contributors' },
+      expect.objectContaining({
+        attribution: '&copy; OpenStreetMap contributors',
+      }),
     )
     expect(
       leafletMocks.polyline.mock.calls.map(
@@ -143,6 +145,20 @@ describe('SegmentStartEndMap', () => {
   })
 
   it('removes the previous map on rerender and the current map on unmount', async () => {
+    const firstMap = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn(),
+      remove: vi.fn(),
+    }
+    const secondMap = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn(),
+      remove: vi.fn(),
+    }
+    leafletMocks.map
+      .mockReturnValueOnce(firstMap)
+      .mockReturnValueOnce(secondMap)
+
     const { rerender, unmount } = render(
       <SegmentStartEndMap
         startLat={40.79}
@@ -164,9 +180,11 @@ describe('SegmentStartEndMap', () => {
     )
 
     await waitFor(() => expect(leafletMocks.map).toHaveBeenCalledTimes(2))
-    expect(leafletMocks.mapInstance.remove).toHaveBeenCalledTimes(1)
+    expect(firstMap.remove).toHaveBeenCalledTimes(1)
+    expect(secondMap.remove).not.toHaveBeenCalled()
 
     unmount()
-    expect(leafletMocks.mapInstance.remove).toHaveBeenCalledTimes(2)
+    expect(firstMap.remove).toHaveBeenCalledTimes(1)
+    expect(secondMap.remove).toHaveBeenCalledTimes(1)
   })
 })
