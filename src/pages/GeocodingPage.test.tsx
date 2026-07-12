@@ -9,28 +9,42 @@ const geocodingHooks = vi.hoisted(() => ({
     .mockReturnValue([vi.fn(), { loading: false }]),
 }))
 
+const authMocks = vi.hoisted(() => ({
+  login: vi.fn(),
+  useAuth: vi.fn(),
+}))
+
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
 vi.mock('@/__generated__/graphql', () => geocodingHooks)
 
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: vi.fn().mockReturnValue({
-    isAuthenticated: false,
-    isLoading: false,
-    login: vi.fn(),
-    logout: vi.fn(),
-    userProfile: null,
-  }),
+  useAuth: authMocks.useAuth,
 }))
+
+vi.mock('sonner', () => ({ toast: toastMocks }))
 
 import { GeocodingPage } from './GeocodingPage'
 
 describe('GeocodingPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     geocodingHooks.useGeocodingStatusQuery.mockReset()
     geocodingHooks.useTriggerGeocodingMutation.mockReset()
     geocodingHooks.useTriggerGeocodingMutation.mockReturnValue([
       vi.fn(),
       { loading: false },
     ])
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      login: authMocks.login,
+      logout: vi.fn(),
+      userProfile: null,
+    })
   })
 
   it('shows a loading state while geocoding status is loading', () => {
@@ -93,7 +107,8 @@ describe('GeocodingPage', () => {
     expect(screen.getByText('90.0%')).toBeInTheDocument()
   })
 
-  it('shows login prompt when not authenticated', () => {
+  it('shows the login prompt and starts authentication', async () => {
+    const user = userEvent.setup()
     geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
       data: {
         geocodingStatus: {
@@ -116,6 +131,145 @@ describe('GeocodingPage', () => {
     expect(
       screen.getByText('Login required to trigger geocoding.'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /login/i }))
+    expect(authMocks.login).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes status manually and handles an empty status response', async () => {
+    const user = userEvent.setup()
+    const refetch = vi.fn()
+    geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
+      data: { geocodingStatus: null },
+      loading: false,
+      error: undefined,
+      refetch,
+    })
+
+    render(<GeocodingPage />)
+
+    expect(screen.queryByText('Total Locations')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /refresh/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('validates batch size before triggering geocoding', async () => {
+    const user = userEvent.setup()
+    const triggerGeocoding = vi.fn()
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      login: authMocks.login,
+    })
+    geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
+      data: { geocodingStatus: null },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    geocodingHooks.useTriggerGeocodingMutation.mockReturnValue([
+      triggerGeocoding,
+      { loading: false },
+    ])
+
+    render(<GeocodingPage />)
+
+    const batchSize = screen.getByRole('spinbutton', { name: 'Batch size' })
+    await user.clear(batchSize)
+    await user.type(batchSize, '201')
+    await user.click(screen.getByRole('button', { name: 'Run Geocoding' }))
+
+    expect(toastMocks.error).toHaveBeenCalledWith('Invalid batch size', {
+      description: 'Batch size must be between 1 and 200.',
+    })
+    expect(triggerGeocoding).not.toHaveBeenCalled()
+  })
+
+  it('triggers an authenticated retry batch with the selected size', async () => {
+    const user = userEvent.setup()
+    const triggerGeocoding = vi.fn()
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      login: authMocks.login,
+    })
+    geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
+      data: { geocodingStatus: null },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    geocodingHooks.useTriggerGeocodingMutation.mockReturnValue([
+      triggerGeocoding,
+      { loading: false },
+    ])
+
+    render(<GeocodingPage />)
+
+    const batchSize = screen.getByRole('spinbutton', { name: 'Batch size' })
+    await user.clear(batchSize)
+    await user.type(batchSize, '25')
+    await user.click(screen.getByRole('button', { name: 'Run Geocoding' }))
+    expect(triggerGeocoding).toHaveBeenLastCalledWith({
+      variables: { batch_size: 25 },
+    })
+
+    await user.click(screen.getByRole('checkbox', { name: 'Retry failed' }))
+    await user.click(screen.getByRole('button', { name: 'Run Geocoding' }))
+
+    expect(triggerGeocoding).toHaveBeenLastCalledWith({
+      variables: { batch_size: 25, retry_failed: true },
+    })
+  })
+
+  it('reports mutation success and failure callbacks', () => {
+    const refetch = vi.fn()
+    geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
+      data: { geocodingStatus: null },
+      loading: false,
+      error: undefined,
+      refetch,
+    })
+
+    render(<GeocodingPage />)
+
+    const mutationOptions =
+      geocodingHooks.useTriggerGeocodingMutation.mock.calls[0]?.[0]
+    expect(mutationOptions).toBeDefined()
+    mutationOptions!.onCompleted({
+      triggerGeocoding: {
+        processed: 20,
+        remaining: 5,
+        skipped_dedup: 3,
+      },
+    })
+    mutationOptions!.onError(new Error('Pelias unavailable'))
+
+    expect(toastMocks.success).toHaveBeenCalledWith(
+      'Geocoding batch complete',
+      { description: 'Processed: 20, Remaining: 5, Dedup skipped: 3' },
+    )
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(toastMocks.error).toHaveBeenCalledWith('Geocoding failed', {
+      description: 'Pelias unavailable',
+    })
+  })
+
+  it('shows a disabled processing action while the mutation is running', () => {
+    authMocks.useAuth.mockReturnValue({
+      isAuthenticated: true,
+      login: authMocks.login,
+    })
+    geocodingHooks.useGeocodingStatusQuery.mockReturnValue({
+      data: { geocodingStatus: null },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    geocodingHooks.useTriggerGeocodingMutation.mockReturnValue([
+      vi.fn(),
+      { loading: true },
+    ])
+
+    render(<GeocodingPage />)
+
+    expect(screen.getByRole('button', { name: 'Processing...' })).toBeDisabled()
   })
 })
