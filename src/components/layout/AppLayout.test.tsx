@@ -117,9 +117,10 @@ describe('AppLayout', () => {
     const user = userEvent.setup()
     renderLayout()
 
-    const menuButton = document.querySelector('.lucide-menu')?.closest('button')
-    expect(menuButton).not.toBeNull()
-    await user.click(menuButton!)
+    const menuButton = screen.getByRole('button', {
+      name: 'Open navigation menu',
+    })
+    await user.click(menuButton)
     const overlay = screen.getByRole('button', {
       name: 'Close navigation menu',
     })
@@ -130,12 +131,10 @@ describe('AppLayout', () => {
       screen.queryByRole('button', { name: 'Close navigation menu' }),
     ).not.toBeInTheDocument()
 
-    await user.click(menuButton!)
-    const closeButton = document.querySelector('.lucide-x')?.closest('button')
-    expect(closeButton).not.toBeNull()
-    await user.click(closeButton!)
+    await user.click(menuButton)
+    await user.click(screen.getByRole('button', { name: 'Close sidebar' }))
 
-    await user.click(menuButton!)
+    await user.click(menuButton)
     await user.click(screen.getByRole('link', { name: /Garmin/i }))
     expect(
       screen.queryByRole('button', { name: 'Close navigation menu' }),

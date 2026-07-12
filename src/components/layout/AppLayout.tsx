@@ -93,6 +93,7 @@ export function AppLayout() {
             variant="ghost"
             size="icon"
             className="ml-auto lg:hidden"
+            aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-4 w-4" />
@@ -156,6 +157,7 @@ export function AppLayout() {
             variant="ghost"
             size="icon"
             className="lg:hidden"
+            aria-label="Open navigation menu"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-5 w-5" />

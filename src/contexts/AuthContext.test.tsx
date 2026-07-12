@@ -51,7 +51,9 @@ function AuthConsumer() {
       </button>
       <button
         onClick={() =>
-          getAccessToken().then((value) => setToken(value ?? 'none'))
+          getAccessToken()
+            .then((value) => setToken(value ?? 'none'))
+            .catch(() => setToken('error'))
         }
       >
         token
@@ -215,6 +217,12 @@ describe('AuthContext', () => {
     await user.click(screen.getByRole('button', { name: 'token' }))
     await waitFor(() =>
       expect(screen.getByTestId('token')).toHaveTextContent('token-123'),
+    )
+
+    authServiceMock.getAccessToken.mockRejectedValue(new Error('token failed'))
+    await user.click(screen.getByRole('button', { name: 'token' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('token')).toHaveTextContent('error'),
     )
   })
 
