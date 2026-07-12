@@ -103,4 +103,68 @@ describe('DeleteSegmentButton', () => {
     expect(toastMocks.error).toHaveBeenCalled()
     expect(toastMocks.success).not.toHaveBeenCalled()
   })
+
+  it('handles successful and failed mutation callbacks', () => {
+    const onDeleted = vi.fn()
+    render(
+      <DeleteSegmentButton
+        segmentId={1}
+        segmentName="Harlem Hill"
+        onDeleted={onDeleted}
+      />,
+    )
+
+    const options =
+      graphqlMocks.useDeleteGarminSegmentMutation.mock.calls[0]?.[0]
+    expect(options).toBeDefined()
+    options!.onCompleted({ deleteGarminSegment: true })
+    expect(toastMocks.success).toHaveBeenCalledWith('Segment deleted', {
+      description:
+        '"Harlem Hill" was removed and will be cleared from Garmin Connect shortly.',
+    })
+    expect(onDeleted).toHaveBeenCalledTimes(1)
+
+    options!.onError(new Error('delete failed'))
+    expect(toastMocks.error).toHaveBeenCalledWith('Could not delete segment', {
+      description: 'delete failed',
+    })
+  })
+
+  it('disables confirmation controls while deletion is running', async () => {
+    const user = userEvent.setup()
+    graphqlMocks.useDeleteGarminSegmentMutation.mockReturnValue([
+      deleteSegment,
+      { loading: true },
+    ])
+    render(
+      <DeleteSegmentButton
+        segmentId={1}
+        segmentName="Harlem Hill"
+        onDeleted={onDeleted}
+      />,
+    )
+    await user.click(screen.getByTestId('delete-segment-trigger'))
+
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    expect(screen.getByTestId('delete-segment-confirm')).toBeDisabled()
+    expect(screen.getByTestId('delete-segment-confirm')).toHaveTextContent(
+      'Deleting…',
+    )
+  })
+
+  it('closes the confirmation without deleting when cancelled', async () => {
+    const user = userEvent.setup()
+    render(
+      <DeleteSegmentButton
+        segmentId={1}
+        segmentName="Harlem Hill"
+        onDeleted={onDeleted}
+      />,
+    )
+    await user.click(screen.getByTestId('delete-segment-trigger'))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByText('Delete “Harlem Hill”?')).not.toBeInTheDocument()
+    expect(deleteSegment).not.toHaveBeenCalled()
+  })
 })

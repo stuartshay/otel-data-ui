@@ -154,4 +154,83 @@ describe('SaveSegmentPopover', () => {
 
     expect(screen.getByTestId('save-segment-submit')).toBeDisabled()
   })
+
+  it('validates tolerance boundaries before submitting', async () => {
+    const user = userEvent.setup()
+    render(<SaveSegmentPopover {...baseProps} defaultName="Hill" />)
+    await user.click(screen.getByTestId('save-segment-trigger'))
+
+    const tolerance = screen.getByTestId('save-segment-tolerance')
+    await user.clear(tolerance)
+    await user.type(tolerance, '4')
+    expect(screen.getByTestId('save-segment-submit')).toBeDisabled()
+
+    await user.clear(tolerance)
+    await user.type(tolerance, '201')
+    expect(screen.getByTestId('save-segment-submit')).toBeDisabled()
+
+    await user.clear(tolerance)
+    await user.type(tolerance, '5')
+    expect(screen.getByTestId('save-segment-submit')).toBeEnabled()
+  })
+
+  it('handles mutation success and error callbacks', () => {
+    render(<SaveSegmentPopover {...baseProps} />)
+
+    const options =
+      graphqlMocks.useCreateGarminSegmentMutation.mock.calls[0]?.[0]
+    expect(options).toBeDefined()
+    options!.onCompleted({ createGarminSegment: { name: 'Harlem Hill' } })
+    expect(toastMocks.success).toHaveBeenCalledWith('Segment saved', {
+      description: '"Harlem Hill" is now tracking efforts.',
+    })
+
+    options!.onError(new Error('save failed'))
+    expect(toastMocks.error).toHaveBeenCalledWith('Could not save segment', {
+      description: 'save failed',
+    })
+  })
+
+  it('uses nullable defaults and a climb login label', async () => {
+    const user = userEvent.setup()
+    authMocks.useAuth.mockReturnValue({ isAuthenticated: false, login })
+    const { unmount } = render(
+      <SaveSegmentPopover
+        startLatitude={1}
+        startLongitude={2}
+        endLatitude={3}
+        endLongitude={4}
+        sourceClimbIndex={0}
+      />,
+    )
+    await user.click(screen.getByTestId('save-segment-trigger'))
+    expect(
+      screen.getByText('Log in to save this climb as a named segment.'),
+    ).toBeVisible()
+    unmount()
+
+    authMocks.useAuth.mockReturnValue({ isAuthenticated: true, login })
+    render(
+      <SaveSegmentPopover
+        startLatitude={1}
+        startLongitude={2}
+        endLatitude={3}
+        endLongitude={4}
+        defaultName="Climb"
+      />,
+    )
+    await user.click(screen.getByTestId('save-segment-trigger'))
+    await user.click(screen.getByTestId('save-segment-submit'))
+    expect(createSegment).toHaveBeenCalledWith({
+      variables: {
+        input: expect.objectContaining({
+          sport: null,
+          distance_meters: null,
+          source_activity_id: null,
+          source_lap_index: null,
+          source_climb_index: null,
+        }),
+      },
+    })
+  })
 })
