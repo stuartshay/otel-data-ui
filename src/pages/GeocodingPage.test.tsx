@@ -232,14 +232,15 @@ describe('GeocodingPage', () => {
 
     const mutationOptions =
       geocodingHooks.useTriggerGeocodingMutation.mock.calls[0]?.[0]
-    mutationOptions.onCompleted({
+    expect(mutationOptions).toBeDefined()
+    mutationOptions!.onCompleted({
       triggerGeocoding: {
         processed: 20,
         remaining: 5,
         skipped_dedup: 3,
       },
     })
-    mutationOptions.onError(new Error('Pelias unavailable'))
+    mutationOptions!.onError(new Error('Pelias unavailable'))
 
     expect(toastMocks.success).toHaveBeenCalledWith(
       'Geocoding batch complete',
