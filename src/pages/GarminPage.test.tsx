@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Routes } from 'react-router-dom'
@@ -316,7 +316,11 @@ describe('GarminPage', () => {
 
     renderPage()
 
-    expect(screen.getAllByText('—')).toHaveLength(6)
+    const activityRow = screen
+      .getByRole('link', { name: 'running' })
+      .closest('tr')
+    expect(activityRow).not.toBeNull()
+    expect(within(activityRow!).getAllByText('—')).toHaveLength(6)
   })
 
   it('keeps the previous page number when navigating back beyond page two', async () => {
