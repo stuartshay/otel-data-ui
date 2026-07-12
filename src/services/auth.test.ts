@@ -130,6 +130,19 @@ describe('authService', () => {
     )
   })
 
+  it('falls back to the home route when callback state is not a string', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState')
+    const { authService } = await import('./auth')
+    authMocks.userManager.signinRedirectCallback.mockResolvedValue({
+      state: { unexpected: true },
+    })
+
+    await authService.handleCallback()
+
+    expect(replaceStateSpy).toHaveBeenCalledWith({}, document.title, '/')
+    replaceStateSpy.mockRestore()
+  })
+
   it('derives auth state, access token, and profile from the current user', async () => {
     const { authService } = await import('./auth')
     authMocks.userManager.getUser.mockResolvedValue({
@@ -149,6 +162,52 @@ describe('authService', () => {
       name: 'Runner',
       sub: 'sub-123',
     })
+  })
+
+  it('rejects expired users and missing access tokens', async () => {
+    const { authService } = await import('./auth')
+    authMocks.userManager.getUser.mockResolvedValue({
+      expired: true,
+      access_token: 'expired-token',
+    })
+
+    await expect(authService.isAuthenticated()).resolves.toBe(false)
+    await expect(authService.getAccessToken()).resolves.toBeNull()
+
+    authMocks.userManager.getUser.mockResolvedValue({
+      expired: false,
+      access_token: '',
+    })
+    await expect(authService.getAccessToken()).resolves.toBeNull()
+  })
+
+  it('returns null authentication data when there is no current user', async () => {
+    const { authService } = await import('./auth')
+    authMocks.userManager.getUser.mockResolvedValue(null)
+
+    await expect(authService.getUser()).resolves.toBeNull()
+    await expect(authService.isAuthenticated()).resolves.toBe(false)
+    await expect(authService.getAccessToken()).resolves.toBeNull()
+    await expect(authService.getUserProfile()).resolves.toBeNull()
+  })
+
+  it('rejects profile access when an existing user has no profile', async () => {
+    const { authService } = await import('./auth')
+    authMocks.userManager.getUser.mockResolvedValue({
+      expired: false,
+      profile: undefined,
+    })
+
+    await expect(authService.getUserProfile()).rejects.toThrow(TypeError)
+  })
+
+  it('removes the current user during logout', async () => {
+    const { authService } = await import('./auth')
+    authMocks.userManager.removeUser.mockResolvedValue(undefined)
+
+    await authService.logout()
+
+    expect(authMocks.userManager.removeUser).toHaveBeenCalledTimes(1)
   })
 
   it('registers token event handlers that trigger logout on terminal failures', async () => {
