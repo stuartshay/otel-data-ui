@@ -112,4 +112,33 @@ describe('AppLayout', () => {
       'bg-sidebar-accent',
     )
   })
+
+  it('opens and closes the mobile navigation overlay', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    const menuButton = document.querySelector('.lucide-menu')?.closest('button')
+    expect(menuButton).not.toBeNull()
+    await user.click(menuButton!)
+    const overlay = screen.getByRole('button', {
+      name: 'Close navigation menu',
+    })
+    expect(overlay).toBeInTheDocument()
+
+    await user.click(overlay)
+    expect(
+      screen.queryByRole('button', { name: 'Close navigation menu' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(menuButton!)
+    const closeButton = document.querySelector('.lucide-x')?.closest('button')
+    expect(closeButton).not.toBeNull()
+    await user.click(closeButton!)
+
+    await user.click(menuButton!)
+    await user.click(screen.getByRole('link', { name: /Garmin/i }))
+    expect(
+      screen.queryByRole('button', { name: 'Close navigation menu' }),
+    ).not.toBeInTheDocument()
+  })
 })

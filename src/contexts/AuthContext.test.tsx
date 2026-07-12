@@ -19,7 +19,17 @@ import { AuthProvider, useAuth } from './AuthContext'
 
 function AuthConsumer() {
   const [loginError, setLoginError] = useState('')
-  const { isAuthenticated, isLoading, login, logout, userProfile } = useAuth()
+  const [logoutError, setLogoutError] = useState('')
+  const [token, setToken] = useState('none')
+  const {
+    isAuthenticated,
+    isLoading,
+    login,
+    logout,
+    getAccessToken,
+    refreshUser,
+    userProfile,
+  } = useAuth()
 
   return (
     <div>
@@ -27,12 +37,26 @@ function AuthConsumer() {
       <div data-testid="loading">{String(isLoading)}</div>
       <div data-testid="email">{userProfile?.email ?? 'none'}</div>
       <div data-testid="login-error">{loginError || 'none'}</div>
+      <div data-testid="logout-error">{logoutError || 'none'}</div>
+      <div data-testid="token">{token}</div>
       <button
         onClick={() => login().catch((error) => setLoginError(error.message))}
       >
         login
       </button>
-      <button onClick={() => logout()}>logout</button>
+      <button
+        onClick={() => logout().catch((error) => setLogoutError(error.message))}
+      >
+        logout
+      </button>
+      <button
+        onClick={() =>
+          getAccessToken().then((value) => setToken(value ?? 'none'))
+        }
+      >
+        token
+      </button>
+      <button onClick={() => refreshUser()}>refresh</button>
     </div>
   )
 }
@@ -145,6 +169,74 @@ describe('AuthContext', () => {
       'useAuth must be used within an AuthProvider',
     )
 
+    errorSpy.mockRestore()
+  })
+
+  it('recovers from user loading errors and refreshes user state', async () => {
+    const user = userEvent.setup()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    authServiceMock.getUser.mockRejectedValueOnce(new Error('load failed'))
+    authServiceMock.getUser.mockResolvedValueOnce({
+      expired: false,
+      profile: { email: 'refreshed@example.com' },
+    })
+    authServiceMock.getUserProfile.mockResolvedValue({
+      email: 'refreshed@example.com',
+    })
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('loading')).toHaveTextContent('false'),
+    )
+    expect(screen.getByTestId('auth')).toHaveTextContent('false')
+
+    await user.click(screen.getByRole('button', { name: 'refresh' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('email')).toHaveTextContent(
+        'refreshed@example.com',
+      ),
+    )
+    errorSpy.mockRestore()
+  })
+
+  it('delegates access token retrieval', async () => {
+    const user = userEvent.setup()
+    authServiceMock.getUser.mockResolvedValue(null)
+    authServiceMock.getAccessToken.mockResolvedValue('token-123')
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'token' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('token')).toHaveTextContent('token-123'),
+    )
+  })
+
+  it('surfaces logout failures and clears loading state', async () => {
+    const user = userEvent.setup()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    authServiceMock.getUser.mockResolvedValue(null)
+    authServiceMock.logout.mockRejectedValue(new Error('logout failed'))
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'logout' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('logout-error')).toHaveTextContent(
+        'logout failed',
+      ),
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('loading')).toHaveTextContent('false'),
+    )
     errorSpy.mockRestore()
   })
 })
