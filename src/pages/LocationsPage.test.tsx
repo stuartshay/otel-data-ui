@@ -17,9 +17,9 @@ vi.mock('@/components/shared/DateRangePicker', () => ({
     dateTo,
     onRangeChange,
   }: {
-    dateFrom?: Date
-    dateTo?: Date
-    onRangeChange: (from?: Date, to?: Date) => void
+    dateFrom: Date | undefined
+    dateTo: Date | undefined
+    onRangeChange: (from: Date | undefined, to: Date | undefined) => void
   }) => (
     <div>
       <button
@@ -31,7 +31,7 @@ vi.mock('@/components/shared/DateRangePicker', () => ({
       >
         Set date range {dateFrom?.toDateString()} {dateTo?.toDateString()}
       </button>
-      <button type="button" onClick={() => onRangeChange()}>
+      <button type="button" onClick={() => onRangeChange(undefined, undefined)}>
         Clear date range
       </button>
     </div>
