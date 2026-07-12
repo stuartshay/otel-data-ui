@@ -38,6 +38,7 @@ describe('triggerDownload', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('creates, clicks, removes, and asynchronously revokes a download link', () => {
