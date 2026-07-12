@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -10,6 +10,33 @@ const locationHooks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/__generated__/graphql', () => locationHooks)
+
+vi.mock('@/components/shared/DateRangePicker', () => ({
+  DateRangePicker: ({
+    dateFrom,
+    dateTo,
+    onRangeChange,
+  }: {
+    dateFrom?: Date
+    dateTo?: Date
+    onRangeChange: (from?: Date, to?: Date) => void
+  }) => (
+    <div>
+      <button
+        type="button"
+        data-testid="date-range-trigger"
+        onClick={() =>
+          onRangeChange(new Date(2026, 0, 2), new Date(2026, 1, 3))
+        }
+      >
+        Set date range {dateFrom?.toDateString()} {dateTo?.toDateString()}
+      </button>
+      <button type="button" onClick={() => onRangeChange()}>
+        Clear date range
+      </button>
+    </div>
+  ),
+}))
 
 import { LocationsPage } from './LocationsPage'
 
@@ -76,9 +103,9 @@ describe('LocationsPage', () => {
     )
   })
 
-  function renderPage() {
+  function renderPage(entry = '/locations') {
     return render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>
         <LocationsPage />
       </MemoryRouter>,
     )
@@ -163,7 +190,8 @@ describe('LocationsPage', () => {
     })
   })
 
-  it('shows an error state when the locations query fails', () => {
+  it('shows an error state and retries when the locations query fails', async () => {
+    const user = userEvent.setup()
     const refetch = vi.fn()
     locationHooks.useLocationsQuery.mockReturnValue({
       data: undefined,
@@ -175,6 +203,8 @@ describe('LocationsPage', () => {
     renderPage()
 
     expect(screen.getByText('locations failed')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it('renders display_address when present and falls back to dash when null', () => {
@@ -286,6 +316,153 @@ describe('LocationsPage', () => {
     expect(addressCell.closest('td')).toHaveAttribute(
       'title',
       'A very long address that would be truncated',
+    )
+  })
+
+  it('shows a loading state before location data is available', () => {
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    expect(screen.getByText('Loading locations...')).toBeInTheDocument()
+  })
+
+  it('clears the active device filter and resets pagination', async () => {
+    const user = userEvent.setup()
+    renderPage('/locations?page=2&device=phone')
+
+    await user.click(screen.getByRole('button', { name: 'All' }))
+
+    await waitFor(() =>
+      expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          offset: 0,
+          device_id: undefined,
+        }),
+      }),
+    )
+  })
+
+  it('sets and clears date filters while resetting pagination', async () => {
+    const user = userEvent.setup()
+    renderPage('/locations?page=2&device=watch')
+
+    await user.click(screen.getByRole('button', { name: 'Set date range' }))
+    await waitFor(() =>
+      expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          offset: 0,
+          date_from: '2026-01-02',
+          date_to: '2026-02-03',
+        }),
+      }),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear date range' }))
+    await waitFor(() =>
+      expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          date_from: undefined,
+          date_to: undefined,
+        }),
+      }),
+    )
+  })
+
+  it('renders filtered empty state and clears every filter', async () => {
+    const user = userEvent.setup()
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: { locations: { total: 0, items: [] } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    renderPage(
+      '/locations?page=3&device=phone&date_from=2026-01-01&date_to=2026-01-31',
+    )
+
+    expect(
+      screen.getByText(/No locations match the selected filters/),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }))
+    await waitFor(() =>
+      expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          offset: 0,
+          device_id: undefined,
+          date_from: undefined,
+          date_to: undefined,
+        }),
+      }),
+    )
+  })
+
+  it('renders unfiltered empty state without a reset action', () => {
+    locationHooks.useLocationDateRangeQuery.mockReturnValue({ data: undefined })
+    locationHooks.useDevicesQuery.mockReturnValue({ data: undefined })
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage('/locations?page=invalid')
+
+    expect(
+      screen.getByText('No OwnTracks GPS points have been recorded yet.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Clear filters' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders fallback values for incomplete location fields', () => {
+    locationHooks.useLocationsQuery.mockReturnValue({
+      data: {
+        locations: {
+          total: 1,
+          items: [
+            {
+              id: 99,
+              device_id: 'phone',
+              latitude: 40.736097,
+              longitude: -74.039373,
+              battery: null,
+              accuracy: null,
+              timestamp: '2026-03-14T09:00:00Z',
+              display_address: null,
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    const row = screen.getByRole('link', { name: '99' }).closest('tr')
+    expect(row).not.toBeNull()
+    expect(within(row!).getAllByText('—')).toHaveLength(3)
+  })
+
+  it('navigates to the preceding page beyond page two', async () => {
+    const user = userEvent.setup()
+    renderPage('/locations?page=4')
+
+    await user.click(screen.getByRole('button', { name: /Prev/i }))
+
+    await waitFor(() =>
+      expect(locationHooks.useLocationsQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({ offset: 50 }),
+      }),
     )
   })
 })
