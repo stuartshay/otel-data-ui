@@ -41,4 +41,22 @@ describe('Select primitives', () => {
       document.querySelector('[data-slot="select-content"]'),
     ).toHaveAttribute('data-align-trigger', 'false')
   })
+
+  it('uses item-aligned content positioning by default', () => {
+    render(
+      <Select defaultOpen defaultValue="cycling">
+        <SelectTrigger aria-label="Choose activity">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="cycling">Cycling</SelectItem>
+        </SelectContent>
+      </Select>,
+    )
+
+    const content = document.querySelector('[data-slot="select-content"]')
+
+    expect(content).toHaveAttribute('data-align-trigger', 'true')
+    expect(content).not.toHaveClass('data-[side=bottom]:translate-y-1')
+  })
 })
