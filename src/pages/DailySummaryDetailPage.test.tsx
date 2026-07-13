@@ -11,6 +11,10 @@ const graphqlHooks = vi.hoisted(() => ({
   useDailySummaryDateRangeQuery: vi.fn(),
 }))
 
+const exportMocks = vi.hoisted(() => ({
+  triggerDownload: vi.fn(),
+}))
+
 const leafletMocks = vi.hoisted(() => {
   class CircleMarkerMock {
     bindPopup = vi.fn()
@@ -54,6 +58,11 @@ const leafletMocks = vi.hoisted(() => {
 })
 
 vi.mock('@/__generated__/graphql', () => graphqlHooks)
+
+vi.mock('@/lib/export', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/export')>()),
+  triggerDownload: exportMocks.triggerDownload,
+}))
 
 vi.mock('leaflet', () => ({
   default: {
@@ -102,6 +111,7 @@ describe('DailySummaryDetailPage', () => {
     graphqlHooks.useUnifiedGpsLazyQuery.mockReset()
     graphqlHooks.useDailySummaryQuery.mockReset()
     graphqlHooks.useDailySummaryDateRangeQuery.mockReset()
+    exportMocks.triggerDownload.mockReset()
 
     // Sensible defaults for the supporting queries so tests can override only
     // the main useUnifiedGpsQuery as needed.
@@ -698,6 +708,12 @@ describe('DailySummaryDetailPage', () => {
     renderDetail()
 
     expect(screen.getByText('No points available')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Download points as CSV' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Download points as GeoJSON' }),
+    ).toBeDisabled()
   })
 
   it('downloads a CSV via the lazy query when Export CSV is clicked', async () => {
@@ -758,16 +774,6 @@ describe('DailySummaryDetailPage', () => {
       },
     )
 
-    const createObjectURL = vi.fn(() => 'blob:mock')
-    const revokeObjectURL = vi.fn()
-    const originalCreate = URL.createObjectURL
-    const originalRevoke = URL.revokeObjectURL
-    URL.createObjectURL = createObjectURL
-    URL.revokeObjectURL = revokeObjectURL
-
-    const originalClick = HTMLAnchorElement.prototype.click
-    HTMLAnchorElement.prototype.click = vi.fn()
-
     renderDetail()
 
     await user.click(
@@ -784,11 +790,211 @@ describe('DailySummaryDetailPage', () => {
         }),
       }),
     )
-    expect(createObjectURL).toHaveBeenCalled()
+    await waitFor(() =>
+      expect(exportMocks.triggerDownload).toHaveBeenCalledTimes(1),
+    )
+    expect(exportMocks.triggerDownload).toHaveBeenCalledWith(
+      [
+        'source,identifier,latitude,longitude,timestamp,battery,speed_kmh,heart_rate,accuracy',
+        'owntracks,phone,40.736,-74.039,2026-03-14T09:00:00Z,88,,,5',
+      ].join('\n'),
+      'text/csv;charset=utf-8',
+      'daily-summary-2026-03-14.csv',
+    )
+  })
 
-    HTMLAnchorElement.prototype.click = originalClick
-    URL.createObjectURL = originalCreate
-    URL.revokeObjectURL = originalRevoke
+  it('downloads source-filtered GeoJSON with coordinates and null metric fallbacks', async () => {
+    const user = userEvent.setup()
+    const lazyFetch = vi.fn().mockResolvedValue({
+      data: {
+        unifiedGps: {
+          total: 2,
+          items: [
+            {
+              source: 'garmin',
+              identifier: 'activity-1',
+              latitude: 40.736,
+              longitude: -74.039,
+              timestamp: '2026-03-14T09:00:00Z',
+              battery: null,
+              speed_kmh: null,
+              heart_rate: null,
+              accuracy: null,
+            },
+            {
+              source: 'garmin',
+              identifier: 'activity-2',
+              latitude: 40.737,
+              longitude: -74.04,
+              timestamp: '2026-03-14T10:00:00Z',
+              battery: 75,
+              speed_kmh: 12.5,
+              heart_rate: 148,
+              accuracy: 3,
+            },
+          ],
+        },
+      },
+    })
+    graphqlHooks.useUnifiedGpsLazyQuery.mockReturnValue([
+      lazyFetch,
+      { loading: false, called: false },
+    ])
+    graphqlHooks.useUnifiedGpsQuery.mockImplementation(
+      ({ variables }: { variables: { source?: string; limit?: number } }) => ({
+        data: {
+          unifiedGps: {
+            total: variables.limit === 1 ? 0 : 1,
+            items:
+              variables.limit === 1
+                ? []
+                : [
+                    {
+                      source: 'garmin',
+                      identifier: 'activity-1',
+                      latitude: 40.736,
+                      longitude: -74.039,
+                      timestamp: '2026-03-14T09:00:00Z',
+                    },
+                  ],
+          },
+        },
+        loading: false,
+        error: undefined,
+        refetch: vi.fn(),
+      }),
+    )
+
+    renderDetail('/daily-summary/2026-03-14?source=garmin&order=asc')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Download points as GeoJSON' }),
+    )
+
+    await waitFor(() => expect(lazyFetch).toHaveBeenCalledTimes(1))
+    expect(lazyFetch).toHaveBeenCalledWith({
+      variables: {
+        source: 'garmin',
+        date_from: '2026-03-14',
+        date_to: '2026-03-14',
+        limit: 10000,
+        offset: 0,
+        order: 'asc',
+      },
+    })
+    await waitFor(() =>
+      expect(exportMocks.triggerDownload).toHaveBeenCalledTimes(1),
+    )
+    const [content, mime, filename] = exportMocks.triggerDownload.mock.calls[0]!
+    expect(JSON.parse(content as string)).toEqual({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-74.039, 40.736] },
+          properties: {
+            source: 'garmin',
+            identifier: 'activity-1',
+            timestamp: '2026-03-14T09:00:00Z',
+            battery: null,
+            speed_kmh: null,
+            heart_rate: null,
+            accuracy: null,
+          },
+        },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-74.04, 40.737] },
+          properties: {
+            source: 'garmin',
+            identifier: 'activity-2',
+            timestamp: '2026-03-14T10:00:00Z',
+            battery: 75,
+            speed_kmh: 12.5,
+            heart_rate: 148,
+            accuracy: 3,
+          },
+        },
+      ],
+    })
+    expect(mime).toBe('application/geo+json')
+    expect(filename).toBe('daily-summary-2026-03-14-garmin.geojson')
+  })
+
+  it('exports an empty GeoJSON collection when the lazy query has no data', async () => {
+    const user = userEvent.setup()
+    const lazyFetch = vi.fn().mockResolvedValue({ data: undefined })
+    graphqlHooks.useUnifiedGpsLazyQuery.mockReturnValue([
+      lazyFetch,
+      { loading: false, called: false },
+    ])
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: {
+        unifiedGps: {
+          total: 1,
+          items: [
+            {
+              source: 'owntracks',
+              identifier: 'phone',
+              latitude: 40.736,
+              longitude: -74.039,
+              timestamp: '2026-03-14T09:00:00Z',
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderDetail()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Download points as GeoJSON' }),
+    )
+
+    await waitFor(() => expect(exportMocks.triggerDownload).toHaveBeenCalled())
+    const [content] = exportMocks.triggerDownload.mock.calls[0]!
+    expect(JSON.parse(content as string)).toEqual({
+      type: 'FeatureCollection',
+      features: [],
+    })
+  })
+
+  it('disables export controls while an export query is loading', () => {
+    graphqlHooks.useUnifiedGpsLazyQuery.mockReturnValue([
+      vi.fn(),
+      { loading: true, called: true },
+    ])
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: {
+        unifiedGps: {
+          total: 1,
+          items: [
+            {
+              source: 'owntracks',
+              identifier: 'phone',
+              latitude: 40.736,
+              longitude: -74.039,
+              timestamp: '2026-03-14T09:00:00Z',
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderDetail()
+
+    expect(
+      screen.getByRole('button', { name: 'Download points as CSV' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Download points as GeoJSON' }),
+    ).toBeDisabled()
   })
 
   it('handles invalid route dates by skipping the query', () => {
