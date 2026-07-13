@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Routes } from 'react-router-dom'
 import { renderWithRouter } from '@/test/renderWithRouter'
@@ -18,8 +19,10 @@ vi.mock('@/components/garmin/SegmentStartEndMap', () => ({
   ),
 }))
 vi.mock('@/components/garmin/DeleteSegmentButton', () => ({
-  DeleteSegmentButton: () => (
-    <div data-testid="delete-segment-trigger">delete</div>
+  DeleteSegmentButton: ({ onDeleted }: { onDeleted: () => void }) => (
+    <button data-testid="delete-segment-trigger" onClick={onDeleted}>
+      delete
+    </button>
   ),
 }))
 
@@ -40,15 +43,16 @@ const segment = {
   updated_at: '2026-07-07T05:00:11Z',
 }
 
-function renderDetail() {
+function renderDetail(entry = '/garmin/segments/1') {
   return renderWithRouter(
     <Routes>
       <Route
         path="garmin/segments/:segmentId"
         element={<GarminSegmentDetailPage />}
       />
+      <Route path="garmin/segments" element={<div>segment list</div>} />
     </Routes>,
-    { entries: ['/garmin/segments/1'] },
+    { entries: [entry] },
   )
 }
 
@@ -59,6 +63,18 @@ describe('GarminSegmentDetailPage', () => {
       data: undefined,
       loading: false,
       error: undefined,
+    })
+    segmentHooks.useGarminSegmentQuery.mockReturnValue({
+      data: { garminSegment: segment },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    segmentHooks.useGarminSegmentEffortsQuery.mockReturnValue({
+      data: { garminSegmentEfforts: { items: [], total: 0 } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
     })
   })
 
@@ -169,5 +185,118 @@ describe('GarminSegmentDetailPage', () => {
     renderDetail()
 
     expect(screen.getByText('Segment not found')).toBeVisible()
+  })
+
+  it('rejects an invalid segment id without running the queries', () => {
+    renderDetail('/garmin/segments/invalid')
+
+    expect(screen.getByText('Invalid segment id.')).toBeVisible()
+    expect(segmentHooks.useGarminSegmentQuery).toHaveBeenCalledWith({
+      variables: { id: Number.NaN },
+      skip: true,
+    })
+    expect(segmentHooks.useGarminSegmentEffortsQuery).toHaveBeenCalledWith({
+      variables: { id: Number.NaN, limit: 100 },
+      skip: true,
+    })
+  })
+
+  it('renders the segment loading state', () => {
+    segmentHooks.useGarminSegmentQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderDetail()
+
+    expect(screen.getByText('Loading segment...')).toBeVisible()
+  })
+
+  it('retries after a segment query error', async () => {
+    const user = userEvent.setup()
+    const refetch = vi.fn()
+    segmentHooks.useGarminSegmentQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: { message: 'segment failed' },
+      refetch,
+    })
+
+    renderDetail()
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(screen.getByText('segment failed')).toBeVisible()
+    expect(refetch).toHaveBeenCalledOnce()
+  })
+
+  it('renders the efforts loading state', () => {
+    segmentHooks.useGarminSegmentEffortsQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderDetail()
+
+    expect(screen.getByText('Loading efforts...')).toBeVisible()
+  })
+
+  it('retries after an efforts query error', async () => {
+    const user = userEvent.setup()
+    const refetch = vi.fn()
+    segmentHooks.useGarminSegmentEffortsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: { message: 'efforts failed' },
+      refetch,
+    })
+
+    renderDetail()
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(screen.getByText('efforts failed')).toBeVisible()
+    expect(refetch).toHaveBeenCalledOnce()
+  })
+
+  it('renders optional metadata fallbacks and navigates after deletion', async () => {
+    const user = userEvent.setup()
+    segmentHooks.useGarminSegmentQuery.mockReturnValue({
+      data: {
+        garminSegment: {
+          ...segment,
+          sport: null,
+          distance_meters: null,
+          source_activity_id: null,
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    segmentHooks.useGarminSegmentEffortsQuery.mockReturnValue({
+      data: { garminSegmentEfforts: { items: [], total: 1 } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderDetail()
+
+    expect(screen.getByText('1 matching effort')).toBeVisible()
+    expect(screen.getByText('No efforts yet')).toBeVisible()
+    expect(screen.queryByText('cycling')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'View' })).not.toBeInTheDocument()
+    expect(screen.getByText('Distance').nextElementSibling).toHaveTextContent(
+      '—',
+    )
+    expect(segmentHooks.useGarminChartDataQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: true }),
+    )
+
+    await user.click(screen.getByTestId('delete-segment-trigger'))
+    expect(screen.getByText('segment list')).toBeVisible()
   })
 })
