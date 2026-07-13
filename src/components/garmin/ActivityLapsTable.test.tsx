@@ -292,6 +292,71 @@ describe('ActivityLapsTable', () => {
     expect(summary.avgHeartRate).toBe(150)
   })
 
+  it('uses unit heart-rate weighting and null summary fallbacks without usable totals', () => {
+    const summary = buildLapSummary([
+      lap({
+        duration_seconds: 0,
+        distance_meters: 0,
+        paved_distance_meters: null,
+        unpaved_distance_meters: null,
+        avg_heart_rate: 125,
+        max_heart_rate: 0,
+        total_ascent_meters: 0,
+      }),
+      lap({
+        duration_seconds: null,
+        distance_meters: null,
+        paved_distance_meters: null,
+        unpaved_distance_meters: null,
+        avg_heart_rate: null,
+        max_heart_rate: null,
+        total_ascent_meters: null,
+      }),
+    ])
+
+    expect(summary).toEqual({
+      durationSeconds: null,
+      distanceMeters: null,
+      pavedPercent: null,
+      unpavedPercent: null,
+      avgSpeedMps: null,
+      avgHeartRate: 125,
+      maxHeartRate: null,
+      totalAscentMeters: null,
+    })
+  })
+
+  it('returns no points when a lap has no effective end time', () => {
+    expect(
+      getLapSegmentPoints(
+        lap({
+          start_time: '2026-07-04T19:50:33Z',
+          end_time: null,
+          duration_seconds: 0,
+          distance_meters: null,
+        }),
+        [],
+      ),
+    ).toEqual([])
+  })
+
+  it('returns no points when the target lap is absent from distance context', () => {
+    const target = lap({
+      lap_index: 2,
+      start_time: null,
+      end_time: null,
+      distance_meters: 1000,
+    })
+
+    expect(
+      getLapSegmentPoints(
+        target,
+        [],
+        [lap({ lap_index: 1, distance_meters: 1000 })],
+      ),
+    ).toEqual([])
+  })
+
   it('renders laps in lap order with cumulative time and summary', () => {
     render(
       <ActivityLapsTable
