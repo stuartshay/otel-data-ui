@@ -42,14 +42,7 @@ export function SegmentMiniMap({
   )
 
   useEffect(() => {
-    if (!mapRef.current) return
-
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove()
-      mapInstanceRef.current = null
-    }
-
-    const map = L.map(mapRef.current, {
+    const map = L.map(mapRef.current!, {
       zoomControl: false,
       attributionControl: false,
       dragging: false,
