@@ -65,7 +65,7 @@ git fetch origin master && git rebase origin/master
 
 ⚠️ **ALWAYS open pull requests in ready-for-review mode.** Do not create a
 draft PR unless the user explicitly requests a draft for that specific PR.
-After creation, verify the PR reports `isDraft: false` before handing it off.
+After creation, verify the PR reports `isDraft: false` (e.g. `gh pr view <PR> --json isDraft -q '.isDraft'`) before handing it off.
 
 ⚠️ **ALWAYS check for and resolve conflicts before creating a PR:**
 
