@@ -63,6 +63,10 @@ git fetch origin master && git rebase origin/master
 
 ### Before Creating a PR
 
+⚠️ **ALWAYS open pull requests in ready-for-review mode.** Do not create a
+draft PR unless the user explicitly requests a draft for that specific PR.
+After creation, verify the PR reports `isDraft: false` before handing it off.
+
 ⚠️ **ALWAYS check for and resolve conflicts before creating a PR:**
 
 1. Rebase onto the latest protected branch:
@@ -190,7 +194,7 @@ Final acceptance validation (YYYY-MM-DD):
 6. Run `npm run type-check` to validate types
 7. Commit and push to `develop` or `feature/*` branch
 8. **For feature branches**: rebase onto latest `master`: `git fetch origin master && git rebase origin/master`
-9. Create PR to `master` when ready for deployment
+9. Create a ready-for-review PR to `master` when ready for deployment
 10. **NEVER**: `git push origin master` or commit directly to master
 
 ## Writing Code
