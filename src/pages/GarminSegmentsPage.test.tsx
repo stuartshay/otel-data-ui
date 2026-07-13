@@ -97,9 +97,9 @@ describe('GarminSegmentsPage', () => {
     })
 
     renderWithRouter(<GarminSegmentsPage />)
-    await user.click(screen.getByRole('button', { name: 'Retry' }))
-
     expect(screen.getByText('segments failed')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledOnce()
   })
 
