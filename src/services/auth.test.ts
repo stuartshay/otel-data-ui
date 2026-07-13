@@ -102,6 +102,26 @@ describe('authService', () => {
     })
   })
 
+  it('uses redirect fallbacks when initialized outside the browser', async () => {
+    vi.stubGlobal('window', undefined)
+
+    try {
+      await import('./auth')
+
+      expect(authMocks.WebStorageStateStoreMock).not.toHaveBeenCalled()
+      expect(authMocks.config.userStore).toBeUndefined()
+      expect(authMocks.config.stateStore).toBeUndefined()
+      expect(authMocks.config.post_logout_redirect_uri).toBe(
+        'https://data-ui.example.com',
+      )
+      expect(authMocks.config.silent_redirect_uri).toBe(
+        'https://data-ui.example.com/silent-renew.html',
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('passes the current pathname through the login redirect state', async () => {
     const { authService } = await import('./auth')
     authMocks.userManager.signinRedirect.mockResolvedValue(undefined)
