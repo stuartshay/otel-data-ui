@@ -9,6 +9,27 @@ const garminHooks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/__generated__/graphql', () => garminHooks)
+vi.mock('@/components/shared/DateRangePicker', () => ({
+  DateRangePicker: ({
+    onRangeChange,
+  }: {
+    onRangeChange: (from: Date | undefined, to: Date | undefined) => void
+  }) => (
+    <div>
+      <button
+        type="button"
+        onClick={() =>
+          onRangeChange(new Date(2026, 0, 2), new Date(2026, 1, 3))
+        }
+      >
+        Set dates
+      </button>
+      <button type="button" onClick={() => onRangeChange(undefined, undefined)}>
+        Clear dates
+      </button>
+    </div>
+  ),
+}))
 
 import { LapComparisonPage } from './LapComparisonPage'
 
@@ -160,5 +181,55 @@ describe('LapComparisonPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalled()
+  })
+
+  it('shows the loading state while comparison data is unavailable', () => {
+    garminHooks.useGarminLapsComparisonQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderWithRouter(<LapComparisonPage />, { route: '/garmin/compare' })
+    expect(screen.getByText('Loading laps...')).toBeInTheDocument()
+  })
+
+  it('sets and clears date range query variables', async () => {
+    const user = userEvent.setup()
+    renderWithRouter(<LapComparisonPage />, { route: '/garmin/compare' })
+
+    await user.click(screen.getByRole('button', { name: 'Set dates' }))
+    expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith({
+      variables: {
+        sport: 'cycling',
+        date_from: '2026-01-02',
+        date_to: '2026-02-03',
+        limit: 50,
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Clear dates' }))
+    expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith({
+      variables: {
+        sport: 'cycling',
+        date_from: undefined,
+        date_to: undefined,
+        limit: 50,
+      },
+    })
+  })
+
+  it('uses date and comparison fallbacks when metadata is absent', () => {
+    garminHooks.useGarminDateRangeQuery.mockReturnValue({ data: undefined })
+    garminHooks.useGarminLapsComparisonQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    renderWithRouter(<LapComparisonPage />, { route: '/garmin/compare' })
+    expect(screen.getByText(/no laps to compare/i)).toBeInTheDocument()
   })
 })
