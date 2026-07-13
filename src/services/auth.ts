@@ -81,7 +81,7 @@ class AuthService {
 
   async logout(): Promise<void> {
     await this.userManager.removeUser()
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const origin = window.location.origin
     const logoutUrl = `https://${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(origin + '/')}`
     window.location.href = logoutUrl
   }
