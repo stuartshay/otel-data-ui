@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -9,6 +9,35 @@ const dailySummaryHooks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/__generated__/graphql', () => dailySummaryHooks)
+vi.mock('@/components/shared/DateRangePicker', () => ({
+  DateRangePicker: ({
+    dateFrom,
+    dateTo,
+    onRangeChange,
+  }: {
+    dateFrom: Date | undefined
+    dateTo: Date | undefined
+    onRangeChange: (from: Date | undefined, to: Date | undefined) => void
+  }) => (
+    <div
+      data-testid="date-range"
+      data-from={String(dateFrom)}
+      data-to={String(dateTo)}
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onRangeChange(new Date(2026, 0, 2), new Date(2026, 1, 3))
+        }
+      >
+        Set dates
+      </button>
+      <button type="button" onClick={() => onRangeChange(undefined, undefined)}>
+        Clear dates
+      </button>
+    </div>
+  ),
+}))
 
 import { DailySummaryPage } from './DailySummaryPage'
 
@@ -180,6 +209,102 @@ describe('DailySummaryPage', () => {
     expect(screen.getByText('No data available')).toBeInTheDocument()
     const reset = screen.getByRole('button', { name: /Clear filters/i })
     await user.click(reset)
+  })
+
+  it('sets and clears date filters while resetting pagination', async () => {
+    const user = userEvent.setup()
+    dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
+      data: { dailySummary: buildDailySummaryConnection() },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    renderPage('/daily-summary?page=2')
+
+    await user.click(screen.getByRole('button', { name: 'Set dates' }))
+    await waitFor(() =>
+      expect(dailySummaryHooks.useDailySummaryQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          offset: 0,
+          date_from: '2026-01-02',
+          date_to: '2026-02-03',
+        }),
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Clear dates' }))
+    await waitFor(() =>
+      expect(dailySummaryHooks.useDailySummaryQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({
+          date_from: undefined,
+          date_to: undefined,
+        }),
+      }),
+    )
+  })
+
+  it('renders unfiltered empty state without a reset action', () => {
+    dailySummaryHooks.useDailySummaryDateRangeQuery.mockReturnValue({
+      data: undefined,
+    })
+    dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    renderPage('/daily-summary?page=invalid')
+
+    expect(
+      screen.getByText('No daily summary data has been recorded yet.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Clear filters/i })).toBeNull()
+  })
+
+  it('renders fallback values for an incomplete summary', () => {
+    dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
+      data: {
+        dailySummary: {
+          total: 1,
+          items: [
+            {
+              activity_date: null,
+              owntracks_device: null,
+              owntracks_points: null,
+              min_battery: null,
+              max_battery: null,
+              garmin_sport: null,
+              total_distance_km: null,
+              avg_heart_rate: null,
+              total_calories: null,
+            },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    renderPage()
+
+    const rows = screen.getAllByRole('row')
+    expect(within(rows[1]).getAllByText('—')).toHaveLength(8)
+  })
+
+  it('navigates to the preceding page beyond page two', async () => {
+    const user = userEvent.setup()
+    dailySummaryHooks.useDailySummaryQuery.mockReturnValue({
+      data: { dailySummary: buildDailySummaryConnection() },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    renderPage('/daily-summary?page=4')
+    await user.click(screen.getByRole('button', { name: /Prev/i }))
+    await waitFor(() =>
+      expect(dailySummaryHooks.useDailySummaryQuery).toHaveBeenLastCalledWith({
+        variables: expect.objectContaining({ offset: 50 }),
+      }),
+    )
   })
 })
 
