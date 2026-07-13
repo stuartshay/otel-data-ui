@@ -6,6 +6,8 @@ import { Calendar } from './calendar'
 describe('Calendar', () => {
   it('renders dropdown navigation, week numbers, and a focused selection', () => {
     const selectedDate = new Date(2026, 6, 13)
+    const expectedMonth = selectedDate.getMonth().toString()
+    const expectedDate = selectedDate.toLocaleDateString(enGB.code)
 
     const { container } = render(
       <Calendar
@@ -22,11 +24,11 @@ describe('Calendar', () => {
     expect(screen.getByRole('grid')).toBeInTheDocument()
     expect(container.querySelector('.rdp-week_number')).toBeInTheDocument()
     expect(
-      screen.getByRole('combobox', { name: 'Choose the Month' }),
-    ).toHaveValue('6')
+      screen.getByRole('combobox', { name: /choose the month/i }),
+    ).toHaveValue(expectedMonth)
 
     const selectedButton = container.querySelector(
-      'button[data-day="13/07/2026"]',
+      `button[data-day="${expectedDate}"]`,
     )
 
     expect(selectedButton).toBeInTheDocument()
