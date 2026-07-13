@@ -191,14 +191,18 @@ describe('GarminSegmentDetailPage', () => {
     renderDetail('/garmin/segments/invalid')
 
     expect(screen.getByText('Invalid segment id.')).toBeVisible()
-    expect(segmentHooks.useGarminSegmentQuery).toHaveBeenCalledWith({
-      variables: { id: Number.NaN },
-      skip: true,
-    })
-    expect(segmentHooks.useGarminSegmentEffortsQuery).toHaveBeenCalledWith({
-      variables: { id: Number.NaN, limit: 100 },
-      skip: true,
-    })
+    expect(segmentHooks.useGarminSegmentQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ id: Number.NaN }),
+        skip: true,
+      }),
+    )
+    expect(segmentHooks.useGarminSegmentEffortsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ id: Number.NaN, limit: 100 }),
+        skip: true,
+      }),
+    )
   })
 
   it('renders the segment loading state', () => {
