@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -52,6 +52,25 @@ const leafletMocks = vi.hoisted(() => {
 })
 
 vi.mock('@/__generated__/graphql', () => graphqlHooks)
+vi.mock('@/components/ui/calendar', () => ({
+  Calendar: ({ onSelect }: { onSelect: (date: Date | undefined) => void }) => (
+    <div>
+      <button onClick={() => onSelect(new Date('2026-01-15T12:00:00Z'))}>
+        Select January 15
+      </button>
+      <button onClick={() => onSelect(undefined)}>Clear selection</button>
+    </div>
+  ),
+}))
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}))
 
 vi.mock('leaflet', () => ({
   default: {
@@ -192,5 +211,92 @@ describe('MapPage', () => {
 
     expect(graphqlHooks.useLocationDateRangeQuery).toHaveBeenCalled()
     expect(screen.getByText('Unified Map')).toBeInTheDocument()
+  })
+
+  it('uses today when date-range metadata is unavailable', () => {
+    graphqlHooks.useLocationDateRangeQuery.mockReturnValue({ data: undefined })
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<MapPage />)
+
+    expect(screen.getByText(/April 3, 2026 \(Today\)/)).toBeInTheDocument()
+    expect(graphqlHooks.useUnifiedGpsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({
+          date_from: '2026-04-03',
+          date_to: '2026-04-03',
+        }),
+      }),
+    )
+  })
+
+  it('clamps to the maximum available date when today is too recent', async () => {
+    const user = userEvent.setup()
+    graphqlHooks.useLocationDateRangeQuery.mockReturnValue({
+      data: {
+        locationDateRange: {
+          min_date: null,
+          max_date: '2026-03-01T12:00:00Z',
+        },
+      },
+    })
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: { unifiedGps: { total: 0, items: [] } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<MapPage />)
+    expect(screen.getByText(/March 1, 2026/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Today' }))
+    await waitFor(() =>
+      expect(graphqlHooks.useUnifiedGpsQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          variables: expect.objectContaining({ date_from: '2026-03-01' }),
+        }),
+      ),
+    )
+  })
+
+  it('clamps dates below the minimum and handles calendar selections', async () => {
+    const user = userEvent.setup()
+    graphqlHooks.useLocationDateRangeQuery.mockReturnValue({
+      data: {
+        locationDateRange: {
+          min_date: '2026-05-01T12:00:00Z',
+          max_date: '2026-06-01T12:00:00Z',
+        },
+      },
+    })
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue({
+      data: { unifiedGps: { total: 0, items: [] } },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<MapPage />)
+    expect(screen.getAllByText(/May 1, 2026/)).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Today' }))
+    await user.click(screen.getByRole('button', { name: 'Select January 15' }))
+    await waitFor(() =>
+      expect(graphqlHooks.useUnifiedGpsQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          variables: expect.objectContaining({ date_from: '2026-05-01' }),
+        }),
+      ),
+    )
+
+    const callCount = graphqlHooks.useUnifiedGpsQuery.mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }))
+    expect(graphqlHooks.useUnifiedGpsQuery).toHaveBeenCalledTimes(callCount)
   })
 })
