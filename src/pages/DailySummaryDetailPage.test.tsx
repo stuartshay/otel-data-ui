@@ -790,6 +790,9 @@ describe('DailySummaryDetailPage', () => {
         }),
       }),
     )
+    await waitFor(() =>
+      expect(exportMocks.triggerDownload).toHaveBeenCalledTimes(1),
+    )
     expect(exportMocks.triggerDownload).toHaveBeenCalledWith(
       [
         'source,identifier,latitude,longitude,timestamp,battery,speed_kmh,heart_rate,accuracy',
@@ -879,6 +882,9 @@ describe('DailySummaryDetailPage', () => {
         order: 'asc',
       },
     })
+    await waitFor(() =>
+      expect(exportMocks.triggerDownload).toHaveBeenCalledTimes(1),
+    )
     const [content, mime, filename] = exportMocks.triggerDownload.mock.calls[0]!
     expect(JSON.parse(content as string)).toEqual({
       type: 'FeatureCollection',
