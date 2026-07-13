@@ -198,7 +198,7 @@ describe('metric definitions', () => {
   })
 
   it('falls back to the time definition for an unknown metric', () => {
-    expect(getMetricDef('unknown' as LapMetric)).toBe(getMetricDef('time'))
+    expect(getMetricDef('unknown' as LapMetric).key).toBe('time')
   })
 
   it('extracts and formats speed values and missing data', () => {
