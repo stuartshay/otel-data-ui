@@ -4,7 +4,22 @@ import {
   getMetricDef,
   heatColor,
   type ComparisonItem,
+  type ComparisonLap,
+  type LapMetric,
 } from './lapComparison'
+
+const lap = (overrides: Partial<ComparisonLap> = {}): ComparisonLap => ({
+  lap_index: 1,
+  duration_seconds: 1500,
+  distance_meters: 8046,
+  avg_speed_mps: 5,
+  avg_heart_rate: 120,
+  max_heart_rate: 140,
+  total_ascent_meters: 20,
+  total_descent_meters: 18,
+  calories: 260,
+  ...overrides,
+})
 
 const items: ComparisonItem[] = [
   {
@@ -151,6 +166,27 @@ describe('buildComparisonMatrix', () => {
       avg: '28:20',
     })
   })
+
+  it('uses empty summaries when a lap column has no finite metric values', () => {
+    const matrix = buildComparisonMatrix(
+      [
+        {
+          activity: { activity_id: 'empty', start_time: null },
+          laps: [lap({ avg_heart_rate: 0 })],
+        },
+      ],
+      'avgHr',
+    )
+
+    expect(matrix.rows[0]).toMatchObject({
+      activityId: 'empty',
+      startTime: null,
+      cells: [{ value: null, formatted: '—', score: null, isPR: false }],
+    })
+    expect(matrix.summary).toEqual([
+      { lapIndex: 1, best: '—', worst: '—', avg: '—' },
+    ])
+  })
 })
 
 describe('metric definitions', () => {
@@ -161,21 +197,46 @@ describe('metric definitions', () => {
     expect(getMetricDef('efficiency').higherIsBetter).toBe(true)
   })
 
-  it('returns efficiency as null when heart rate is missing', () => {
+  it('falls back to the time definition for an unknown metric', () => {
+    expect(getMetricDef('unknown' as LapMetric)).toBe(getMetricDef('time'))
+  })
+
+  it('extracts and formats speed values and missing data', () => {
+    const def = getMetricDef('speed')
+    expect(def.extract(lap({ avg_speed_mps: null }))).toBeNull()
+    expect(def.extract(lap())).toBeCloseTo(11.1847)
+    expect(def.format(null)).toBe('—')
+    expect(def.format(11.1847)).toBe('11.2')
+  })
+
+  it.each([
+    ['avgHr' as const, 'avg_heart_rate' as const, 123.6, '124'],
+    ['maxHr' as const, 'max_heart_rate' as const, 156.4, '156'],
+  ])('extracts and formats %s values', (metric, field, value, formatted) => {
+    const def = getMetricDef(metric)
+    expect(def.extract(lap({ [field]: null }))).toBeNull()
+    expect(def.extract(lap({ [field]: 0 }))).toBeNull()
+    expect(def.extract(lap({ [field]: value }))).toBe(value)
+    expect(def.format(null)).toBe('—')
+    expect(def.format(value)).toBe(formatted)
+  })
+
+  it('extracts and formats ascent values', () => {
+    const def = getMetricDef('ascent')
+    expect(def.extract(lap({ total_ascent_meters: null }))).toBeNull()
+    expect(def.extract(lap({ total_ascent_meters: 10 }))).toBeCloseTo(32.8084)
+    expect(def.format(null)).toBe('—')
+    expect(def.format(32.8084)).toBe('33')
+  })
+
+  it('extracts and formats efficiency only for valid speed and heart rate', () => {
     const def = getMetricDef('efficiency')
-    expect(
-      def.extract({
-        lap_index: 1,
-        duration_seconds: 1000,
-        distance_meters: 1000,
-        avg_speed_mps: 5,
-        avg_heart_rate: null,
-        max_heart_rate: null,
-        total_ascent_meters: 0,
-        total_descent_meters: 0,
-        calories: 0,
-      }),
-    ).toBeNull()
+    expect(def.extract(lap({ avg_speed_mps: null }))).toBeNull()
+    expect(def.extract(lap({ avg_heart_rate: null }))).toBeNull()
+    expect(def.extract(lap({ avg_heart_rate: 0 }))).toBeNull()
+    expect(def.extract(lap())).toBe(9.3)
+    expect(def.format(null)).toBe('—')
+    expect(def.format(9.34)).toBe('9.3')
   })
 })
 
