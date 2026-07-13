@@ -141,7 +141,7 @@ export function SpatialPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(nearbyData.nearbyPoints ?? []).map((p) => (
+                        {nearbyData.nearbyPoints.map((p) => (
                           <TableRow key={`${p.source}-${p.id}`}>
                             <TableCell>
                               <Badge variant="outline">{p.source}</Badge>
