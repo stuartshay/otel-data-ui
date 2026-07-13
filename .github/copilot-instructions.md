@@ -63,6 +63,10 @@ git fetch origin master && git rebase origin/master
 
 ### Before Creating a PR
 
+⚠️ **ALWAYS open pull requests in ready-for-review mode.** Do not create a
+draft PR unless the user explicitly requests a draft for that specific PR.
+After creation, verify the PR reports `isDraft: false` (e.g. `gh pr view <PR> --json isDraft -q '.isDraft'`) before handing it off.
+
 ⚠️ **ALWAYS check for and resolve conflicts before creating a PR:**
 
 1. Rebase onto the latest protected branch:
@@ -180,6 +184,42 @@ Final acceptance validation (YYYY-MM-DD):
    - a short reason for not applying the suggestion.
 4. Do not leave review threads without a response before merge.
 
+### PR Review and Approval Workflow (Required)
+
+Follow these steps for every PR targeting `master`:
+
+1. **Open ready for review** — Verify `isDraft: false`, the base branch is
+   `master`, and the PR is mergeable without conflicts.
+2. **Wait for required checks** — Branch protection requires these checks to
+   pass on the latest commit:
+   - `ESLint and TypeScript Check`
+   - `Build Check`
+   - `Build and Push`
+3. **Wait for Copilot review** — PRs opened by `stuartshay` trigger the
+   `Auto Approve after Copilot Review` job. It waits up to five minutes for an
+   active Copilot review and does not approve when Copilot requests changes.
+   Renovate and Dependabot PRs use the separate bot auto-approval job.
+4. **Evaluate every comment** — Determine whether each review comment is
+   valid. Apply valid changes; explain why any rejected suggestion is not
+   appropriate. Reply directly in every thread.
+5. **Resolve every conversation** — Branch protection requires all review
+   conversations to be resolved. Do not resolve a valid thread until its fix
+   is pushed and the reply identifies the supporting commit or evidence.
+6. **Repeat after every push** — Branch protection dismisses stale approvals.
+   After addressing feedback, wait for the updated CI checks, Copilot review,
+   and approval state on the new head commit.
+7. **Verify final approval state** — Before merge, confirm all of the
+   following:
+   - at least one approving review is active;
+   - `reviewDecision` is `APPROVED`;
+   - all required checks succeeded on the latest commit;
+   - no unresolved review threads remain;
+   - the PR is ready for review, mergeable, and up to date with `master`.
+8. **Merge only with authorization** — Approval and green checks indicate
+   readiness but do not authorize an assistant to merge. Merge only when the
+   user explicitly requests it, then follow the deployment and issue-closure
+   requirements below.
+
 ### Daily Workflow
 
 1. **ALWAYS** start from `develop` or create a feature branch
@@ -190,7 +230,7 @@ Final acceptance validation (YYYY-MM-DD):
 6. Run `npm run type-check` to validate types
 7. Commit and push to `develop` or `feature/*` branch
 8. **For feature branches**: rebase onto latest `master`: `git fetch origin master && git rebase origin/master`
-9. Create PR to `master` when ready for deployment
+9. Create a ready-for-review PR to `master` when ready for deployment
 10. **NEVER**: `git push origin master` or commit directly to master
 
 ## Writing Code
