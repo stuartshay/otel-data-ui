@@ -200,23 +200,31 @@ describe('LapComparisonPage', () => {
     renderWithRouter(<LapComparisonPage />, { route: '/garmin/compare' })
 
     await user.click(screen.getByRole('button', { name: 'Set dates' }))
-    expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith({
-      variables: {
-        sport: 'cycling',
-        date_from: '2026-01-02',
-        date_to: '2026-02-03',
-        limit: 50,
-      },
+    await vi.waitFor(() => {
+      expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith(
+        {
+          variables: {
+            sport: 'cycling',
+            date_from: '2026-01-02',
+            date_to: '2026-02-03',
+            limit: 50,
+          },
+        },
+      )
     })
 
     await user.click(screen.getByRole('button', { name: 'Clear dates' }))
-    expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith({
-      variables: {
-        sport: 'cycling',
-        date_from: undefined,
-        date_to: undefined,
-        limit: 50,
-      },
+    await vi.waitFor(() => {
+      expect(garminHooks.useGarminLapsComparisonQuery).toHaveBeenLastCalledWith(
+        {
+          variables: {
+            sport: 'cycling',
+            date_from: undefined,
+            date_to: undefined,
+            limit: 50,
+          },
+        },
+      )
     })
   })
 
