@@ -183,10 +183,15 @@ describe('UnifiedGpsMap', () => {
       tileLayer,
     )
 
-    const outerCallback = rafCallbacks.get(1)
+    expect(rafCallbacks.size).toBe(1)
+    const [outerEntry] = rafCallbacks.entries()
+    const [outerRafId, outerCallback] = outerEntry ?? []
     expect(outerCallback).toBeDefined()
     act(() => outerCallback?.(0))
-    const innerCallback = rafCallbacks.get(2)
+    const innerCallback = [...rafCallbacks.entries()].find(
+      ([rafId]) => rafId !== outerRafId,
+    )?.[1]
+    expect(innerCallback).toBeDefined()
     act(() => innerCallback?.(0))
     expect(leafletMocks.mapInstance.invalidateSize).toHaveBeenCalledTimes(1)
 
@@ -199,7 +204,7 @@ describe('UnifiedGpsMap', () => {
 
     expect(resizeObservers[0]?.disconnect).toHaveBeenCalledTimes(1)
     expect(leafletMocks.mapInstance.remove).toHaveBeenCalledTimes(1)
-    expect(rafCallbacks).toHaveLength(0)
+    expect(rafCallbacks.size).toBe(0)
 
     act(() => resizeCallback?.([], resizeObservers[0] as never))
     expect(leafletMocks.mapInstance.invalidateSize).toHaveBeenCalledTimes(2)
