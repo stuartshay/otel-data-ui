@@ -137,4 +137,64 @@ describe('SpatialPage', () => {
       skip: false,
     })
   })
+
+  it('uses updated coordinates for both spatial queries', async () => {
+    const user = userEvent.setup()
+    render(<SpatialPage />)
+
+    const inputs = screen.getAllByRole('textbox')
+    const updates = [
+      [0, '41.1'],
+      [1, '-72.2'],
+      [4, '-71.4'],
+      [5, '42.5'],
+      [6, '-70.6'],
+    ] as const
+    for (const [index, value] of updates) {
+      await user.clear(inputs[index])
+      await user.type(inputs[index], value)
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    await user.click(screen.getByRole('button', { name: 'Calculate' }))
+
+    await waitFor(() => {
+      expect(spatialHooks.useNearbyPointsQuery).toHaveBeenLastCalledWith({
+        variables: {
+          lat: 41.1,
+          lon: -72.2,
+          radius_meters: 500,
+          limit: 20,
+        },
+        skip: false,
+      })
+      expect(spatialHooks.useCalculateDistanceQuery).toHaveBeenLastCalledWith({
+        variables: {
+          from_lat: 40.736097,
+          from_lon: -71.4,
+          to_lat: 42.5,
+          to_lon: -70.6,
+        },
+        skip: false,
+      })
+    })
+  })
+
+  it('disables both actions while their queries are loading', () => {
+    spatialHooks.useNearbyPointsQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+    })
+    spatialHooks.useCalculateDistanceQuery.mockReturnValue({
+      data: undefined,
+      loading: true,
+    })
+
+    render(<SpatialPage />)
+
+    expect(screen.getByRole('button', { name: 'Searching...' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Calculating...' }),
+    ).toBeDisabled()
+  })
 })
