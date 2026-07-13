@@ -42,7 +42,11 @@ export function SegmentMiniMap({
   )
 
   useEffect(() => {
-    const map = L.map(mapRef.current!, {
+    const host = mapRef.current
+    /* v8 ignore next -- defensive; React assigns host refs before effects */
+    if (!host) return
+
+    const map = L.map(host, {
       zoomControl: false,
       attributionControl: false,
       dragging: false,
