@@ -106,4 +106,22 @@ describe('SegmentMiniMap', () => {
       expect.objectContaining({ dashArray: '6 6' }),
     )
   })
+
+  it('does not fit the map when Leaflet returns invalid bounds', async () => {
+    leafletMocks.bounds.isValid.mockReturnValue(false)
+
+    render(
+      <SegmentMiniMap
+        startLat={40.79}
+        startLon={-73.96}
+        endLat={40.8}
+        endLon={-73.94}
+        label="Harlem Hill"
+      />,
+    )
+
+    await waitFor(() => expect(leafletMocks.map).toHaveBeenCalledTimes(1))
+
+    expect(leafletMocks.mapInstance.fitBounds).not.toHaveBeenCalled()
+  })
 })
