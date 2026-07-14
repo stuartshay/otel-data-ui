@@ -155,17 +155,20 @@ test.describe('Dashboard Daily Summary detail map', () => {
   }) => {
     await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
 
-    const firstDateLink = page
-      .getByRole('main')
-      .locator('table tbody tr')
-      .first()
+    const dateRows = page.getByRole('main').locator('table tbody tr')
+    await expect(dateRows.first()).toBeVisible({ timeout: 30_000 })
+    const dateRowCount = await dateRows.count()
+    expect(dateRowCount).toBeGreaterThanOrEqual(3)
+
+    const selectedDateLink = dateRows
+      .nth(Math.floor(dateRowCount / 2))
       .locator('a[href^="/daily-summary/"]')
       .first()
-    await expect(firstDateLink).toBeVisible({ timeout: 30_000 })
+    await expect(selectedDateLink).toBeVisible()
 
-    const selectedHref = await firstDateLink.getAttribute('href')
+    const selectedHref = await selectedDateLink.getAttribute('href')
     expect(selectedHref).not.toBeNull()
-    await firstDateLink.click()
+    await selectedDateLink.click()
     await expect(page).toHaveURL(new RegExp(`${selectedHref}$`))
 
     const previousHref = await page
