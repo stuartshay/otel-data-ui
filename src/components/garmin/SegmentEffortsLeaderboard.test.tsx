@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SegmentEffortsLeaderboard } from './SegmentEffortsLeaderboard'
@@ -54,5 +55,54 @@ describe('SegmentEffortsLeaderboard', () => {
     const rows = screen.getAllByTestId('segment-effort-row')
     expect(within(rows[0]).getByText('Jul 8, 2026')).toBeVisible()
     expect(within(rows[1]).getByText('Jul 1, 2026')).toBeVisible()
+  })
+
+  it('reorders efforts with the sort controls', async () => {
+    const user = userEvent.setup()
+    renderLeaderboard([
+      effort({
+        activity_id: 'fastest',
+        activity_start_time: '2026-07-01T10:00:00Z',
+        elapsed_seconds: 70,
+        avg_speed_kmh: 18,
+      }),
+      effort({
+        activity_id: 'top-speed',
+        activity_start_time: '2026-07-02T10:00:00Z',
+        elapsed_seconds: 90,
+        avg_speed_kmh: 24,
+      }),
+      effort({
+        activity_id: 'newest',
+        activity_start_time: '2026-07-08T10:00:00Z',
+        elapsed_seconds: 95,
+        avg_speed_kmh: 20,
+      }),
+    ])
+
+    await user.click(screen.getByRole('button', { name: 'Fastest' }))
+    expect(
+      within(screen.getAllByTestId('segment-effort-row')[0]).getByRole('link', {
+        name: 'View',
+      }),
+    ).toHaveAttribute('href', '/garmin/fastest')
+
+    await user.click(screen.getByRole('button', { name: 'Top speed' }))
+    expect(
+      within(screen.getAllByTestId('segment-effort-row')[0]).getByRole('link', {
+        name: 'View',
+      }),
+    ).toHaveAttribute('href', '/garmin/top-speed')
+  })
+
+  it('shows the effort date when the activity start time is missing', () => {
+    renderLeaderboard([
+      effort({
+        activity_start_time: null,
+        effort_start: '2026-07-04T10:00:00Z',
+      }),
+    ])
+
+    expect(screen.getByText('Jul 4, 2026')).toBeVisible()
   })
 })
