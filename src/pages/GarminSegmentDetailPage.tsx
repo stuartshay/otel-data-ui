@@ -22,7 +22,10 @@ import {
 import { getSegmentRoutePoints } from '@/components/garmin/segmentRoute'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 
-const EFFORTS_LIMIT = 100
+// 500 is the otel-data-api's max; an activity that laps a loop segment
+// several times now yields one effort per lap instead of just its fastest,
+// so a popular segment can have well over 100 total efforts.
+const EFFORTS_LIMIT = 500
 
 export function GarminSegmentDetailPage() {
   const { segmentId } = useParams<{ segmentId: string }>()

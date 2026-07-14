@@ -48,10 +48,21 @@ export function sortEfforts(
 }
 
 /**
- * The activity_id of the personal-best (fastest) effort, or null when there are
- * fewer than one efforts. Ties resolve to the first-seen fastest.
+ * Identifies one effort row. An activity can appear more than once (each lap
+ * of a loop segment ridden in a single activity is its own effort), so
+ * activity_id alone isn't a unique key.
  */
-export function bestEffortActivityId(
+export function effortKey(
+  effort: Pick<SegmentEffort, 'activity_id' | 'effort_start'>,
+): string {
+  return `${effort.activity_id}-${effort.effort_start}`
+}
+
+/**
+ * The key of the personal-best (fastest) effort, or null when there are fewer
+ * than one efforts. Ties resolve to the first-seen fastest.
+ */
+export function bestEffortKey(
   efforts: readonly SegmentEffort[],
 ): string | null {
   let best: SegmentEffort | null = null
@@ -60,7 +71,7 @@ export function bestEffortActivityId(
       best = e
     }
   }
-  return best?.activity_id ?? null
+  return best ? effortKey(best) : null
 }
 
 export function formatElapsed(seconds: number | null | undefined): string {

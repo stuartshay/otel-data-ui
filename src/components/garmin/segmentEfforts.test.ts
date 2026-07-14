@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bestEffortActivityId,
+  bestEffortKey,
+  effortKey,
   formatDistanceMi,
   formatElapsed,
   formatSpeedMph,
@@ -73,17 +74,36 @@ describe('sortEfforts', () => {
   })
 })
 
-describe('bestEffortActivityId', () => {
-  it('returns the activity id with the lowest elapsed time', () => {
+describe('bestEffortKey', () => {
+  it('returns the key of the effort with the lowest elapsed time', () => {
     const efforts = [
       effort({ activity_id: 'a', elapsed_seconds: 82 }),
       effort({ activity_id: 'b', elapsed_seconds: 79 }),
     ]
-    expect(bestEffortActivityId(efforts)).toBe('b')
+    expect(bestEffortKey(efforts)).toBe(effortKey(efforts[1]))
   })
 
   it('returns null for an empty list', () => {
-    expect(bestEffortActivityId([])).toBeNull()
+    expect(bestEffortKey([])).toBeNull()
+  })
+
+  it('picks the fastest lap, not every lap, when one activity has several', () => {
+    // A single ride that laps the segment twice shares one activity_id --
+    // only its faster lap should be the PR, not both.
+    const efforts = [
+      effort({
+        activity_id: 'multi-lap-ride',
+        effort_start: '2026-07-09T22:03:21Z',
+        elapsed_seconds: 1098,
+      }),
+      effort({
+        activity_id: 'multi-lap-ride',
+        effort_start: '2026-07-09T22:44:46Z',
+        elapsed_seconds: 1199,
+      }),
+    ]
+    expect(bestEffortKey(efforts)).toBe(effortKey(efforts[0]))
+    expect(bestEffortKey(efforts)).not.toBe(effortKey(efforts[1]))
   })
 })
 
