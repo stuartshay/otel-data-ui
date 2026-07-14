@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -372,6 +372,84 @@ describe('DailySummaryDetailPage', () => {
       'href',
       '/daily-summary/2026-03-13',
     )
+  })
+
+  it('navigates between available days with Alt+Left and Alt+Right', async () => {
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue(emptyUnifiedGpsResult())
+
+    renderDetail('/daily-summary/2026-03-14')
+
+    fireEvent.keyDown(window, { altKey: true, key: 'ArrowLeft' })
+    expect(
+      await screen.findByRole('heading', { name: 'March 13, 2026' }),
+    ).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { altKey: true, key: 'ArrowRight' })
+    expect(
+      await screen.findByRole('heading', { name: 'March 14, 2026' }),
+    ).toBeInTheDocument()
+  })
+
+  it('ignores arrow keys without Alt and shortcuts from editable targets', () => {
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue(emptyUnifiedGpsResult())
+
+    renderDetail('/daily-summary/2026-03-14')
+
+    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+
+    const contentEditable = document.createElement('div')
+    Object.defineProperty(contentEditable, 'isContentEditable', {
+      value: true,
+    })
+    for (const target of [
+      document.createElement('input'),
+      document.createElement('textarea'),
+      contentEditable,
+    ]) {
+      document.body.append(target)
+      fireEvent.keyDown(target, { altKey: true, key: 'ArrowLeft' })
+      target.remove()
+    }
+
+    expect(
+      screen.getByRole('heading', { name: 'March 14, 2026' }),
+    ).toBeInTheDocument()
+  })
+
+  it('does not navigate beyond the available daily summary date range', () => {
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue(emptyUnifiedGpsResult())
+    graphqlHooks.useDailySummaryDateRangeQuery.mockReturnValue({
+      data: {
+        dailySummaryDateRange: {
+          min_date: '2026-03-14',
+          max_date: '2026-03-14',
+        },
+      },
+    })
+
+    renderDetail('/daily-summary/2026-03-14')
+
+    fireEvent.keyDown(window, { altKey: true, key: 'ArrowLeft' })
+    fireEvent.keyDown(window, { altKey: true, key: 'ArrowRight' })
+
+    expect(
+      screen.getByRole('heading', { name: 'March 14, 2026' }),
+    ).toBeInTheDocument()
+  })
+
+  it('removes the keyboard navigation listener when the page unmounts', () => {
+    graphqlHooks.useUnifiedGpsQuery.mockReturnValue(emptyUnifiedGpsResult())
+    const addListener = vi.spyOn(window, 'addEventListener')
+    const removeListener = vi.spyOn(window, 'removeEventListener')
+
+    const { unmount } = renderDetail()
+    const keydownCall = addListener.mock.calls.find(
+      ([eventName]) => eventName === 'keydown',
+    )
+
+    expect(keydownCall).toBeDefined()
+    unmount()
+    expect(removeListener).toHaveBeenCalledWith('keydown', keydownCall?.[1])
   })
 
   it('updates pagination offsets as the user moves between point pages', async () => {

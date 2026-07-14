@@ -8,7 +8,7 @@ import {
   Route,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   useDailySummaryDateRangeQuery,
   useDailySummaryQuery,
@@ -149,6 +149,7 @@ function exportDailyPoints(
 function useDayKeyboardNavigation(
   prevDayIso: string | undefined,
   nextDayIso: string | undefined,
+  navigate: (path: string) => void,
 ): void {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -164,15 +165,15 @@ function useDayKeyboardNavigation(
       }
       if (event.key === 'ArrowLeft' && prevDayIso) {
         event.preventDefault()
-        window.location.href = `/daily-summary/${prevDayIso}`
+        navigate(`/daily-summary/${prevDayIso}`)
       } else if (event.key === 'ArrowRight' && nextDayIso) {
         event.preventDefault()
-        window.location.href = `/daily-summary/${nextDayIso}`
+        navigate(`/daily-summary/${nextDayIso}`)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [prevDayIso, nextDayIso])
+  }, [prevDayIso, nextDayIso, navigate])
 }
 
 function DayNavButton({
@@ -616,6 +617,7 @@ function DayPagination({
 
 export function DailySummaryDetailPage() {
   const { date } = useParams<{ date: string }>()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const parsedPage = Number.parseInt(searchParams.get('page') ?? '', 10)
   const page = Math.max(1, Number.isNaN(parsedPage) ? 1 : parsedPage)
@@ -722,7 +724,7 @@ export function DailySummaryDetailPage() {
     return format(next, 'yyyy-MM-dd')
   }, [routeDate, maxDate])
 
-  useDayKeyboardNavigation(prevDayIso, nextDayIso)
+  useDayKeyboardNavigation(prevDayIso, nextDayIso, navigate)
 
   const updateParams = useCallback(
     (mutator: (params: URLSearchParams) => void, resetPage = false) => {

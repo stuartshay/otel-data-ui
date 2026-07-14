@@ -150,6 +150,41 @@ test.describe('Dashboard Daily Summary detail map', () => {
     })
   })
 
+  test('detail keyboard shortcuts navigate between available days', async ({
+    page,
+  }) => {
+    await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
+
+    const firstDateLink = page
+      .getByRole('main')
+      .locator('table tbody tr')
+      .first()
+      .locator('a[href^="/daily-summary/"]')
+      .first()
+    await expect(firstDateLink).toBeVisible({ timeout: 30_000 })
+
+    const selectedHref = await firstDateLink.getAttribute('href')
+    expect(selectedHref).not.toBeNull()
+    await firstDateLink.click()
+    await expect(page).toHaveURL(new RegExp(`${selectedHref}$`))
+
+    const previousHref = await page
+      .getByRole('link', { name: 'Previous day' })
+      .getAttribute('href')
+    expect(previousHref).toMatch(/^\/daily-summary\/\d{4}-\d{2}-\d{2}$/)
+
+    await page.keyboard.press('Alt+ArrowLeft')
+    await expect(page).toHaveURL(new RegExp(`${previousHref}$`))
+    await expect(
+      page.getByRole('heading', {
+        name: formatHeadingDate(previousHref!.split('/').pop()!),
+      }),
+    ).toBeVisible({ timeout: 30_000 })
+
+    await page.keyboard.press('Alt+ArrowRight')
+    await expect(page).toHaveURL(new RegExp(`${selectedHref}$`))
+  })
+
   test('pagination updates the URL and result range', async ({ page }) => {
     await page.goto('/daily-summary', { waitUntil: 'domcontentloaded' })
 
