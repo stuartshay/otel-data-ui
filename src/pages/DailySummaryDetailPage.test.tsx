@@ -395,7 +395,7 @@ describe('DailySummaryDetailPage', () => {
 
     renderDetail('/daily-summary/2026-03-14')
 
-    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+    expect(fireEvent.keyDown(window, { key: 'ArrowLeft' })).toBe(true)
 
     const contentEditable = document.createElement('div')
     Object.defineProperty(contentEditable, 'isContentEditable', {
@@ -407,7 +407,9 @@ describe('DailySummaryDetailPage', () => {
       contentEditable,
     ]) {
       document.body.append(target)
-      fireEvent.keyDown(target, { altKey: true, key: 'ArrowLeft' })
+      expect(
+        fireEvent.keyDown(target, { altKey: true, key: 'ArrowLeft' }),
+      ).toBe(true)
       target.remove()
     }
 
@@ -429,8 +431,12 @@ describe('DailySummaryDetailPage', () => {
 
     renderDetail('/daily-summary/2026-03-14')
 
-    fireEvent.keyDown(window, { altKey: true, key: 'ArrowLeft' })
-    fireEvent.keyDown(window, { altKey: true, key: 'ArrowRight' })
+    expect(fireEvent.keyDown(window, { altKey: true, key: 'ArrowLeft' })).toBe(
+      false,
+    )
+    expect(fireEvent.keyDown(window, { altKey: true, key: 'ArrowRight' })).toBe(
+      false,
+    )
 
     expect(
       screen.getByRole('heading', { name: 'March 14, 2026' }),

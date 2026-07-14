@@ -163,12 +163,12 @@ function useDayKeyboardNavigation(
       ) {
         return
       }
-      if (event.key === 'ArrowLeft' && prevDayIso) {
+      if (event.key === 'ArrowLeft') {
         event.preventDefault()
-        navigate(`/daily-summary/${prevDayIso}`)
-      } else if (event.key === 'ArrowRight' && nextDayIso) {
+        if (prevDayIso) navigate(`/daily-summary/${prevDayIso}`)
+      } else if (event.key === 'ArrowRight') {
         event.preventDefault()
-        navigate(`/daily-summary/${nextDayIso}`)
+        if (nextDayIso) navigate(`/daily-summary/${nextDayIso}`)
       }
     }
     window.addEventListener('keydown', handler)
