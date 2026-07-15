@@ -14,7 +14,8 @@ import {
 import { cn } from '@/lib/utils'
 import {
   EFFORT_SORTS,
-  bestEffortActivityId,
+  bestEffortKey,
+  effortKey,
   formatDistanceMi,
   formatEffortDate,
   formatElapsed,
@@ -34,7 +35,7 @@ export function SegmentEffortsLeaderboard({
 }: Readonly<SegmentEffortsLeaderboardProps>) {
   const [sort, setSort] = useState<EffortSort>('date')
 
-  const bestActivityId = useMemo(() => bestEffortActivityId(efforts), [efforts])
+  const bestKey = useMemo(() => bestEffortKey(efforts), [efforts])
   const sorted = useMemo(() => sortEfforts(efforts, sort), [efforts, sort])
 
   return (
@@ -71,10 +72,10 @@ export function SegmentEffortsLeaderboard({
           </TableHeader>
           <TableBody>
             {sorted.map((effort, index) => {
-              const isPR = effort.activity_id === bestActivityId
+              const isPR = effortKey(effort) === bestKey
               return (
                 <TableRow
-                  key={`${effort.activity_id}-${effort.effort_start}`}
+                  key={effortKey(effort)}
                   className={cn(isPR && 'bg-primary/5')}
                   data-testid="segment-effort-row"
                 >

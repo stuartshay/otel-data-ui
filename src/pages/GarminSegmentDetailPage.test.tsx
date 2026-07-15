@@ -199,7 +199,7 @@ describe('GarminSegmentDetailPage', () => {
     )
     expect(segmentHooks.useGarminSegmentEffortsQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        variables: expect.objectContaining({ id: Number.NaN, limit: 100 }),
+        variables: expect.objectContaining({ id: Number.NaN, limit: 500 }),
         skip: true,
       }),
     )

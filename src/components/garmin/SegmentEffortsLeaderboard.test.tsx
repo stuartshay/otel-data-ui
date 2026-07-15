@@ -105,4 +105,30 @@ describe('SegmentEffortsLeaderboard', () => {
 
     expect(screen.getByText('Jul 4, 2026')).toBeVisible()
   })
+
+  it('marks only the fastest lap as PR when one activity has multiple laps', () => {
+    // A single ride that laps the segment twice shares an activity_id; only
+    // its faster lap should get the PR badge, not every row for that ride.
+    renderLeaderboard([
+      effort({
+        activity_id: 'multi-lap',
+        activity_start_time: '2026-07-09T22:44:46Z',
+        effort_start: '2026-07-09T22:44:46Z',
+        elapsed_seconds: 1199,
+      }),
+      effort({
+        activity_id: 'multi-lap',
+        activity_start_time: '2026-07-09T22:03:21Z',
+        effort_start: '2026-07-09T22:03:21Z',
+        elapsed_seconds: 1098,
+      }),
+    ])
+
+    const rows = screen.getAllByTestId('segment-effort-row')
+    expect(rows).toHaveLength(2)
+    expect(
+      within(rows[0]).queryByTestId('segment-effort-pr'),
+    ).not.toBeInTheDocument()
+    expect(within(rows[1]).getByTestId('segment-effort-pr')).toBeVisible()
+  })
 })
