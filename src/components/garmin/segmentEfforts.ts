@@ -59,8 +59,8 @@ export function effortKey(
 }
 
 /**
- * The key of the personal-best (fastest) effort, or null when there are fewer
- * than one efforts. Ties resolve to the first-seen fastest.
+ * The key of the personal-best (fastest) effort, or null when there are no
+ * efforts. Ties resolve to the first-seen fastest.
  */
 export function bestEffortKey(
   efforts: readonly SegmentEffort[],
