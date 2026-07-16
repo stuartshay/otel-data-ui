@@ -10,6 +10,7 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminChartDataQuery: vi.fn(),
   useGarminActivityClimbsQuery: vi.fn(),
   useGarminActivityLapsQuery: vi.fn(),
+  useGarminActivityWeatherQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
 }))
 const toastMocks = vi.hoisted(() => ({
@@ -185,6 +186,7 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminChartDataQuery.mockReset()
     garminDetailHooks.useGarminActivityClimbsQuery.mockReset()
     garminDetailHooks.useGarminActivityLapsQuery.mockReset()
+    garminDetailHooks.useGarminActivityWeatherQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
     toastMocks.error.mockReset()
     toastMocks.warning.mockReset()
@@ -202,6 +204,11 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityLapsQuery.mockReturnValue({
       loading: false,
       data: { garminActivityLaps: [] },
+      error: undefined,
+    })
+    garminDetailHooks.useGarminActivityWeatherQuery.mockReturnValue({
+      loading: false,
+      data: { garminActivityWeather: null },
       error: undefined,
     })
   })

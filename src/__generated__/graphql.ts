@@ -407,6 +407,51 @@ export type GarminActivityTotal = {
   total_duration_seconds?: Maybe<Scalars['Int']['output']>;
 };
 
+/** Open-Meteo weather conditions matched to an activity's start location/time. */
+export type GarminActivityWeather = {
+  __typename?: 'GarminActivityWeather';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** Feels-like temperature in degrees C */
+  apparent_temperature_c?: Maybe<Scalars['Float']['output']>;
+  /** Total cloud cover percent */
+  cloud_cover_pct?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was inserted */
+  created_at?: Maybe<Scalars['String']['output']>;
+  /** True when sourced from the forecast API pending ERA5 archive settlement */
+  is_provisional: Scalars['Boolean']['output'];
+  /** Latitude the weather was looked up for */
+  latitude: Scalars['Float']['output'];
+  /** Longitude the weather was looked up for */
+  longitude: Scalars['Float']['output'];
+  /** UTC hourly bucket the reading was taken from */
+  observed_at: Scalars['String']['output'];
+  /** Total precipitation in millimeters */
+  precipitation_mm?: Maybe<Scalars['Float']['output']>;
+  /** Rainfall in millimeters */
+  rain_mm?: Maybe<Scalars['Float']['output']>;
+  /** Relative humidity percent */
+  relative_humidity_pct?: Maybe<Scalars['Float']['output']>;
+  /** Snowfall in centimeters */
+  snowfall_cm?: Maybe<Scalars['Float']['output']>;
+  /** Open-Meteo API the row came from: archive or forecast */
+  source: Scalars['String']['output'];
+  /** Surface pressure in hPa */
+  surface_pressure_hpa?: Maybe<Scalars['Float']['output']>;
+  /** Air temperature in degrees C */
+  temperature_c?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was last updated */
+  updated_at?: Maybe<Scalars['String']['output']>;
+  /** WMO weather interpretation code */
+  weather_code?: Maybe<Scalars['Int']['output']>;
+  /** Wind direction in degrees */
+  wind_direction_deg?: Maybe<Scalars['Float']['output']>;
+  /** Wind gust speed in km/h */
+  wind_gusts_kmh?: Maybe<Scalars['Float']['output']>;
+  /** Wind speed in km/h */
+  wind_speed_kmh?: Maybe<Scalars['Float']['output']>;
+};
+
 /** Lightweight track point optimised for time-series chart rendering. */
 export type GarminChartPoint = {
   __typename?: 'GarminChartPoint';
@@ -525,7 +570,11 @@ export type GarminSegment = {
   match_tolerance_meters: Scalars['Float']['output'];
   /** Human-readable segment name (e.g. "Harlem Hill") */
   name: Scalars['String']['output'];
-  /** Ordered [latitude, longitude] pairs tracing the segment path; null when unavailable */
+  /**
+   * Ordered [latitude, longitude] pairs tracing the segment path, recovered and
+   * simplified from the source activity's GPS track. Null when no source activity
+   * track can be matched (clients fall back to a straight start→end line).
+   */
   route?: Maybe<Array<Array<Scalars['Float']['output']>>>;
   /** Garmin activity this segment was created from, if any */
   source_activity_id?: Maybe<Scalars['String']['output']>;
@@ -989,6 +1038,11 @@ export type Query = {
   garminActivityLaps: Array<GarminActivityLap>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
+  /**
+   * Retrieve Open-Meteo weather conditions for a Garmin activity's start location/time.
+   * Returns null if the activity exists but hasn't been weather-backfilled yet.
+   */
+  garminActivityWeather?: Maybe<GarminActivityWeather>;
   /** Retrieve chart-optimised track points for a Garmin activity. */
   garminChartData: Array<GarminChartPoint>;
   /** Get the earliest and latest Garmin activity timestamps. */
@@ -1086,6 +1140,11 @@ export type QueryGarminActivityTotalsArgs = {
   date_to?: InputMaybe<Scalars['String']['input']>;
   period: Scalars['String']['input'];
   sport?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryGarminActivityWeatherArgs = {
+  activity_id: Scalars['String']['input'];
 };
 
 
@@ -1366,6 +1425,13 @@ export type GarminActivityLapsQueryVariables = Exact<{
 
 
 export type GarminActivityLapsQuery = { garminActivityLaps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, paved_distance_meters: number | null, unpaved_distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null, created_at: string | null, updated_at: string | null }> };
+
+export type GarminActivityWeatherQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminActivityWeatherQuery = { garminActivityWeather: { activity_id: string, observed_at: string, temperature_c: number | null, apparent_temperature_c: number | null, relative_humidity_pct: number | null, precipitation_mm: number | null, rain_mm: number | null, snowfall_cm: number | null, cloud_cover_pct: number | null, wind_speed_kmh: number | null, wind_gusts_kmh: number | null, wind_direction_deg: number | null, weather_code: number | null, source: string, is_provisional: boolean } | null };
 
 export type GarminLapsComparisonQueryVariables = Exact<{
   sport?: string | null | undefined;
@@ -2183,6 +2249,63 @@ export type GarminActivityLapsQueryHookResult = ReturnType<typeof useGarminActiv
 export type GarminActivityLapsLazyQueryHookResult = ReturnType<typeof useGarminActivityLapsLazyQuery>;
 export type GarminActivityLapsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityLapsSuspenseQuery>;
 export type GarminActivityLapsQueryResult = ApolloReactCommon.QueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
+export const GarminActivityWeatherDocument = gql`
+    query GarminActivityWeather($activity_id: String!) {
+  garminActivityWeather(activity_id: $activity_id) {
+    activity_id
+    observed_at
+    temperature_c
+    apparent_temperature_c
+    relative_humidity_pct
+    precipitation_mm
+    rain_mm
+    snowfall_cm
+    cloud_cover_pct
+    wind_speed_kmh
+    wind_gusts_kmh
+    wind_direction_deg
+    weather_code
+    source
+    is_provisional
+  }
+}
+    `;
+
+/**
+ * __useGarminActivityWeatherQuery__
+ *
+ * To run a query within a React component, call `useGarminActivityWeatherQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivityWeatherQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivityWeatherQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminActivityWeatherQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables> & ({ variables: GarminActivityWeatherQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>(GarminActivityWeatherDocument, options);
+      }
+export function useGarminActivityWeatherLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>(GarminActivityWeatherDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivityWeatherSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>;
+export function useGarminActivityWeatherSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivityWeatherQuery | undefined, GarminActivityWeatherQueryVariables>;
+export function useGarminActivityWeatherSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>(GarminActivityWeatherDocument, options);
+        }
+export type GarminActivityWeatherQueryHookResult = ReturnType<typeof useGarminActivityWeatherQuery>;
+export type GarminActivityWeatherLazyQueryHookResult = ReturnType<typeof useGarminActivityWeatherLazyQuery>;
+export type GarminActivityWeatherSuspenseQueryHookResult = ReturnType<typeof useGarminActivityWeatherSuspenseQuery>;
+export type GarminActivityWeatherQueryResult = ApolloReactCommon.QueryResult<GarminActivityWeatherQuery, GarminActivityWeatherQueryVariables>;
 export const GarminLapsComparisonDocument = gql`
     query GarminLapsComparison($sport: String, $date_from: String, $date_to: String, $limit: Int, $offset: Int) {
   garminLapsComparison(

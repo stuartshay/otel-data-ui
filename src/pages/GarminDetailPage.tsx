@@ -8,6 +8,7 @@ import {
   useGarminChartDataQuery,
   useGarminActivityClimbsQuery,
   useGarminActivityLapsQuery,
+  useGarminActivityWeatherQuery,
   useGarminExportPointsLazyQuery,
   type GarminActivityClimbsQuery,
   type GarminExportPointsQuery,
@@ -31,6 +32,7 @@ import { ClimbDetailsPanel } from '@/components/garmin/ClimbDetailsPanel'
 import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
+import { WeatherPanel } from '@/components/garmin/WeatherPanel'
 import { ActivityLapsTable } from '@/components/garmin/ActivityLapsTable'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -661,6 +663,14 @@ export function GarminDetailPage() {
     variables: { activity_id: activityId ?? '' },
     skip: !activityId,
   })
+  const {
+    data: weatherData,
+    loading: weatherLoading,
+    error: weatherError,
+  } = useGarminActivityWeatherQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+  })
   // Resolve map clicks against the *full-resolution* track series (not the
   // downsampled chart series) so the selected point is the true nearest
   // location, then convert it into the chart/display shape using the same
@@ -788,6 +798,11 @@ export function GarminDetailPage() {
           <ActivityStatsPanel
             activity={{ ...a, hr_available: hasHrData }}
             heartRateZonePoints={chartPoints}
+          />
+          <WeatherPanel
+            weather={weatherData?.garminActivityWeather}
+            loading={weatherLoading}
+            error={weatherError?.message}
           />
         </TabsContent>
 

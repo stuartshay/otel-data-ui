@@ -1,5 +1,6 @@
 const KM_TO_MI = 0.621371
 const M_TO_FT = 3.28084
+const MM_TO_IN = 0.0393701
 
 export function kmToMi(km: number): number {
   return km * KM_TO_MI
@@ -15,6 +16,10 @@ export function metersToFeet(m: number): number {
 
 export function celsiusToFahrenheit(c: number): number {
   return c * 1.8 + 32
+}
+
+export function mmToInches(mm: number): number {
+  return mm * MM_TO_IN
 }
 
 export function formatDuration(seconds: number | null): string {

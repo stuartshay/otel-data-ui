@@ -275,6 +275,28 @@ export const GARMIN_ACTIVITY_LAPS_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_WEATHER_QUERY = gql`
+  query GarminActivityWeather($activity_id: String!) {
+    garminActivityWeather(activity_id: $activity_id) {
+      activity_id
+      observed_at
+      temperature_c
+      apparent_temperature_c
+      relative_humidity_pct
+      precipitation_mm
+      rain_mm
+      snowfall_cm
+      cloud_cover_pct
+      wind_speed_kmh
+      wind_gusts_kmh
+      wind_direction_deg
+      weather_code
+      source
+      is_provisional
+    }
+  }
+`
+
 export const GARMIN_LAPS_COMPARISON_QUERY = gql`
   query GarminLapsComparison(
     $sport: String
