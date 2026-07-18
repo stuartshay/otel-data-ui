@@ -18,6 +18,17 @@ vi.mock('@/components/garmin/SegmentStartEndMap', () => ({
     <div data-testid="segment-map">map points: {routePoints.length}</div>
   ),
 }))
+vi.mock('@/components/garmin/SegmentElevationProfile', () => ({
+  SegmentElevationProfile: ({
+    routePoints = [],
+  }: {
+    routePoints?: unknown[]
+  }) => (
+    <div data-testid="segment-elevation-profile">
+      elevation points: {routePoints.length}
+    </div>
+  ),
+}))
 vi.mock('@/components/garmin/DeleteSegmentButton', () => ({
   DeleteSegmentButton: ({ onDeleted }: { onDeleted: () => void }) => (
     <button data-testid="delete-segment-trigger" onClick={onDeleted}>
@@ -136,21 +147,29 @@ describe('GarminSegmentDetailPage', () => {
             latitude: 40.78,
             longitude: -73.95,
             timestamp: '2025-07-04T11:59:00Z',
+            distance_from_start_km: 0,
+            altitude: 4,
           },
           {
             latitude: 40.79,
             longitude: -73.96,
             timestamp: '2025-07-04T12:00:00Z',
+            distance_from_start_km: 0.1,
+            altitude: 5,
           },
           {
             latitude: 40.795,
             longitude: -73.965,
             timestamp: '2025-07-04T12:00:30Z',
+            distance_from_start_km: 0.35,
+            altitude: 10,
           },
           {
             latitude: 40.8,
             longitude: -73.97,
             timestamp: '2025-07-04T12:01:00Z',
+            distance_from_start_km: 0.6,
+            altitude: 8,
           },
         ],
       },
@@ -163,6 +182,9 @@ describe('GarminSegmentDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'Harlem Hill' })).toBeVisible()
     expect(screen.getByText('2 matching efforts')).toBeVisible()
     expect(screen.getByTestId('segment-map')).toHaveTextContent('map points: 3')
+    expect(screen.getByTestId('segment-elevation-profile')).toHaveTextContent(
+      'elevation points: 3',
+    )
     expect(screen.getAllByTestId('segment-effort-row')).toHaveLength(2)
     // Exactly one PR badge, on the fastest effort.
     expect(screen.getAllByTestId('segment-effort-pr')).toHaveLength(1)
