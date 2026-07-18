@@ -154,7 +154,7 @@ export function WeatherPanel({
               <a
                 href="https://open-meteo.com/"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="underline"
               >
                 Open-Meteo
