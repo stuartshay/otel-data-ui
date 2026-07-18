@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
+import { SegmentElevationProfile } from '@/components/garmin/SegmentElevationProfile'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
 import {
@@ -56,11 +57,12 @@ export function GarminSegmentDetailPage() {
 
   const segment = segmentData?.garminSegment
 
-  const { data: sourceTrackData } = useGarminChartDataQuery({
-    variables: { activity_id: segment?.source_activity_id ?? '' },
-    skip: !segment?.source_activity_id,
-    fetchPolicy: 'no-cache',
-  })
+  const { data: sourceTrackData, loading: sourceTrackLoading } =
+    useGarminChartDataQuery({
+      variables: { activity_id: segment?.source_activity_id ?? '' },
+      skip: !segment?.source_activity_id,
+      fetchPolicy: 'no-cache',
+    })
 
   const efforts = (effortsData?.garminSegmentEfforts?.items ??
     []) as SegmentEffort[]
@@ -181,6 +183,10 @@ export function GarminSegmentDetailPage() {
               endLat={segment.end_latitude}
               endLon={segment.end_longitude}
               routePoints={routePoints}
+            />
+            <SegmentElevationProfile
+              routePoints={routePoints}
+              loading={sourceTrackLoading}
             />
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Distance</dt>

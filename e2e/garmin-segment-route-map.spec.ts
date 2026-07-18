@@ -4,6 +4,7 @@ test.describe('Garmin segment route map', () => {
   test('renders the source activity points for the saved segment route', async ({
     page,
   }) => {
+    await page.emulateMedia({ colorScheme: 'dark' })
     const chartDataResponse = page.waitForResponse(async (response) => {
       if (response.request().method() !== 'POST') return false
 
@@ -12,6 +13,7 @@ test.describe('Garmin segment route map', () => {
     })
 
     await page.goto('/garmin/segments/6')
+    await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(
       page.getByRole('heading', { name: 'Central Park 2' }),
     ).toBeVisible({ timeout: 15_000 })
@@ -38,5 +40,17 @@ test.describe('Garmin segment route map', () => {
       ),
     )
     expect(strokeColors.length).toBeGreaterThan(1)
+
+    const elevationProfile = page.getByTestId('segment-elevation-profile')
+    await expect(elevationProfile).toBeVisible()
+    await expect(
+      elevationProfile.getByRole('heading', { name: 'Elevation' }),
+    ).toBeVisible()
+    await expect(
+      elevationProfile.getByRole('img', {
+        name: /elevation profile from .* at the segment start/i,
+      }),
+    ).toBeVisible()
+    await expect(elevationProfile.getByText('Start to finish')).toBeVisible()
   })
 })
