@@ -1,5 +1,6 @@
 import {
   WEATHER_ICONS,
+  describeWeatherCode,
   fmtTemp,
   temperatureRangeF,
   weatherIconKind,
@@ -68,6 +69,9 @@ export function WeatherHourlyBreakdown({
                 className="h-5 w-5 text-muted-foreground"
                 aria-hidden="true"
               />
+              <span className="sr-only">
+                {describeWeatherCode(hour.weather_code)}
+              </span>
               <span className="text-sm font-medium tracking-tight">
                 {fmtTemp(hour.temperature_c)}
               </span>

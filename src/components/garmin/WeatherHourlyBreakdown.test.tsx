@@ -31,6 +31,8 @@ describe('WeatherHourlyBreakdown', () => {
     // 10C -> 50F, 25C -> 77F
     expect(screen.getByText('50°F')).toBeInTheDocument()
     expect(screen.getByText('77°F')).toBeInTheDocument()
+    expect(screen.getByText('Clear sky')).toHaveClass('sr-only')
+    expect(screen.getByText('Slight rain')).toHaveClass('sr-only')
   })
 
   it('shows the temperature range across the hours', () => {
