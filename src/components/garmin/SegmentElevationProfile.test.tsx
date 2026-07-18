@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { SegmentElevationProfile } from './SegmentElevationProfile'
 import { buildSegmentElevationProfile } from './SegmentElevationProfile.helpers'
@@ -10,12 +11,28 @@ vi.mock('recharts', () => ({
   AreaChart: ({
     children,
     data,
+    onMouseMove,
+    onMouseLeave,
   }: {
     children: React.ReactNode
     data: unknown[]
+    onMouseMove?: (state: {
+      activeTooltipIndex?: number | string | null
+    }) => void
+    onMouseLeave?: () => void
   }) => (
     <div data-testid="elevation-area-chart" data-point-count={data.length}>
       {children}
+      <button onClick={() => onMouseMove?.({ activeTooltipIndex: '1' })}>
+        Hover profile point
+      </button>
+      <button onClick={() => onMouseMove?.({ activeTooltipIndex: 0 })}>
+        Hover first profile point
+      </button>
+      <button onClick={() => onMouseMove?.({ activeTooltipIndex: '' })}>
+        Hover invalid profile point
+      </button>
+      <button onClick={onMouseLeave}>Leave profile</button>
     </div>
   ),
   Area: () => null,
@@ -44,16 +61,22 @@ const routePoints = [
     timestamp: '2026-07-18T12:00:00Z',
     distance_from_start_km: 10,
     altitude: 10,
+    latitude: 40.79,
+    longitude: -73.96,
   },
   {
     timestamp: '2026-07-18T12:00:30Z',
     distance_from_start_km: 10.1,
     altitude: 12,
+    latitude: 40.795,
+    longitude: -73.955,
   },
   {
     timestamp: '2026-07-18T12:01:00Z',
     distance_from_start_km: 10.2,
     altitude: 11,
+    latitude: Number.NaN,
+    longitude: null,
   },
 ]
 
@@ -67,6 +90,12 @@ describe('buildSegmentElevationProfile', () => {
     expect(profile?.startElevationFeet).toBeCloseTo(32.81, 2)
     expect(profile?.finishElevationFeet).toBeCloseTo(36.09, 2)
     expect(profile?.elevationGainFeet).toBeCloseTo(6.56, 2)
+    expect(profile?.points[1]).toEqual(
+      expect.objectContaining({ latitude: 40.795, longitude: -73.955 }),
+    )
+    expect(profile?.points[2]).toEqual(
+      expect.objectContaining({ latitude: null, longitude: null }),
+    )
   })
 
   it('returns null without at least two valid distance and altitude readings', () => {
@@ -153,5 +182,132 @@ describe('SegmentElevationProfile', () => {
     expect(
       screen.getByText('Elevation profile unavailable for this segment.'),
     ).toBeVisible()
+  })
+
+  it('emits the active profile point and clears it when the pointer leaves', async () => {
+    const user = userEvent.setup()
+    const onActivePointChange = vi.fn()
+    const { rerender } = render(
+      <SegmentElevationProfile
+        routePoints={routePoints}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover invalid profile point' }),
+    )
+    expect(onActivePointChange).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover profile point' }),
+    )
+    await waitFor(() =>
+      expect(onActivePointChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          distanceMiles: expect.any(Number),
+          elevationFeet: expect.any(Number),
+          latitude: 40.795,
+          longitude: -73.955,
+        }),
+      ),
+    )
+    expect(onActivePointChange).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <SegmentElevationProfile
+        routePoints={routePoints.map((point) => ({ ...point }))}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Hover profile point' }),
+    )
+    await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    expect(onActivePointChange).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover first profile point' }),
+    )
+    await waitFor(() =>
+      expect(onActivePointChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
+      ),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Leave profile' }))
+    await waitFor(() =>
+      expect(onActivePointChange).toHaveBeenLastCalledWith(null),
+    )
+    const callCountAfterLeave = onActivePointChange.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: 'Leave profile' }))
+    await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    expect(onActivePointChange).toHaveBeenCalledTimes(callCountAfterLeave)
+  })
+
+  it('cancels a queued hover update when the profile unmounts', () => {
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockReturnValue(42)
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    const onActivePointChange = vi.fn()
+    const { unmount } = render(
+      <SegmentElevationProfile
+        routePoints={routePoints}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hover profile point' }))
+    expect(requestFrame).toHaveBeenCalledOnce()
+
+    unmount()
+    expect(cancelFrame).toHaveBeenCalledWith(42)
+    expect(onActivePointChange).not.toHaveBeenCalled()
+
+    requestFrame.mockRestore()
+    cancelFrame.mockRestore()
+  })
+
+  it('ignores hover updates when no listener is provided', () => {
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame')
+    render(<SegmentElevationProfile routePoints={routePoints} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hover profile point' }))
+
+    expect(requestFrame).not.toHaveBeenCalled()
+    requestFrame.mockRestore()
+  })
+
+  it('coalesces multiple hover events into the latest animation frame point', () => {
+    let queuedFrame: FrameRequestCallback | undefined
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        queuedFrame = callback
+        return 42
+      })
+    const onActivePointChange = vi.fn()
+    render(
+      <SegmentElevationProfile
+        routePoints={routePoints}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hover profile point' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Hover first profile point' }),
+    )
+
+    expect(requestFrame).toHaveBeenCalledOnce()
+    queuedFrame?.(0)
+    expect(onActivePointChange).toHaveBeenCalledOnce()
+    expect(onActivePointChange).toHaveBeenCalledWith(
+      expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
+    )
+
+    requestFrame.mockRestore()
   })
 })

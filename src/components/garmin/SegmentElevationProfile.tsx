@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react'
 import {
   Area,
   AreaChart,
@@ -8,7 +9,43 @@ import {
   YAxis,
 } from 'recharts'
 import type { ActivityChartTrackPoint } from '@/components/garmin/ActivityChartData'
-import { buildSegmentElevationProfile } from './SegmentElevationProfile.helpers'
+import {
+  buildSegmentElevationProfile,
+  type SegmentElevationChartPoint,
+} from './SegmentElevationProfile.helpers'
+
+type TooltipState =
+  Readonly<{ activeTooltipIndex?: number | string | null }> | undefined
+
+function pointFromTooltipState(
+  state: TooltipState,
+  points: readonly SegmentElevationChartPoint[],
+): SegmentElevationChartPoint | null {
+  const rawIndex = state?.activeTooltipIndex
+  const index =
+    typeof rawIndex === 'number'
+      ? rawIndex
+      : typeof rawIndex === 'string' && rawIndex.trim() !== ''
+        ? Number(rawIndex)
+        : Number.NaN
+
+  return Number.isInteger(index) && points[index] ? points[index] : null
+}
+
+function isSameProfilePoint(
+  previous: SegmentElevationChartPoint | null,
+  next: SegmentElevationChartPoint | null,
+): boolean {
+  if (previous === next) return true
+  if (!previous || !next) return false
+
+  return (
+    previous.distanceMiles === next.distanceMiles &&
+    previous.elevationFeet === next.elevationFeet &&
+    previous.latitude === next.latitude &&
+    previous.longitude === next.longitude
+  )
+}
 
 function formatFeet(value: number): string {
   return `${Math.round(value).toLocaleString()} ft`
@@ -31,10 +68,45 @@ function ElevationStat({
 export function SegmentElevationProfile({
   routePoints,
   loading = false,
+  onActivePointChange,
 }: Readonly<{
   routePoints: readonly ActivityChartTrackPoint[]
   loading?: boolean
+  onActivePointChange?: (point: SegmentElevationChartPoint | null) => void
 }>) {
+  const pendingActivePointRef = useRef<SegmentElevationChartPoint | null>(null)
+  const lastActivePointRef = useRef<SegmentElevationChartPoint | null>(null)
+  const activePointFrameRef = useRef<number | null>(null)
+
+  const queueActivePointChange = useCallback(
+    (point: SegmentElevationChartPoint | null) => {
+      if (!onActivePointChange) return
+
+      pendingActivePointRef.current = point
+      if (activePointFrameRef.current != null) return
+
+      activePointFrameRef.current = window.requestAnimationFrame(() => {
+        activePointFrameRef.current = null
+        const nextPoint = pendingActivePointRef.current
+        if (isSameProfilePoint(lastActivePointRef.current, nextPoint)) {
+          return
+        }
+        lastActivePointRef.current = nextPoint
+        onActivePointChange(nextPoint)
+      })
+    },
+    [onActivePointChange],
+  )
+
+  useEffect(
+    () => () => {
+      if (activePointFrameRef.current != null) {
+        window.cancelAnimationFrame(activePointFrameRef.current)
+      }
+    },
+    [],
+  )
+
   if (loading) {
     return (
       <div
@@ -99,6 +171,13 @@ export function SegmentElevationProfile({
           <AreaChart
             data={profile.points}
             margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+            onMouseMove={(state: {
+              activeTooltipIndex?: number | string | null
+            }) => {
+              const point = pointFromTooltipState(state, profile.points)
+              if (point) queueActivePointChange(point)
+            }}
+            onMouseLeave={() => queueActivePointChange(null)}
           >
             <defs>
               <linearGradient
