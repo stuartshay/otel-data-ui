@@ -1,9 +1,11 @@
 import type { ActivityChartTrackPoint } from '@/components/garmin/ActivityChartData'
 import { kmToMi, metersToFeet } from '@/lib/units'
 
-interface SegmentElevationChartPoint {
+export interface SegmentElevationChartPoint {
   distanceMiles: number
   elevationFeet: number
+  latitude: number | null
+  longitude: number | null
 }
 
 export interface SegmentElevationProfileData {
@@ -35,6 +37,8 @@ export function buildSegmentElevationProfile(
       Math.max(0, (point.distance_from_start_km as number) - startDistanceKm),
     ),
     elevationFeet: metersToFeet(point.altitude as number),
+    latitude: isFiniteNumber(point.latitude) ? point.latitude : null,
+    longitude: isFiniteNumber(point.longitude) ? point.longitude : null,
   }))
   const lastPoint = points[points.length - 1]
   const distanceMiles = lastPoint.distanceMiles

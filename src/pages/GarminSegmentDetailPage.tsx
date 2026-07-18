@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
 import { SegmentElevationProfile } from '@/components/garmin/SegmentElevationProfile'
+import type { SegmentElevationChartPoint } from '@/components/garmin/SegmentElevationProfile.helpers'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
 import {
@@ -33,6 +34,13 @@ export function GarminSegmentDetailPage() {
   const navigate = useNavigate()
   const id = Number(segmentId)
   const validId = Number.isInteger(id) && id > 0
+  const [activeElevationPoint, setActiveElevationPoint] =
+    useState<SegmentElevationChartPoint | null>(null)
+  const [previousSegmentId, setPreviousSegmentId] = useState(segmentId)
+  if (segmentId !== previousSegmentId) {
+    setPreviousSegmentId(segmentId)
+    setActiveElevationPoint(null)
+  }
 
   useEffect(() => {
     setNRCustomAttribute('garmin.flow', true)
@@ -78,6 +86,16 @@ export function GarminSegmentDetailPage() {
         : [],
     [segment, sourceTrackData?.garminChartData],
   )
+  const activeLatLng =
+    activeElevationPoint?.latitude != null &&
+    Number.isFinite(activeElevationPoint.latitude) &&
+    activeElevationPoint.longitude != null &&
+    Number.isFinite(activeElevationPoint.longitude)
+      ? {
+          lat: activeElevationPoint.latitude,
+          lng: activeElevationPoint.longitude,
+        }
+      : null
 
   const backLink = (
     <Link
@@ -183,10 +201,12 @@ export function GarminSegmentDetailPage() {
               endLat={segment.end_latitude}
               endLon={segment.end_longitude}
               routePoints={routePoints}
+              activeLatLng={activeLatLng}
             />
             <SegmentElevationProfile
               routePoints={routePoints}
               loading={sourceTrackLoading}
+              onActivePointChange={setActiveElevationPoint}
             />
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Distance</dt>

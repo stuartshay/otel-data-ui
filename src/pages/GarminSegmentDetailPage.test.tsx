@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes } from 'react-router-dom'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import { GarminSegmentDetailPage } from './GarminSegmentDetailPage'
 
@@ -14,18 +14,48 @@ const segmentHooks = vi.hoisted(() => ({
 vi.mock('@/__generated__/graphql', () => segmentHooks)
 vi.mock('@/lib/newrelic-browser', () => ({ setNRCustomAttribute: vi.fn() }))
 vi.mock('@/components/garmin/SegmentStartEndMap', () => ({
-  SegmentStartEndMap: ({ routePoints = [] }: { routePoints?: unknown[] }) => (
-    <div data-testid="segment-map">map points: {routePoints.length}</div>
+  SegmentStartEndMap: ({
+    routePoints = [],
+    activeLatLng,
+  }: {
+    routePoints?: unknown[]
+    activeLatLng?: { lat: number; lng: number } | null
+  }) => (
+    <div data-testid="segment-map">
+      map points: {routePoints.length}; marker:{' '}
+      {activeLatLng ? `${activeLatLng.lat}, ${activeLatLng.lng}` : 'none'}
+    </div>
   ),
 }))
 vi.mock('@/components/garmin/SegmentElevationProfile', () => ({
   SegmentElevationProfile: ({
     routePoints = [],
+    onActivePointChange,
   }: {
     routePoints?: unknown[]
+    onActivePointChange?: (
+      point: { latitude: number | null; longitude: number | null } | null,
+    ) => void
   }) => (
     <div data-testid="segment-elevation-profile">
       elevation points: {routePoints.length}
+      <button
+        onClick={() =>
+          onActivePointChange?.({ latitude: 40.795, longitude: -73.965 })
+        }
+      >
+        Hover valid elevation point
+      </button>
+      <button
+        onClick={() =>
+          onActivePointChange?.({ latitude: null, longitude: -73.965 })
+        }
+      >
+        Hover invalid elevation point
+      </button>
+      <button onClick={() => onActivePointChange?.(null)}>
+        Leave elevation profile
+      </button>
     </div>
   ),
 }))
@@ -56,13 +86,16 @@ const segment = {
 
 function renderDetail(entry = '/garmin/segments/1') {
   return renderWithRouter(
-    <Routes>
-      <Route
-        path="garmin/segments/:segmentId"
-        element={<GarminSegmentDetailPage />}
-      />
-      <Route path="garmin/segments" element={<div>segment list</div>} />
-    </Routes>,
+    <>
+      <Link to="/garmin/segments/2">Switch test segment</Link>
+      <Routes>
+        <Route
+          path="garmin/segments/:segmentId"
+          element={<GarminSegmentDetailPage />}
+        />
+        <Route path="garmin/segments" element={<div>segment list</div>} />
+      </Routes>
+    </>,
     { entries: [entry] },
   )
 }
@@ -207,6 +240,39 @@ describe('GarminSegmentDetailPage', () => {
     renderDetail()
 
     expect(screen.getByText('Segment not found')).toBeVisible()
+  })
+
+  it('synchronizes valid elevation hover coordinates with the map', async () => {
+    const user = userEvent.setup()
+    renderDetail()
+
+    expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover valid elevation point' }),
+    )
+    expect(screen.getByTestId('segment-map')).toHaveTextContent(
+      'marker: 40.795, -73.965',
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover invalid elevation point' }),
+    )
+    expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover valid elevation point' }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Leave elevation profile' }),
+    )
+    expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover valid elevation point' }),
+    )
+    await user.click(screen.getByRole('link', { name: 'Switch test segment' }))
+    expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
   })
 
   it('rejects an invalid segment id without running the queries', () => {

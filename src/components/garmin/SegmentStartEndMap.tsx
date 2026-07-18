@@ -12,6 +12,8 @@ interface SegmentStartEndMapProps {
     longitude: number
     altitude?: number | null
   }>
+  /** Point currently under the elevation-chart cursor. */
+  activeLatLng?: { lat: number; lng: number } | null
 }
 
 function elevationToColor(
@@ -50,9 +52,11 @@ export function SegmentStartEndMap({
   endLat,
   endLon,
   routePoints = [],
+  activeLatLng,
 }: Readonly<SegmentStartEndMapProps>) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const hoverMarkerRef = useRef<L.CircleMarker | null>(null)
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -152,8 +156,38 @@ export function SegmentStartEndMap({
     return () => {
       map.remove()
       mapInstanceRef.current = null
+      hoverMarkerRef.current = null
     }
   }, [startLat, startLon, endLat, endLon, routePoints])
+
+  // Move one marker along the route while the elevation graph is hovered.
+  // The map view stays fixed so scrubbing the graph does not disrupt context.
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (!activeLatLng) {
+      hoverMarkerRef.current?.remove()
+      hoverMarkerRef.current = null
+      return
+    }
+
+    if (hoverMarkerRef.current) {
+      hoverMarkerRef.current.setLatLng([activeLatLng.lat, activeLatLng.lng])
+    } else {
+      hoverMarkerRef.current = L.circleMarker(
+        [activeLatLng.lat, activeLatLng.lng],
+        {
+          radius: 6,
+          color: '#111827',
+          weight: 2,
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          className: 'segment-hover-marker',
+        },
+      ).addTo(map)
+    }
+  }, [activeLatLng])
 
   return (
     <div
