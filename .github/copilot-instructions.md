@@ -186,6 +186,35 @@ Final acceptance validation (YYYY-MM-DD):
 
 ### PR Review and Approval Workflow (Required)
 
+#### Mandatory Copilot Feedback Completion Rule
+
+⚠️ **Creating or updating a PR is not task completion.** For every PR, the
+assistant MUST actively check for Copilot feedback and complete all of the
+following before handing the PR off as ready:
+
+1. **Check after creation and every push** — Wait for the Copilot review and
+   inspect thread-aware review comments on the latest head commit. Do not assume
+   that a successful push or green CI means review is complete.
+2. **Classify every Copilot comment** — Determine whether each suggestion is
+   valid/actionable or invalid/not applicable based on the current code,
+   requirements, and test evidence.
+3. **Respond when valid** — Implement and validate the change, push it, reply
+   directly in the review thread with the supporting commit or evidence, and
+   then resolve the conversation.
+4. **Respond when invalid** — Reply directly in the review thread with a
+   specific, evidence-based reason the suggestion does not apply, and then
+   resolve the conversation. Never dismiss feedback silently.
+5. **Re-check the latest head** — After any feedback-driven push, wait for
+   updated CI, Copilot review, and approval state; check for new comments before
+   declaring the PR ready.
+6. **Enforce the handoff gate** — Do not report the PR as complete or ready to
+   merge while Copilot review is pending, any comment is unanswered, any
+   conversation is unresolved, or an actionable fix has not been validated.
+
+This rule authorizes review replies and conversation resolution after the
+required response or fix. It does **not** authorize merging; explicit user
+authorization is still required.
+
 Follow these steps for every PR targeting `master`:
 
 1. **Open ready for review** — Verify `isDraft: false`, the base branch is
