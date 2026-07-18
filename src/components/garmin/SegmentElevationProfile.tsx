@@ -32,6 +32,21 @@ function pointFromTooltipState(
   return Number.isInteger(index) && points[index] ? points[index] : null
 }
 
+function isSameProfilePoint(
+  previous: SegmentElevationChartPoint | null,
+  next: SegmentElevationChartPoint | null,
+): boolean {
+  if (previous === next) return true
+  if (!previous || !next) return false
+
+  return (
+    previous.distanceMiles === next.distanceMiles &&
+    previous.elevationFeet === next.elevationFeet &&
+    previous.latitude === next.latitude &&
+    previous.longitude === next.longitude
+  )
+}
+
 function formatFeet(value: number): string {
   return `${Math.round(value).toLocaleString()} ft`
 }
@@ -73,7 +88,7 @@ export function SegmentElevationProfile({
       activePointFrameRef.current = window.requestAnimationFrame(() => {
         activePointFrameRef.current = null
         const nextPoint = pendingActivePointRef.current
-        if (nextPoint !== null && lastActivePointRef.current === nextPoint) {
+        if (isSameProfilePoint(lastActivePointRef.current, nextPoint)) {
           return
         }
         lastActivePointRef.current = nextPoint

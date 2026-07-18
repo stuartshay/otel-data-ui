@@ -187,7 +187,7 @@ describe('SegmentElevationProfile', () => {
   it('emits the active profile point and clears it when the pointer leaves', async () => {
     const user = userEvent.setup()
     const onActivePointChange = vi.fn()
-    render(
+    const { rerender } = render(
       <SegmentElevationProfile
         routePoints={routePoints}
         onActivePointChange={onActivePointChange}
@@ -214,6 +214,12 @@ describe('SegmentElevationProfile', () => {
     )
     expect(onActivePointChange).toHaveBeenCalledTimes(1)
 
+    rerender(
+      <SegmentElevationProfile
+        routePoints={routePoints.map((point) => ({ ...point }))}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
     await user.click(
       screen.getByRole('button', { name: 'Hover profile point' }),
     )
@@ -233,6 +239,11 @@ describe('SegmentElevationProfile', () => {
     await waitFor(() =>
       expect(onActivePointChange).toHaveBeenLastCalledWith(null),
     )
+    const callCountAfterLeave = onActivePointChange.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: 'Leave profile' }))
+    await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    expect(onActivePointChange).toHaveBeenCalledTimes(callCountAfterLeave)
   })
 
   it('cancels a queued hover update when the profile unmounts', () => {

@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -29,18 +35,29 @@ import { setNRCustomAttribute } from '@/lib/newrelic-browser'
 // so a popular segment can have well over 100 total efforts.
 const EFFORTS_LIMIT = 500
 
+interface ActiveElevationSelection {
+  segmentId: string | undefined
+  point: SegmentElevationChartPoint
+}
+
 export function GarminSegmentDetailPage() {
   const { segmentId } = useParams<{ segmentId: string }>()
   const navigate = useNavigate()
   const id = Number(segmentId)
   const validId = Number.isInteger(id) && id > 0
-  const [activeElevationPoint, setActiveElevationPoint] =
-    useState<SegmentElevationChartPoint | null>(null)
-  const [previousSegmentId, setPreviousSegmentId] = useState(segmentId)
-  if (segmentId !== previousSegmentId) {
-    setPreviousSegmentId(segmentId)
-    setActiveElevationPoint(null)
-  }
+  const [activeElevationSelection, setActiveElevationSelection] =
+    useState<ActiveElevationSelection | null>(null)
+  const activeElevationPoint =
+    activeElevationSelection != null &&
+    activeElevationSelection.segmentId === segmentId
+      ? activeElevationSelection.point
+      : null
+  const handleActiveElevationPointChange = useCallback(
+    (point: SegmentElevationChartPoint | null) => {
+      setActiveElevationSelection(point ? { segmentId, point } : null)
+    },
+    [segmentId],
+  )
 
   useEffect(() => {
     setNRCustomAttribute('garmin.flow', true)
@@ -206,7 +223,7 @@ export function GarminSegmentDetailPage() {
             <SegmentElevationProfile
               routePoints={routePoints}
               loading={sourceTrackLoading}
-              onActivePointChange={setActiveElevationPoint}
+              onActivePointChange={handleActiveElevationPointChange}
             />
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Distance</dt>
