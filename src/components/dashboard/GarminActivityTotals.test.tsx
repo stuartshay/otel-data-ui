@@ -726,11 +726,11 @@ describe('GarminActivityTotals', () => {
     expect(refetch).not.toHaveBeenCalled()
     expect(apolloMocks.query.mock.calls.slice(failedAttemptCallCount)).toEqual(
       expect.arrayContaining([
-        [
+        expect.arrayContaining([
           expect.objectContaining({
             variables: expect.objectContaining({ period: 'week' }),
           }),
-        ],
+        ]),
       ]),
     )
   })
