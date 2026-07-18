@@ -1,17 +1,16 @@
-import {
-  Cloud,
-  CloudDrizzle,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
-  CloudSnow,
-  Loader2,
-  Sun,
-  Wind,
-} from 'lucide-react'
+import { Loader2, Wind } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { celsiusToFahrenheit, kmhToMph, mmToInches } from '@/lib/units'
-import { describeWeatherCode, weatherIconKind } from './WeatherPanel.helpers'
+import { kmhToMph, mmToInches } from '@/lib/units'
+import {
+  WEATHER_ICONS,
+  describeWeatherCode,
+  fmtTemp,
+  weatherIconKind,
+} from './WeatherPanel.helpers'
+import {
+  WeatherHourlyBreakdown,
+  type WeatherHourlyPoint,
+} from './WeatherHourlyBreakdown'
 
 export interface WeatherPanelData {
   temperature_c?: number | null
@@ -29,21 +28,7 @@ interface WeatherPanelProps {
   weather: WeatherPanelData | null | undefined
   loading?: boolean
   error?: string | null
-}
-
-const WEATHER_ICONS = {
-  clear: Sun,
-  cloud: Cloud,
-  fog: CloudFog,
-  drizzle: CloudDrizzle,
-  rain: CloudRain,
-  snow: CloudSnow,
-  thunderstorm: CloudLightning,
-  unknown: Cloud,
-} as const
-
-function fmtTemp(celsius: number | null | undefined): string {
-  return celsius != null ? `${Math.round(celsiusToFahrenheit(celsius))}°F` : '—'
+  hourly?: WeatherHourlyPoint[] | null
 }
 
 function fmtWind(kmh: number | null | undefined): string {
@@ -71,6 +56,7 @@ export function WeatherPanel({
   weather,
   loading,
   error,
+  hourly,
 }: Readonly<WeatherPanelProps>) {
   return (
     <Card data-testid="weather-panel">
@@ -141,6 +127,8 @@ export function WeatherPanel({
                 Gusts up to {fmtWind(weather.wind_gusts_kmh)}
               </div>
             )}
+
+            <WeatherHourlyBreakdown hours={hourly} />
 
             {weather.is_provisional && (
               <p className="text-xs text-muted-foreground italic">

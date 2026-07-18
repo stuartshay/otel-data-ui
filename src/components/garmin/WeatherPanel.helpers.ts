@@ -1,3 +1,14 @@
+import {
+  Cloud,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  Sun,
+} from 'lucide-react'
+import { celsiusToFahrenheit } from '@/lib/units'
+
 // WMO weather interpretation codes as returned by Open-Meteo.
 // https://open-meteo.com/en/docs (see "WMO Weather interpretation codes")
 const WMO_DESCRIPTIONS: Record<number, string> = {
@@ -58,4 +69,38 @@ export function weatherIconKind(
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow'
   if (code >= 95 && code <= 99) return 'thunderstorm'
   return 'unknown'
+}
+
+export const WEATHER_ICONS = {
+  clear: Sun,
+  cloud: Cloud,
+  fog: CloudFog,
+  drizzle: CloudDrizzle,
+  rain: CloudRain,
+  snow: CloudSnow,
+  thunderstorm: CloudLightning,
+  unknown: Cloud,
+} as const
+
+export function fmtTemp(celsius: number | null | undefined): string {
+  return celsius != null ? `${Math.round(celsiusToFahrenheit(celsius))}°F` : '—'
+}
+
+export interface TemperatureRange {
+  minF: number
+  maxF: number
+}
+
+/** Min/max temperature (°F) across a set of readings, or null if none have a temperature. */
+export function temperatureRangeF(
+  temperaturesC: Array<number | null | undefined>,
+): TemperatureRange | null {
+  const known = temperaturesC
+    .filter((c): c is number => c != null)
+    .map(celsiusToFahrenheit)
+  if (known.length === 0) return null
+  return {
+    minF: Math.round(Math.min(...known)),
+    maxF: Math.round(Math.max(...known)),
+  }
 }

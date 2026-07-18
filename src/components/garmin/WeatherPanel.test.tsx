@@ -71,4 +71,39 @@ describe('WeatherPanel', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     expect(screen.getByText(/Unknown conditions/)).toBeInTheDocument()
   })
+
+  it('renders the hourly breakdown when multi-hour data is provided', () => {
+    render(
+      <WeatherPanel
+        weather={{
+          temperature_c: 18.4,
+          weather_code: 0,
+          is_provisional: false,
+        }}
+        hourly={[
+          { hour_index: 0, temperature_c: 18.4, weather_code: 0 },
+          { hour_index: 1, temperature_c: 15.0, weather_code: 61 },
+        ]}
+      />,
+    )
+
+    expect(screen.getByTestId('weather-hourly-breakdown')).toBeInTheDocument()
+  })
+
+  it('omits the hourly breakdown for a single-hour activity', () => {
+    render(
+      <WeatherPanel
+        weather={{
+          temperature_c: 18.4,
+          weather_code: 0,
+          is_provisional: false,
+        }}
+        hourly={[{ hour_index: 0, temperature_c: 18.4, weather_code: 0 }]}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId('weather-hourly-breakdown'),
+    ).not.toBeInTheDocument()
+  })
 })
