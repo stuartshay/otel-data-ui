@@ -52,5 +52,26 @@ test.describe('Garmin segment route map', () => {
       }),
     ).toBeVisible()
     await expect(elevationProfile.getByText('Start to finish')).toBeVisible()
+
+    const elevationChart = elevationProfile.locator(
+      '.recharts-responsive-container',
+    )
+    const chartBox = await elevationChart.boundingBox()
+    if (!chartBox) throw new Error('Segment elevation chart unavailable')
+    await page.mouse.move(
+      chartBox.x + chartBox.width / 2,
+      chartBox.y + chartBox.height / 2,
+    )
+
+    const hoverMarker = map.locator(
+      '.leaflet-overlay-pane svg path.segment-hover-marker',
+    )
+    await expect(hoverMarker).toHaveCount(1, { timeout: 5_000 })
+    await expect(
+      elevationProfile.locator('.recharts-tooltip-cursor'),
+    ).toHaveCount(1, { timeout: 5_000 })
+
+    await page.mouse.move(0, 0)
+    await expect(hoverMarker).toHaveCount(0, { timeout: 5_000 })
   })
 })

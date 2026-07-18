@@ -14,6 +14,8 @@ const leafletMocks = vi.hoisted(() => {
   const marker = {
     bindPopup: vi.fn().mockReturnThis(),
     addTo: vi.fn().mockReturnThis(),
+    setLatLng: vi.fn().mockReturnThis(),
+    remove: vi.fn(),
   }
   const bounds = {
     isValid: vi.fn(() => true),
@@ -114,6 +116,80 @@ describe('SegmentStartEndMap', () => {
         ([, options]) => (options as { color: string }).color,
       ),
     ).toEqual(['#2563eb', '#2563eb'])
+  })
+
+  it('adds, moves, and removes one chart hover marker without refitting', async () => {
+    const routePoints = [
+      { latitude: 40.79, longitude: -73.96, altitude: 10 },
+      { latitude: 40.8, longitude: -73.95, altitude: 20 },
+    ]
+    const { rerender } = render(
+      <SegmentStartEndMap
+        startLat={40.79}
+        startLon={-73.96}
+        endLat={40.8}
+        endLon={-73.95}
+        routePoints={routePoints}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(2),
+    )
+
+    rerender(
+      <SegmentStartEndMap
+        startLat={40.79}
+        startLon={-73.96}
+        endLat={40.8}
+        endLon={-73.95}
+        routePoints={routePoints}
+        activeLatLng={{ lat: 40.795, lng: -73.955 }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(leafletMocks.circleMarker).toHaveBeenLastCalledWith(
+        [40.795, -73.955],
+        expect.objectContaining({ className: 'segment-hover-marker' }),
+      ),
+    )
+    expect(leafletMocks.mapInstance.fitBounds).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <SegmentStartEndMap
+        startLat={40.79}
+        startLon={-73.96}
+        endLat={40.8}
+        endLon={-73.95}
+        routePoints={routePoints}
+        activeLatLng={{ lat: 40.797, lng: -73.953 }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(leafletMocks.marker.setLatLng).toHaveBeenLastCalledWith([
+        40.797, -73.953,
+      ]),
+    )
+    expect(leafletMocks.circleMarker).toHaveBeenCalledTimes(3)
+    expect(leafletMocks.mapInstance.fitBounds).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <SegmentStartEndMap
+        startLat={40.79}
+        startLon={-73.96}
+        endLat={40.8}
+        endLon={-73.95}
+        routePoints={routePoints}
+        activeLatLng={null}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(leafletMocks.marker.remove).toHaveBeenCalledOnce(),
+    )
+    expect(leafletMocks.mapInstance.fitBounds).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to a straight dashed line and skips invalid bounds', async () => {
