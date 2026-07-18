@@ -1,11 +1,51 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { format, subDays } from 'date-fns'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 
 // Freeze the system clock so weekly-mode tests that derive labels and query
 // variables from `new Date()` are deterministic regardless of when CI runs.
 const FROZEN_NOW = new Date('2026-04-15T12:00:00Z')
+
+const pointerCaptureMethodNames = [
+  'hasPointerCapture',
+  'releasePointerCapture',
+  'setPointerCapture',
+] as const
+const pointerCaptureDescriptors = Object.fromEntries(
+  pointerCaptureMethodNames.map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(HTMLElement.prototype, name),
+  ]),
+)
+
+beforeAll(() => {
+  Object.defineProperties(HTMLElement.prototype, {
+    hasPointerCapture: { configurable: true, value: vi.fn(() => false) },
+    releasePointerCapture: { configurable: true, value: vi.fn() },
+    setPointerCapture: { configurable: true, value: vi.fn() },
+  })
+})
+
+afterAll(() => {
+  for (const name of pointerCaptureMethodNames) {
+    const descriptor = pointerCaptureDescriptors[name]
+    if (descriptor) {
+      Object.defineProperty(HTMLElement.prototype, name, descriptor)
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, name)
+    }
+  }
+})
 
 let latestBarChartData: Array<Record<string, unknown>> = []
 
@@ -42,8 +82,43 @@ vi.mock('recharts', () => ({
   },
   CartesianGrid: () => null,
   XAxis: () => null,
-  YAxis: () => null,
-  Tooltip: () => null,
+  YAxis: ({ tickFormatter }: { tickFormatter?: (value: number) => string }) => (
+    <div data-testid="activity-totals-axis-value">
+      {tickFormatter?.(12.345)}
+    </div>
+  ),
+  Tooltip: ({
+    formatter,
+    labelFormatter,
+  }: {
+    formatter?: (value: number | string) => [string, string]
+    labelFormatter?: (
+      label: string,
+      payload?: Array<{ payload?: { activity_count?: number } }>,
+    ) => string
+  }) => {
+    const numericValue = formatter?.(12.345)
+    const stringValue = formatter?.('6.789')
+    return (
+      <div>
+        <div data-testid="activity-totals-tooltip-number">
+          {numericValue?.join(' ')}
+        </div>
+        <div data-testid="activity-totals-tooltip-string">
+          {stringValue?.join(' ')}
+        </div>
+        <div data-testid="activity-totals-tooltip-singular">
+          {labelFormatter?.('2025', [{ payload: { activity_count: 1 } }])}
+        </div>
+        <div data-testid="activity-totals-tooltip-plural">
+          {labelFormatter?.('2026', [{ payload: { activity_count: 2 } }])}
+        </div>
+        <div data-testid="activity-totals-tooltip-empty">
+          {labelFormatter?.('2024')}
+        </div>
+      </div>
+    )
+  },
   Bar: () => null,
 }))
 
@@ -295,6 +370,92 @@ describe('GarminActivityTotals', () => {
         }),
       ]),
     )
+  })
+
+  it('updates the visible month and full-history query range', async () => {
+    const user = userEvent.setup()
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: {
+        garminActivityTotals: [
+          {
+            period_start: '2026-01-01',
+            activity_count: 1,
+            total_distance_km: 10,
+            total_duration_seconds: 3600,
+            total_ascent_m: 100,
+            total_calories: 500,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('combobox', { name: /select month/i }))
+    await user.click(screen.getByRole('option', { name: 'Jan' }))
+
+    expect(screen.getByText(/January by year/i)).toBeInTheDocument()
+    const lastCall = hooks.useGarminActivityTotalsQuery.mock.calls.at(-1)?.[0]
+    expect(lastCall?.variables).toEqual(
+      expect.objectContaining({
+        date_from: '2010-01-01',
+        date_to: '2026-01-31',
+      }),
+    )
+  })
+
+  it('formats chart values and activity counts for the selected metric', async () => {
+    const user = userEvent.setup()
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: {
+        garminActivityTotals: [
+          {
+            period_start: '2026-04-01',
+            activity_count: 2,
+            total_distance_km: 12.345,
+            total_duration_seconds: 3600,
+            total_ascent_m: 100,
+            total_calories: 500,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+
+    render(<GarminActivityTotals />)
+
+    expect(screen.getByTestId('activity-totals-axis-value')).toHaveTextContent(
+      '12.3',
+    )
+    expect(
+      screen.getByTestId('activity-totals-tooltip-number'),
+    ).toHaveTextContent('12.3 km Distance')
+    expect(
+      screen.getByTestId('activity-totals-tooltip-string'),
+    ).toHaveTextContent('6.8 km Distance')
+    expect(
+      screen.getByTestId('activity-totals-tooltip-singular'),
+    ).toHaveTextContent('2025 — 1 activity')
+    expect(
+      screen.getByTestId('activity-totals-tooltip-plural'),
+    ).toHaveTextContent('2026 — 2 activities')
+    expect(
+      screen.getByTestId('activity-totals-tooltip-empty'),
+    ).toHaveTextContent('2024 — 0 activities')
+
+    await user.click(screen.getByRole('radio', { name: 'Calories' }))
+
+    expect(screen.getByTestId('activity-totals-axis-value')).toHaveTextContent(
+      '12',
+    )
+    expect(
+      screen.getByTestId('activity-totals-tooltip-number'),
+    ).toHaveTextContent('12 kcal Calories')
   })
 
   it('omits empty years before the earliest returned activity bucket', () => {
