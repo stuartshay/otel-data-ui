@@ -695,6 +695,65 @@ describe('GarminActivityTotals', () => {
     )
   })
 
+  it('weekly mode renders query errors and retries the weekly requests', async () => {
+    const refetch = vi.fn()
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch,
+    })
+    apolloMocks.query.mockRejectedValueOnce(new Error('weekly totals failed'))
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    expect(await screen.findByText('weekly totals failed')).toBeInTheDocument()
+    const failedAttemptCallCount = apolloMocks.query.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: /retry/i }))
+
+    await waitFor(() => {
+      expect(apolloMocks.query.mock.calls.length).toBeGreaterThan(
+        failedAttemptCallCount,
+      )
+    })
+    await waitFor(() => {
+      expect(screen.queryByText('weekly totals failed')).not.toBeInTheDocument()
+    })
+    expect(refetch).not.toHaveBeenCalled()
+    expect(apolloMocks.query.mock.calls.slice(failedAttemptCallCount)).toEqual(
+      expect.arrayContaining([
+        [
+          expect.objectContaining({
+            variables: expect.objectContaining({ period: 'week' }),
+          }),
+        ],
+      ]),
+    )
+  })
+
+  it('weekly mode renders a safe message for non-error rejections', async () => {
+    hooks.useGarminActivityTotalsQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: vi.fn(),
+    })
+    apolloMocks.query.mockRejectedValueOnce('gateway unavailable')
+
+    const user = userEvent.setup()
+    render(<GarminActivityTotals />)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    expect(
+      await screen.findByText('Failed to load weekly totals'),
+    ).toBeInTheDocument()
+  })
+
   it('weekly mode pages backward and forward by 7 days', async () => {
     hooks.useGarminActivityTotalsQuery.mockReturnValue({
       data: undefined,
