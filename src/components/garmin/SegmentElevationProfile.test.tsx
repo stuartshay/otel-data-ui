@@ -95,6 +95,21 @@ describe('buildSegmentElevationProfile', () => {
       ]),
     ).toBeNull()
   })
+
+  it('calculates the elevation domain for a large route without spreading point data', () => {
+    const largeRoute = Array.from({ length: 150_000 }, (_, index) => ({
+      timestamp: '2026-07-18T12:00:00Z',
+      distance_from_start_km: index / 1_000,
+      altitude: 10 + (index % 20),
+    }))
+
+    const profile = buildSegmentElevationProfile(largeRoute)
+
+    expect(profile?.points).toHaveLength(150_000)
+    expect(profile?.startElevationFeet).toBeCloseTo(32.81, 2)
+    expect(profile?.finishElevationFeet).toBeCloseTo(95.14, 2)
+    expect(profile?.yDomain).toEqual([22, 106])
+  })
 })
 
 describe('SegmentElevationProfile', () => {

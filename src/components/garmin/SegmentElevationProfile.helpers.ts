@@ -47,9 +47,13 @@ export function buildSegmentElevationProfile(
     elevationGainMeters += Math.max(0, altitude - previousAltitude)
   }
 
-  const elevations = points.map((point) => point.elevationFeet)
-  const minElevation = Math.min(...elevations)
-  const maxElevation = Math.max(...elevations)
+  let minElevation = points[0].elevationFeet
+  let maxElevation = minElevation
+  for (let index = 1; index < points.length; index++) {
+    const elevation = points[index].elevationFeet
+    minElevation = Math.min(minElevation, elevation)
+    maxElevation = Math.max(maxElevation, elevation)
+  }
   const padding = Math.max(10, (maxElevation - minElevation) * 0.15)
 
   return {
