@@ -43,6 +43,17 @@ export function formatDurationShort(
   return `${m}m ${s}s`
 }
 
+export function formatTimeOfDay(value: string | null | undefined): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
 export function formatPace(avgSpeedKmh: number | null): string {
   if (avgSpeedKmh == null || avgSpeedKmh === 0) return '—'
   const minsPerMi = 60 / kmhToMph(avgSpeedKmh)
