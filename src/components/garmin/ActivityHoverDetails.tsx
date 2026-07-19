@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { reverseGeocode } from '@/services/geocoder'
 import type { ChartDataPoint } from './ActivityChartData'
+import {
+  formatReverseGeocodedAddress,
+  useReverseGeocodedAddress,
+} from './useReverseGeocodedAddress'
 
 interface ActivityHoverDetailsProps {
   point: ChartDataPoint | null
@@ -12,97 +14,12 @@ interface ActivityHoverDetailsProps {
   onToggleSave?: () => void
 }
 
-type AddressState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'ok'; label: string }
-  | { status: 'empty' }
-  | { status: 'error' }
-
-// Round to ~11m precision so small jitter between adjacent samples reuses the
-// cache and we do not flood the geocoder while a cursor sweeps a chart.
-function roundCoord(n: number): number {
-  return Math.round(n * 10_000) / 10_000
-}
-
-const DEBOUNCE_MS = 250
-const addressCache = new Map<string, string | null>()
-
-interface CoordKey {
-  key: string
-  lat: number
-  lon: number
-}
-
-function coordKey(point: ChartDataPoint | null): CoordKey | null {
-  const latitude = point?.latitude
-  const longitude = point?.longitude
-  if (
-    latitude == null ||
-    longitude == null ||
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    return null
-  }
-  const lat = roundCoord(latitude)
-  const lon = roundCoord(longitude)
-  return { key: `${lat},${lon}`, lat, lon }
-}
-
 export function ActivityHoverDetails({
   point,
   isSaved = false,
   onToggleSave,
 }: Readonly<ActivityHoverDetailsProps>) {
-  const target = useMemo(() => coordKey(point), [point])
-  const [pendingState, setPendingState] = useState<{
-    key: string
-    state: AddressState
-  } | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-
-  useEffect(() => {
-    if (!target) return
-    if (addressCache.has(target.key)) return
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const res = await reverseGeocode(target.lat, target.lon, 1)
-        if (controller.signal.aborted) return
-        const label = res.features[0]?.properties?.label ?? null
-        addressCache.set(target.key, label)
-        setPendingState({
-          key: target.key,
-          state: label ? { status: 'ok', label } : { status: 'empty' },
-        })
-      } catch {
-        if (controller.signal.aborted) return
-        setPendingState({ key: target.key, state: { status: 'error' } })
-      }
-    }, DEBOUNCE_MS)
-
-    return () => {
-      window.clearTimeout(timer)
-      controller.abort()
-    }
-  }, [target])
-
-  const address: AddressState = (() => {
-    if (!target) return { status: 'idle' }
-    if (addressCache.has(target.key)) {
-      const cached = addressCache.get(target.key)
-      return cached ? { status: 'ok', label: cached } : { status: 'empty' }
-    }
-    if (pendingState?.key === target.key) {
-      return pendingState.state
-    }
-    return { status: 'loading' }
-  })()
+  const address = useReverseGeocodedAddress(point?.latitude, point?.longitude)
 
   if (!point) {
     return (
@@ -188,28 +105,12 @@ export function ActivityHoverDetails({
             className="font-medium"
             data-testid="activity-hover-address-value"
           >
-            {renderAddress(address)}
+            {formatReverseGeocodedAddress(address)}
           </span>
         </div>
       </CardContent>
     </Card>
   )
-}
-
-function renderAddress(state: AddressState): string {
-  switch (state.status) {
-    case 'loading':
-      return 'Resolving…'
-    case 'ok':
-      return state.label
-    case 'empty':
-      return 'No address found'
-    case 'error':
-      return 'Unavailable'
-    case 'idle':
-    default:
-      return '—'
-  }
 }
 
 // Format the hover distance in miles, appending the km value when available.

@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
 import { SegmentElevationProfile } from '@/components/garmin/SegmentElevationProfile'
 import type { SegmentElevationChartPoint } from '@/components/garmin/SegmentElevationProfile.helpers'
+import { SegmentPointAddress } from '@/components/garmin/SegmentPointAddress'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
 import {
@@ -166,6 +167,11 @@ export function GarminSegmentDetailPage() {
     )
   }
 
+  const addressLatLng = activeLatLng ?? {
+    lat: segment.start_latitude,
+    lng: segment.start_longitude,
+  }
+
   let effortsStatusNode: ReactNode = null
   if (effortsLoading && !effortsData) {
     effortsStatusNode = <LoadingState message="Loading efforts..." />
@@ -219,6 +225,11 @@ export function GarminSegmentDetailPage() {
               endLon={segment.end_longitude}
               routePoints={routePoints}
               activeLatLng={activeLatLng}
+            />
+            <SegmentPointAddress
+              latitude={addressLatLng.lat}
+              longitude={addressLatLng.lng}
+              selected={activeLatLng != null}
             />
             <SegmentElevationProfile
               routePoints={routePoints}

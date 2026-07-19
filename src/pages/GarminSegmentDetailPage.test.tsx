@@ -27,6 +27,21 @@ vi.mock('@/components/garmin/SegmentStartEndMap', () => ({
     </div>
   ),
 }))
+vi.mock('@/components/garmin/SegmentPointAddress', () => ({
+  SegmentPointAddress: ({
+    latitude,
+    longitude,
+    selected,
+  }: {
+    latitude: number
+    longitude: number
+    selected: boolean
+  }) => (
+    <div data-testid="segment-point-address">
+      {selected ? 'selected' : 'start'}: {latitude}, {longitude}
+    </div>
+  ),
+}))
 vi.mock('@/components/garmin/SegmentElevationProfile', () => ({
   SegmentElevationProfile: ({
     routePoints = [],
@@ -242,11 +257,14 @@ describe('GarminSegmentDetailPage', () => {
     expect(screen.getByText('Segment not found')).toBeVisible()
   })
 
-  it('synchronizes valid elevation hover coordinates with the map', async () => {
+  it('synchronizes elevation hover coordinates with the map and address', async () => {
     const user = userEvent.setup()
     renderDetail()
 
     expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+    expect(screen.getByTestId('segment-point-address')).toHaveTextContent(
+      'start: 40.79, -73.96',
+    )
 
     await user.click(
       screen.getByRole('button', { name: 'Hover valid elevation point' }),
@@ -254,11 +272,17 @@ describe('GarminSegmentDetailPage', () => {
     expect(screen.getByTestId('segment-map')).toHaveTextContent(
       'marker: 40.795, -73.965',
     )
+    expect(screen.getByTestId('segment-point-address')).toHaveTextContent(
+      'selected: 40.795, -73.965',
+    )
 
     await user.click(
       screen.getByRole('button', { name: 'Hover invalid elevation point' }),
     )
     expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+    expect(screen.getByTestId('segment-point-address')).toHaveTextContent(
+      'start: 40.79, -73.96',
+    )
 
     await user.click(
       screen.getByRole('button', { name: 'Hover valid elevation point' }),
@@ -267,6 +291,9 @@ describe('GarminSegmentDetailPage', () => {
       screen.getByRole('button', { name: 'Leave elevation profile' }),
     )
     expect(screen.getByTestId('segment-map')).toHaveTextContent('marker: none')
+    expect(screen.getByTestId('segment-point-address')).toHaveTextContent(
+      'start: 40.79, -73.96',
+    )
 
     await user.click(
       screen.getByRole('button', { name: 'Hover valid elevation point' }),

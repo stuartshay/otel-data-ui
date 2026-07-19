@@ -5,6 +5,7 @@ test.describe('Garmin segment route map', () => {
     page,
   }) => {
     await page.emulateMedia({ colorScheme: 'dark' })
+    await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'))
     const chartDataResponse = page.waitForResponse(async (response) => {
       if (response.request().method() !== 'POST') return false
 
@@ -22,6 +23,17 @@ test.describe('Garmin segment route map', () => {
 
     const map = page.getByTestId('segment-map')
     await expect(map).toBeVisible()
+
+    const pointAddress = page.getByTestId('segment-point-address')
+    const addressValue = page.getByTestId('segment-point-address-value')
+    await expect(pointAddress.getByText('Start point address')).toBeVisible()
+    await expect(addressValue).not.toHaveText('Resolving…', {
+      timeout: 10_000,
+    })
+    await expect(addressValue).not.toHaveText('—')
+    await expect(addressValue).not.toHaveText('Unavailable')
+    const startAddress = await addressValue.textContent()
+    if (!startAddress) throw new Error('Segment start address unavailable')
 
     const routePaths = map.locator(
       '.leaflet-overlay-pane svg path[fill="none"]',
@@ -56,8 +68,13 @@ test.describe('Garmin segment route map', () => {
     const elevationChart = elevationProfile.locator(
       '.recharts-responsive-container',
     )
+    await elevationChart.scrollIntoViewIfNeeded()
     const chartBox = await elevationChart.boundingBox()
     if (!chartBox) throw new Error('Segment elevation chart unavailable')
+    const selectedAddressResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/v1/reverse?') && response.status() === 200,
+    )
     await page.mouse.move(
       chartBox.x + chartBox.width / 2,
       chartBox.y + chartBox.height / 2,
@@ -70,8 +87,16 @@ test.describe('Garmin segment route map', () => {
     await expect(
       elevationProfile.locator('.recharts-tooltip-cursor'),
     ).toHaveCount(1, { timeout: 5_000 })
+    await expect(pointAddress.getByText('Selected point address')).toBeVisible()
+    await selectedAddressResponse
+    await expect(addressValue).not.toHaveText('Resolving…', {
+      timeout: 10_000,
+    })
+    await expect(addressValue).not.toHaveText('Unavailable')
 
     await page.mouse.move(0, 0)
     await expect(hoverMarker).toHaveCount(0, { timeout: 5_000 })
+    await expect(pointAddress.getByText('Start point address')).toBeVisible()
+    await expect(addressValue).toHaveText(startAddress)
   })
 })
