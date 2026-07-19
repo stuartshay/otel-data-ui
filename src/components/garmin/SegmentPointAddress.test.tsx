@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const geocoderMocks = vi.hoisted(() => ({
   reverseGeocode: vi.fn(),
@@ -20,6 +20,10 @@ describe('SegmentPointAddress', () => {
   beforeEach(() => {
     vi.useRealTimers()
     geocoderMocks.reverseGeocode.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('resolves the start address, follows selection, and restores the cache', async () => {
