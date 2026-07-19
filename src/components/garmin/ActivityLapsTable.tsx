@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatDuration, metersToFeet } from '@/lib/units'
+import { formatDuration, formatTimeOfDay, metersToFeet } from '@/lib/units'
 import { cn } from '@/lib/utils'
 import type { ActivityChartTrackPoint } from './ActivityChartData'
 import { toRoutePoints } from './ActivityLapRoutePoints'
@@ -69,17 +69,6 @@ function formatCalories(value: number | null | undefined): string {
   return `${Math.round(value)} kcal`
 }
 
-function formatTimestamp(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
 function formatPercent(value: number | null | undefined): string {
   if (value == null) return '—'
   return `${Math.round(value)}%`
@@ -137,8 +126,8 @@ function ActivityLapDetailsPanel({
             <div>
               <h3 className="text-lg font-semibold">Lap {lap.lap_index}</h3>
               <p className="text-sm text-muted-foreground">
-                {formatTimestamp(lap.start_time)} –{' '}
-                {formatTimestamp(
+                {formatTimeOfDay(lap.start_time)} –{' '}
+                {formatTimeOfDay(
                   timeWindow
                     ? new Date(timeWindow.endTime).toISOString()
                     : null,

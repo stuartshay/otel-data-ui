@@ -7,6 +7,7 @@ import {
   celsiusToFahrenheit,
   formatDuration,
   formatPace,
+  formatTimeOfDay,
 } from '@/lib/units'
 import type { ActivityChartTrackPoint } from './ActivityChartData'
 import { ZONE_COLORS } from './heartRateZones'
@@ -111,17 +112,6 @@ function formatTotalIntensityMinutes(
     return `${moderate + vigorous * 2} min`
   }
   return fmtUnit(total, 'min')
-}
-
-function formatTimeOfDay(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-  })
 }
 
 function formatHeartRate(value: number | null | undefined): string {

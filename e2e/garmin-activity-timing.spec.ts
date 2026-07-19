@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 // Regression test for a Garmin Edge 540 Solar device bug where the FIT
 // session `timestamp` field was equal to `start_time` instead of the true
@@ -10,12 +10,18 @@ const ACTIVITY_ID =
 const START_TIME_ISO = '2026-07-17T20:58:17Z'
 const END_TIME_ISO = '2026-07-18T00:22:56.807Z'
 
-function expectedTimeOfDay(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+// Formats in the browser (not the Node test runner) so the expectation uses
+// the same Intl implementation and timezone as the UI under test.
+function expectedTimeOfDay(page: Page, iso: string): Promise<string> {
+  return page.evaluate(
+    (value) =>
+      new Date(value).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    iso,
+  )
 }
 
 test.describe('Garmin activity timing statistics', () => {
@@ -37,8 +43,12 @@ test.describe('Garmin activity timing statistics', () => {
       .getByText('Elapsed Time', { exact: true })
       .locator('..')
 
-    await expect(startTimeRow).toContainText(expectedTimeOfDay(START_TIME_ISO))
-    await expect(endTimeRow).toContainText(expectedTimeOfDay(END_TIME_ISO))
+    await expect(startTimeRow).toContainText(
+      await expectedTimeOfDay(page, START_TIME_ISO),
+    )
+    await expect(endTimeRow).toContainText(
+      await expectedTimeOfDay(page, END_TIME_ISO),
+    )
     await expect(elapsedTimeRow).toContainText('3:24:39')
 
     const startText = await startTimeRow.innerText()
