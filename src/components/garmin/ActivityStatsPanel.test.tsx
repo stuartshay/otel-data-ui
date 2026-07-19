@@ -39,6 +39,47 @@ describe('ActivityStatsPanel', () => {
     expect(screen.getByText((1793).toLocaleString())).toBeInTheDocument()
   })
 
+  it('renders start and end time in the Timing section', () => {
+    render(
+      <ActivityStatsPanel
+        activity={{
+          start_time: '2026-07-18T14:03:17.000Z',
+          end_time: '2026-07-18T16:46:34.000Z',
+        }}
+      />,
+    )
+
+    const startTimeLabel = screen.getByText('Start Time')
+    const endTimeLabel = screen.getByText('End Time')
+    expect(startTimeLabel.nextElementSibling).toHaveTextContent(
+      new Date('2026-07-18T14:03:17.000Z').toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    )
+    expect(endTimeLabel.nextElementSibling).toHaveTextContent(
+      new Date('2026-07-18T16:46:34.000Z').toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    )
+  })
+
+  it('shows a fallback when start and end time are unavailable', () => {
+    render(
+      <ActivityStatsPanel activity={{ start_time: null, end_time: null }} />,
+    )
+
+    expect(screen.getByText('Start Time').nextElementSibling).toHaveTextContent(
+      '—',
+    )
+    expect(screen.getByText('End Time').nextElementSibling).toHaveTextContent(
+      '—',
+    )
+  })
+
   it('shows a fallback when total strokes is unavailable', () => {
     render(<ActivityStatsPanel activity={{ total_strokes: null }} />)
 

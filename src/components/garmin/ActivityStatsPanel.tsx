@@ -20,6 +20,8 @@ interface ActivityStatsPanelProps {
   activity: {
     distance_km?: number | null
     total_distance?: number | null
+    start_time?: string | null
+    end_time?: string | null
     duration_seconds?: number | null
     total_elapsed_time?: number | null
     total_timer_time?: number | null
@@ -109,6 +111,17 @@ function formatTotalIntensityMinutes(
     return `${moderate + vigorous * 2} min`
   }
   return fmtUnit(total, 'min')
+}
+
+function formatTimeOfDay(value: string | null | undefined): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 function formatHeartRate(value: number | null | undefined): string {
@@ -342,6 +355,14 @@ function buildStatSections(
     {
       title: 'Timing',
       rows: [
+        {
+          label: 'Start Time',
+          value: formatTimeOfDay(a.start_time),
+        },
+        {
+          label: 'End Time',
+          value: formatTimeOfDay(a.end_time),
+        },
         {
           label: 'Duration',
           value: formatDuration(a.duration_seconds ?? null),
