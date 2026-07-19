@@ -26,12 +26,17 @@ test.describe('Garmin Activity Weather - hourly breakdown', () => {
 
     const hourlyBreakdown = page.getByTestId('weather-hourly-breakdown')
     await expect(hourlyBreakdown).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByText('Over the activity')).toBeVisible()
+    await expect(hourlyBreakdown.getByText('Over the activity')).toBeVisible()
+    await expect(hourlyBreakdown.getByText('85°F – 87°F')).toBeVisible()
+    for (const label of ['Start', '+1h', '+2h', '+3h', '+4h']) {
+      await expect(
+        hourlyBreakdown.getByText(label, { exact: true }),
+      ).toBeVisible()
+    }
 
     await weatherPanel.scrollIntoViewIfNeeded()
-    await page.screenshot({
+    await weatherPanel.screenshot({
       path: path.join(SCREENSHOT_DIR, 'weather-panel-full.png'),
-      clip: await weatherPanel.boundingBox().then((box) => box ?? undefined),
     })
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, 'stats-tab-full-page.png'),
