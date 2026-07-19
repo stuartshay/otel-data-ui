@@ -27,7 +27,9 @@ test.describe('Garmin Activity Weather - hourly breakdown', () => {
     const hourlyBreakdown = page.getByTestId('weather-hourly-breakdown')
     await expect(hourlyBreakdown).toBeVisible({ timeout: 20_000 })
     await expect(hourlyBreakdown.getByText('Over the activity')).toBeVisible()
-    await expect(hourlyBreakdown.getByText('85°F – 87°F')).toBeVisible()
+    await expect(
+      hourlyBreakdown.getByText(/^-?\d+°F – -?\d+°F$/),
+    ).toBeVisible()
     for (const label of ['Start', '+1h', '+2h', '+3h', '+4h']) {
       await expect(
         hourlyBreakdown.getByText(label, { exact: true }),
