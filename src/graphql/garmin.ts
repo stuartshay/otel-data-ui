@@ -297,6 +297,20 @@ export const GARMIN_ACTIVITY_WEATHER_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_WEATHER_HOURLY_QUERY = gql`
+  query GarminActivityWeatherHourly($activity_id: String!) {
+    garminActivityWeatherHourly(activity_id: $activity_id) {
+      activity_id
+      hour_index
+      observed_at
+      temperature_c
+      weather_code
+      source
+      is_provisional
+    }
+  }
+`
+
 export const GARMIN_LAPS_COMPARISON_QUERY = gql`
   query GarminLapsComparison(
     $sport: String

@@ -8,6 +8,7 @@ import {
   useGarminChartDataQuery,
   useGarminActivityClimbsQuery,
   useGarminActivityLapsQuery,
+  useGarminActivityWeatherHourlyQuery,
   useGarminActivityWeatherQuery,
   useGarminExportPointsLazyQuery,
   type GarminActivityClimbsQuery,
@@ -671,6 +672,10 @@ export function GarminDetailPage() {
     variables: { activity_id: activityId ?? '' },
     skip: !activityId,
   })
+  const { data: weatherHourlyData } = useGarminActivityWeatherHourlyQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+  })
   // Resolve map clicks against the *full-resolution* track series (not the
   // downsampled chart series) so the selected point is the true nearest
   // location, then convert it into the chart/display shape using the same
@@ -803,6 +808,7 @@ export function GarminDetailPage() {
             weather={weatherData?.garminActivityWeather}
             loading={weatherLoading}
             error={weatherError?.message}
+            hourly={weatherHourlyData?.garminActivityWeatherHourly}
           />
         </TabsContent>
 
