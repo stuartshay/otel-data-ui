@@ -7,6 +7,7 @@ import {
   celsiusToFahrenheit,
   formatDuration,
   formatPace,
+  formatTimeOfDay,
 } from '@/lib/units'
 import type { ActivityChartTrackPoint } from './ActivityChartData'
 import { ZONE_COLORS } from './heartRateZones'
@@ -20,6 +21,8 @@ interface ActivityStatsPanelProps {
   activity: {
     distance_km?: number | null
     total_distance?: number | null
+    start_time?: string | null
+    end_time?: string | null
     duration_seconds?: number | null
     total_elapsed_time?: number | null
     total_timer_time?: number | null
@@ -342,6 +345,14 @@ function buildStatSections(
     {
       title: 'Timing',
       rows: [
+        {
+          label: 'Start Time',
+          value: formatTimeOfDay(a.start_time),
+        },
+        {
+          label: 'End Time',
+          value: formatTimeOfDay(a.end_time),
+        },
         {
           label: 'Duration',
           value: formatDuration(a.duration_seconds ?? null),
