@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { reverseGeocode } from '@/services/geocoder'
+import { useReverseGeocodePointLazyQuery } from '@/__generated__/graphql'
 
 export type ReverseGeocodedAddressState =
   | { status: 'idle' }
@@ -53,6 +53,9 @@ export function useReverseGeocodedAddress(
   latitude: number | null | undefined,
   longitude: number | null | undefined,
 ): ReverseGeocodedAddressState {
+  const [reverseGeocodePoint] = useReverseGeocodePointLazyQuery({
+    fetchPolicy: 'no-cache',
+  })
   const target = useMemo(
     () => coordinateTarget(latitude, longitude),
     [latitude, longitude],
@@ -72,14 +75,18 @@ export function useReverseGeocodedAddress(
 
     const timer = window.setTimeout(async () => {
       try {
-        const response = await reverseGeocode(
-          target.latitude,
-          target.longitude,
-          1,
-        )
+        const response = await reverseGeocodePoint({
+          variables: {
+            latitude: target.latitude,
+            longitude: target.longitude,
+          },
+        })
         if (controller.signal.aborted) return
+        if (response.error) throw response.error
 
-        const label = response.features[0]?.properties?.label ?? null
+        const point = response.data?.reverseGeocodePoint
+        const label =
+          point?.status === 'success' ? (point.display_address ?? null) : null
         addressCache.set(target.key, label)
         setPendingState({
           key: target.key,
@@ -95,7 +102,7 @@ export function useReverseGeocodedAddress(
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [target])
+  }, [reverseGeocodePoint, target])
 
   if (!target) return { status: 'idle' }
   if (addressCache.has(target.key)) {

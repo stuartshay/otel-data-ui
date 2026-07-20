@@ -826,6 +826,39 @@ export type GeocodedAddressSummary = {
   waypoint_kind?: Maybe<Scalars['String']['output']>;
 };
 
+/** Reverse-geocoded address for a 4-decimal coordinate cell. */
+export type GeocodedPointAddress = {
+  __typename?: 'GeocodedPointAddress';
+  /** Pelias confidence score from 0 to 1. */
+  confidence?: Maybe<Scalars['Float']['output']>;
+  /** Country name. */
+  country?: Maybe<Scalars['String']['output']>;
+  /** Full formatted address label. */
+  display_address?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when geocoding was performed. */
+  geocoded_at?: Maybe<Scalars['String']['output']>;
+  /** House or building number. */
+  housenumber?: Maybe<Scalars['String']['output']>;
+  /** Resolved 4-decimal cell latitude. */
+  latitude: Scalars['Float']['output'];
+  /** City or town. */
+  locality?: Maybe<Scalars['String']['output']>;
+  /** Resolved 4-decimal cell longitude. */
+  longitude: Scalars['Float']['output'];
+  /** Neighbourhood name. */
+  neighbourhood?: Maybe<Scalars['String']['output']>;
+  /** Postal or ZIP code. */
+  postalcode?: Maybe<Scalars['String']['output']>;
+  /** State or province. */
+  region?: Maybe<Scalars['String']['output']>;
+  /** Whether the address came from the cache or Pelias fallback. */
+  resolution_source: PointAddressSource;
+  /** Geocoding status: success, no_coverage, error, or pending. */
+  status: Scalars['String']['output'];
+  /** Street name. */
+  street?: Maybe<Scalars['String']['output']>;
+};
+
 /** Coverage statistics for a single geocoding source (owntracks or garmin). */
 export type GeocodingSourceStatus = {
   __typename?: 'GeocodingSourceStatus';
@@ -1068,6 +1101,13 @@ export type PaginationInfo = {
   total: Scalars['Int']['output'];
 };
 
+/** Source used to resolve a point address. */
+export type PointAddressSource =
+  /** Address was returned from the persisted dense-cell cache. */
+  | 'database'
+  /** Address was resolved through the Pelias fallback and persisted. */
+  | 'pelias';
+
 export type Query = {
   __typename?: 'Query';
   /** Calculate the geodesic distance between two geographic points. */
@@ -1140,6 +1180,11 @@ export type Query = {
   referenceLocation?: Maybe<ReferenceLocation>;
   /** List all named reference locations. */
   referenceLocations: Array<ReferenceLocation>;
+  /**
+   * Resolve an address from the dense point-cell cache, with Pelias fallback.
+   * Requires the caller's Authorization header because a fallback can persist data.
+   */
+  reverseGeocodePoint: GeocodedPointAddress;
   /** Retrieve a paginated list of unified GPS points from all sources. */
   unifiedGps: UnifiedGpsConnection;
   /** Find GPS points within a named reference location's geofence. */
@@ -1291,6 +1336,12 @@ export type QueryReferenceLocationArgs = {
 };
 
 
+export type QueryReverseGeocodePointArgs = {
+  latitude: Scalars['Float']['input'];
+  longitude: Scalars['Float']['input'];
+};
+
+
 export type QueryUnifiedGpsArgs = {
   date_from?: InputMaybe<Scalars['String']['input']>;
   date_to?: InputMaybe<Scalars['String']['input']>;
@@ -1409,6 +1460,8 @@ export type WithinReferenceResult = {
 };
 
 /** Input for creating a saved Garmin segment (e.g. from an activity lap or climb). */
+
+/** Source used to resolve a point address. */
 
 /** Sort direction for query results. */
 
@@ -1536,6 +1589,14 @@ export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GeocodingStatusQuery = { geocodingStatus: { total_locations: number, geocoded: number, success: number, pending: number, no_coverage: number, errors: number, coverage_percent: number } };
+
+export type ReverseGeocodePointQueryVariables = Exact<{
+  latitude: number;
+  longitude: number;
+}>;
+
+
+export type ReverseGeocodePointQuery = { reverseGeocodePoint: { latitude: number, longitude: number, display_address: string | null, status: string, resolution_source: PointAddressSource } };
 
 export type TriggerGeocodingMutationVariables = Exact<{
   batch_size?: number | null | undefined;
@@ -2676,6 +2737,54 @@ export type GeocodingStatusQueryHookResult = ReturnType<typeof useGeocodingStatu
 export type GeocodingStatusLazyQueryHookResult = ReturnType<typeof useGeocodingStatusLazyQuery>;
 export type GeocodingStatusSuspenseQueryHookResult = ReturnType<typeof useGeocodingStatusSuspenseQuery>;
 export type GeocodingStatusQueryResult = ApolloReactCommon.QueryResult<GeocodingStatusQuery, GeocodingStatusQueryVariables>;
+export const ReverseGeocodePointDocument = gql`
+    query ReverseGeocodePoint($latitude: Float!, $longitude: Float!) {
+  reverseGeocodePoint(latitude: $latitude, longitude: $longitude) {
+    latitude
+    longitude
+    display_address
+    status
+    resolution_source
+  }
+}
+    `;
+
+/**
+ * __useReverseGeocodePointQuery__
+ *
+ * To run a query within a React component, call `useReverseGeocodePointQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReverseGeocodePointQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReverseGeocodePointQuery({
+ *   variables: {
+ *      latitude: // value for 'latitude'
+ *      longitude: // value for 'longitude'
+ *   },
+ * });
+ */
+export function useReverseGeocodePointQuery(baseOptions: ApolloReactHooks.QueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables> & ({ variables: ReverseGeocodePointQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+      }
+export function useReverseGeocodePointLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+        }
+// @ts-ignore
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>;
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<ReverseGeocodePointQuery | undefined, ReverseGeocodePointQueryVariables>;
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+        }
+export type ReverseGeocodePointQueryHookResult = ReturnType<typeof useReverseGeocodePointQuery>;
+export type ReverseGeocodePointLazyQueryHookResult = ReturnType<typeof useReverseGeocodePointLazyQuery>;
+export type ReverseGeocodePointSuspenseQueryHookResult = ReturnType<typeof useReverseGeocodePointSuspenseQuery>;
+export type ReverseGeocodePointQueryResult = ApolloReactCommon.QueryResult<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>;
 export const TriggerGeocodingDocument = gql`
     mutation TriggerGeocoding($batch_size: Int, $retry_failed: Boolean) {
   triggerGeocoding(batch_size: $batch_size, retry_failed: $retry_failed) {
