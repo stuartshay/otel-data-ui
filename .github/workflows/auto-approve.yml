@@ -31,6 +31,52 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'stuartshay'
     steps:
+      - name: Request Copilot review
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const copilotLogin = 'copilot-pull-request-reviewer[bot]';
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const existingReview = reviews.some(
+              review => review.user?.login === copilotLogin && review.state !== 'DISMISSED'
+            );
+
+            if (existingReview) {
+              core.info('Copilot review already exists');
+              return;
+            }
+
+            const { data: requestedReviewers } = await github.rest.pulls.listRequestedReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const existingRequest = requestedReviewers.users.some(
+              reviewer => reviewer.login === copilotLogin
+            );
+
+            if (existingRequest) {
+              core.info('Copilot review already requested');
+              return;
+            }
+
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              reviewers: [copilotLogin],
+            });
+
+            core.info('Requested Copilot review');
+
       - name: Wait for Copilot review
         uses: actions/github-script@v9
         with:

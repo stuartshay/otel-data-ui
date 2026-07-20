@@ -73,7 +73,9 @@ test.describe('Garmin segment route map', () => {
     if (!chartBox) throw new Error('Segment elevation chart unavailable')
     const selectedAddressResponse = page.waitForResponse(
       (response) =>
-        response.url().includes('/v1/reverse?') && response.status() === 200,
+        response.request().method() === 'POST' &&
+        (response.request().postData() ?? '').includes('ReverseGeocodePoint') &&
+        response.status() === 200,
     )
     await page.mouse.move(
       chartBox.x + chartBox.width / 2,
@@ -88,7 +90,21 @@ test.describe('Garmin segment route map', () => {
       elevationProfile.locator('.recharts-tooltip-cursor'),
     ).toHaveCount(1, { timeout: 5_000 })
     await expect(pointAddress.getByText('Selected point address')).toBeVisible()
-    await selectedAddressResponse
+    const selectedResponse = await selectedAddressResponse
+    const selectedResponseBody = (await selectedResponse.json()) as {
+      data?: {
+        reverseGeocodePoint?: {
+          status?: string
+          resolution_source?: string
+        }
+      }
+    }
+    expect(['success', 'no_coverage']).toContain(
+      selectedResponseBody.data?.reverseGeocodePoint?.status,
+    )
+    expect(['database', 'pelias']).toContain(
+      selectedResponseBody.data?.reverseGeocodePoint?.resolution_source,
+    )
     await expect(addressValue).not.toHaveText('Resolving…', {
       timeout: 10_000,
     })
