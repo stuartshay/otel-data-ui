@@ -390,6 +390,45 @@ export type GarminActivityLapsGroup = {
   laps: Array<GarminActivityLap>;
 };
 
+/** A FIT device_info record (head unit or paired sensor) for a Garmin activity. */
+export type GarminActivitySensor = {
+  __typename?: 'GarminActivitySensor';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** ANT network the sensor was paired on */
+  ant_network?: Maybe<Scalars['String']['output']>;
+  /** FIT battery_status: new, good, ok, low, critical, charging, unknown */
+  battery_status?: Maybe<Scalars['String']['output']>;
+  /** Sensor battery voltage */
+  battery_voltage?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was inserted */
+  created_at?: Maybe<Scalars['String']['output']>;
+  /** FIT device_index: 0 for the head unit, 1+ for each paired sensor */
+  device_index: Scalars['Int']['output'];
+  /** FIT antplus_device_type (e.g. heart_rate, bike_power) */
+  device_type?: Maybe<Scalars['String']['output']>;
+  /** Raw Garmin product enum id from the FIT file */
+  garmin_product?: Maybe<Scalars['Int']['output']>;
+  /** Sensor hardware revision */
+  hardware_version?: Maybe<Scalars['Int']['output']>;
+  /** Unique sensor row identifier */
+  id: Scalars['Float']['output'];
+  /** True for the recording device (head unit / FIT creator record) */
+  is_primary: Scalars['Boolean']['output'];
+  /** Sensor manufacturer (e.g. garmin) */
+  manufacturer?: Maybe<Scalars['String']['output']>;
+  /** Friendly product name (e.g. Edge 540 Solar, HRM-Pro) */
+  product_name?: Maybe<Scalars['String']['output']>;
+  /** Sensor serial number, when reported */
+  serial_number?: Maybe<Scalars['Float']['output']>;
+  /** Sensor firmware/software version */
+  software_version?: Maybe<Scalars['String']['output']>;
+  /** Sensor connection type (ant, antplus, bluetooth_low_energy, ...) */
+  source_type?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when the row was last updated */
+  updated_at?: Maybe<Scalars['String']['output']>;
+};
+
 /** Aggregated Garmin activity totals for a single time bucket (week, month, or year). */
 export type GarminActivityTotal = {
   __typename?: 'GarminActivityTotal';
@@ -826,6 +865,39 @@ export type GeocodedAddressSummary = {
   waypoint_kind?: Maybe<Scalars['String']['output']>;
 };
 
+/** Reverse-geocoded address for a 4-decimal coordinate cell. */
+export type GeocodedPointAddress = {
+  __typename?: 'GeocodedPointAddress';
+  /** Pelias confidence score from 0 to 1. */
+  confidence?: Maybe<Scalars['Float']['output']>;
+  /** Country name. */
+  country?: Maybe<Scalars['String']['output']>;
+  /** Full formatted address label. */
+  display_address?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when geocoding was performed. */
+  geocoded_at?: Maybe<Scalars['String']['output']>;
+  /** House or building number. */
+  housenumber?: Maybe<Scalars['String']['output']>;
+  /** Resolved 4-decimal cell latitude. */
+  latitude: Scalars['Float']['output'];
+  /** City or town. */
+  locality?: Maybe<Scalars['String']['output']>;
+  /** Resolved 4-decimal cell longitude. */
+  longitude: Scalars['Float']['output'];
+  /** Neighbourhood name. */
+  neighbourhood?: Maybe<Scalars['String']['output']>;
+  /** Postal or ZIP code. */
+  postalcode?: Maybe<Scalars['String']['output']>;
+  /** State or province. */
+  region?: Maybe<Scalars['String']['output']>;
+  /** Whether the address came from the cache or Pelias fallback. */
+  resolution_source: PointAddressSource;
+  /** Geocoding status: success, no_coverage, error, or pending. */
+  status: Scalars['String']['output'];
+  /** Street name. */
+  street?: Maybe<Scalars['String']['output']>;
+};
+
 /** Coverage statistics for a single geocoding source (owntracks or garmin). */
 export type GeocodingSourceStatus = {
   __typename?: 'GeocodingSourceStatus';
@@ -1068,6 +1140,13 @@ export type PaginationInfo = {
   total: Scalars['Int']['output'];
 };
 
+/** Source used to resolve a point address. */
+export type PointAddressSource =
+  /** Address was returned from the persisted dense-cell cache. */
+  | 'database'
+  /** Address was resolved through the Pelias fallback and persisted. */
+  | 'pelias';
+
 export type Query = {
   __typename?: 'Query';
   /** Calculate the geodesic distance between two geographic points. */
@@ -1088,6 +1167,8 @@ export type Query = {
   garminActivityClimbs: Array<GarminActivityClimb>;
   /** Retrieve Garmin-native or derived laps for a Garmin activity. */
   garminActivityLaps: Array<GarminActivityLap>;
+  /** Retrieve the sensors (head unit + paired ANT+/BLE devices) recorded for a Garmin activity. */
+  garminActivitySensors: Array<GarminActivitySensor>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
   /**
@@ -1140,6 +1221,11 @@ export type Query = {
   referenceLocation?: Maybe<ReferenceLocation>;
   /** List all named reference locations. */
   referenceLocations: Array<ReferenceLocation>;
+  /**
+   * Resolve an address from the dense point-cell cache, with Pelias fallback.
+   * Requires the caller's Authorization header because a fallback can persist data.
+   */
+  reverseGeocodePoint: GeocodedPointAddress;
   /** Retrieve a paginated list of unified GPS points from all sources. */
   unifiedGps: UnifiedGpsConnection;
   /** Find GPS points within a named reference location's geofence. */
@@ -1190,6 +1276,11 @@ export type QueryGarminActivityClimbsArgs = {
 
 
 export type QueryGarminActivityLapsArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivitySensorsArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -1288,6 +1379,12 @@ export type QueryNearbyPointsArgs = {
 
 export type QueryReferenceLocationArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type QueryReverseGeocodePointArgs = {
+  latitude: Scalars['Float']['input'];
+  longitude: Scalars['Float']['input'];
 };
 
 
@@ -1489,6 +1586,13 @@ export type GarminActivityLapsQueryVariables = Exact<{
 
 
 export type GarminActivityLapsQuery = { garminActivityLaps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, paved_distance_meters: number | null, unpaved_distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null, created_at: string | null, updated_at: string | null }> };
+
+export type GarminActivitySensorsQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminActivitySensorsQuery = { garminActivitySensors: Array<{ id: number, activity_id: string, device_index: number, is_primary: boolean, device_type: string | null, manufacturer: string | null, garmin_product: number | null, product_name: string | null, serial_number: number | null, software_version: string | null, hardware_version: number | null, battery_status: string | null, battery_voltage: number | null, ant_network: string | null, source_type: string | null, created_at: string | null, updated_at: string | null }> };
 
 export type GarminActivityWeatherQueryVariables = Exact<{
   activity_id: string;
@@ -2320,6 +2424,65 @@ export type GarminActivityLapsQueryHookResult = ReturnType<typeof useGarminActiv
 export type GarminActivityLapsLazyQueryHookResult = ReturnType<typeof useGarminActivityLapsLazyQuery>;
 export type GarminActivityLapsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityLapsSuspenseQuery>;
 export type GarminActivityLapsQueryResult = ApolloReactCommon.QueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
+export const GarminActivitySensorsDocument = gql`
+    query GarminActivitySensors($activity_id: String!) {
+  garminActivitySensors(activity_id: $activity_id) {
+    id
+    activity_id
+    device_index
+    is_primary
+    device_type
+    manufacturer
+    garmin_product
+    product_name
+    serial_number
+    software_version
+    hardware_version
+    battery_status
+    battery_voltage
+    ant_network
+    source_type
+    created_at
+    updated_at
+  }
+}
+    `;
+
+/**
+ * __useGarminActivitySensorsQuery__
+ *
+ * To run a query within a React component, call `useGarminActivitySensorsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivitySensorsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivitySensorsQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminActivitySensorsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables> & ({ variables: GarminActivitySensorsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+      }
+export function useGarminActivitySensorsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>;
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivitySensorsQuery | undefined, GarminActivitySensorsQueryVariables>;
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+        }
+export type GarminActivitySensorsQueryHookResult = ReturnType<typeof useGarminActivitySensorsQuery>;
+export type GarminActivitySensorsLazyQueryHookResult = ReturnType<typeof useGarminActivitySensorsLazyQuery>;
+export type GarminActivitySensorsSuspenseQueryHookResult = ReturnType<typeof useGarminActivitySensorsSuspenseQuery>;
+export type GarminActivitySensorsQueryResult = ApolloReactCommon.QueryResult<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>;
 export const GarminActivityWeatherDocument = gql`
     query GarminActivityWeather($activity_id: String!) {
   garminActivityWeather(activity_id: $activity_id) {
