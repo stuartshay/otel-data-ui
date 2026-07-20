@@ -284,17 +284,10 @@ export const GARMIN_ACTIVITY_SENSORS_QUERY = gql`
       is_primary
       device_type
       manufacturer
-      garmin_product
       product_name
-      serial_number
       software_version
-      hardware_version
       battery_status
       battery_voltage
-      ant_network
-      source_type
-      created_at
-      updated_at
     }
   }
 `

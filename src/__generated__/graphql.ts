@@ -1592,7 +1592,7 @@ export type GarminActivitySensorsQueryVariables = Exact<{
 }>;
 
 
-export type GarminActivitySensorsQuery = { garminActivitySensors: Array<{ id: number, activity_id: string, device_index: number, is_primary: boolean, device_type: string | null, manufacturer: string | null, garmin_product: number | null, product_name: string | null, serial_number: number | null, software_version: string | null, hardware_version: number | null, battery_status: string | null, battery_voltage: number | null, ant_network: string | null, source_type: string | null, created_at: string | null, updated_at: string | null }> };
+export type GarminActivitySensorsQuery = { garminActivitySensors: Array<{ id: number, activity_id: string, device_index: number, is_primary: boolean, device_type: string | null, manufacturer: string | null, product_name: string | null, software_version: string | null, battery_status: string | null, battery_voltage: number | null }> };
 
 export type GarminActivityWeatherQueryVariables = Exact<{
   activity_id: string;
@@ -2433,17 +2433,10 @@ export const GarminActivitySensorsDocument = gql`
     is_primary
     device_type
     manufacturer
-    garmin_product
     product_name
-    serial_number
     software_version
-    hardware_version
     battery_status
     battery_voltage
-    ant_network
-    source_type
-    created_at
-    updated_at
   }
 }
     `;

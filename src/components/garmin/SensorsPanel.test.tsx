@@ -40,7 +40,7 @@ describe('SensorsPanel', () => {
     )
 
     expect(screen.getByText('Edge 540 Solar')).toBeInTheDocument()
-    expect(screen.getByText(/garmin.*v27\.14/)).toBeInTheDocument()
+    expect(screen.getByText('Garmin · v27.14')).toBeInTheDocument()
   })
 
   it('maps a known device_type to a friendly label for paired sensors', () => {

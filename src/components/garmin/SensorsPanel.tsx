@@ -47,6 +47,15 @@ const DEVICE_TYPE_LABELS: Record<string, string> = {
   fitness_equipment: 'Fitness Equipment',
 }
 
+function capitalizeWords(value: string | null | undefined): string | null {
+  if (!value) return null
+  return value
+    .replaceAll('_', ' ')
+    .split(' ')
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(' ')
+}
+
 function sensorLabel(sensor: ActivitySensor): string {
   if (sensor.is_primary) {
     return sensor.product_name ?? 'Recording Device'
@@ -161,9 +170,9 @@ export function SensorsPanel({
                   <div className="text-sm font-medium">
                     {sensorLabel(sensor)}
                   </div>
-                  <div className="text-xs text-muted-foreground capitalize">
+                  <div className="text-xs text-muted-foreground">
                     {[
-                      sensor.manufacturer?.replaceAll('_', ' '),
+                      capitalizeWords(sensor.manufacturer),
                       sensor.software_version && `v${sensor.software_version}`,
                     ]
                       .filter(Boolean)
