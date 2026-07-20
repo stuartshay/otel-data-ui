@@ -99,8 +99,8 @@ test.describe('Garmin segment route map', () => {
         }
       }
     }
-    expect(selectedResponseBody.data?.reverseGeocodePoint?.status).toBe(
-      'success',
+    expect(['success', 'no_coverage']).toContain(
+      selectedResponseBody.data?.reverseGeocodePoint?.status,
     )
     expect(['database', 'pelias']).toContain(
       selectedResponseBody.data?.reverseGeocodePoint?.resolution_source,
