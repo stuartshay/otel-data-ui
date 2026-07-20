@@ -85,8 +85,16 @@ export function useReverseGeocodedAddress(
         if (response.error) throw response.error
 
         const point = response.data?.reverseGeocodePoint
+        if (
+          !point ||
+          (point.status !== 'success' && point.status !== 'no_coverage')
+        ) {
+          setPendingState({ key: target.key, state: { status: 'error' } })
+          return
+        }
+
         const label =
-          point?.status === 'success' ? (point.display_address ?? null) : null
+          point.status === 'success' ? (point.display_address ?? null) : null
         addressCache.set(target.key, label)
         setPendingState({
           key: target.key,

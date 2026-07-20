@@ -11,14 +11,17 @@ vi.mock('@/__generated__/graphql', () => ({
 
 import { SegmentPointAddress } from './SegmentPointAddress'
 
-function geocoderResponse(label?: string) {
+function geocoderResponse(
+  label?: string,
+  status = label ? 'success' : 'no_coverage',
+) {
   return {
     data: {
       reverseGeocodePoint: {
         latitude: 40.7306,
         longitude: -73.9352,
         display_address: label ?? null,
-        status: label ? 'success' : 'no_coverage',
+        status,
         resolution_source: label ? 'database' : 'pelias',
       },
     },
@@ -125,6 +128,50 @@ describe('SegmentPointAddress', () => {
     )
     expect(await screen.findByText('Unavailable')).toBeInTheDocument()
   })
+
+  it.each([
+    { status: 'error', latitude: 40.6801 },
+    { status: 'pending', latitude: 40.6802 },
+  ])(
+    'shows $status as unavailable without caching it',
+    async ({ status, latitude }) => {
+      graphqlMocks.reverseGeocodePoint
+        .mockResolvedValueOnce(geocoderResponse(undefined, status))
+        .mockResolvedValueOnce(
+          geocoderResponse('Recovered point, New York, NY, USA'),
+        )
+
+      const { rerender } = render(
+        <SegmentPointAddress
+          latitude={latitude}
+          longitude={-73.9501}
+          selected
+        />,
+      )
+
+      expect(await screen.findByText('Unavailable')).toBeInTheDocument()
+
+      rerender(
+        <SegmentPointAddress
+          latitude={Number.NaN}
+          longitude={-73.9501}
+          selected={false}
+        />,
+      )
+      rerender(
+        <SegmentPointAddress
+          latitude={latitude}
+          longitude={-73.9501}
+          selected
+        />,
+      )
+
+      expect(
+        await screen.findByText('Recovered point, New York, NY, USA'),
+      ).toBeInTheDocument()
+      expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('debounces rapid coordinate changes and resolves only the latest point', async () => {
     vi.useFakeTimers()
