@@ -16,8 +16,12 @@ test.describe('Garmin activity sensors', () => {
 
     const sensorsPanel = page.getByTestId('sensors-panel')
     await expect(sensorsPanel).toBeVisible({ timeout: 20_000 })
-    await expect(sensorsPanel.getByText('Edge 540 Solar')).toBeVisible({
+    // The activity's FIT device_info records include a non-primary
+    // component that shares the head unit's product name, so multiple
+    // "Edge 540 Solar" rows can appear -- assert on the first (primary) row.
+    await expect(sensorsPanel.getByText('Edge 540 Solar').first()).toBeVisible({
       timeout: 20_000,
     })
+    await expect(sensorsPanel.getByRole('listitem')).toHaveCount(5)
   })
 })
