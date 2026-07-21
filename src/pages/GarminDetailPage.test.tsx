@@ -14,6 +14,8 @@ const garminDetailHooks = vi.hoisted(() => ({
   useGarminActivityWeatherQuery: vi.fn(),
   useGarminActivityWeatherHourlyQuery: vi.fn(),
   useGarminExportPointsLazyQuery: vi.fn(),
+  useReverseGeocodePointLazyQuery: vi.fn(),
+  reverseGeocodePoint: vi.fn(),
 }))
 const toastMocks = vi.hoisted(() => ({
   error: vi.fn(),
@@ -22,9 +24,6 @@ const toastMocks = vi.hoisted(() => ({
 
 vi.mock('@/__generated__/graphql', () => garminDetailHooks)
 vi.mock('sonner', () => ({ toast: toastMocks }))
-vi.mock('@/services/geocoder', () => ({
-  reverseGeocode: vi.fn().mockResolvedValue({ features: [] }),
-}))
 
 vi.mock('@/components/garmin/ActivityHeader', () => ({
   ActivityHeader: ({ backTo, sport }: { backTo: string; sport: string }) => (
@@ -192,6 +191,8 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminActivityWeatherQuery.mockReset()
     garminDetailHooks.useGarminActivityWeatherHourlyQuery.mockReset()
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReset()
+    garminDetailHooks.useReverseGeocodePointLazyQuery.mockReset()
+    garminDetailHooks.reverseGeocodePoint.mockReset()
     toastMocks.error.mockReset()
     toastMocks.warning.mockReset()
 
@@ -199,6 +200,18 @@ describe('GarminDetailPage', () => {
     garminDetailHooks.useGarminExportPointsLazyQuery.mockReturnValue([
       vi.fn(),
       { loading: false },
+    ])
+    garminDetailHooks.reverseGeocodePoint.mockResolvedValue({
+      data: {
+        reverseGeocodePoint: {
+          display_address: null,
+          status: 'no_coverage',
+          resolution_source: 'pelias',
+        },
+      },
+    })
+    garminDetailHooks.useReverseGeocodePointLazyQuery.mockReturnValue([
+      garminDetailHooks.reverseGeocodePoint,
     ])
     garminDetailHooks.useGarminActivityClimbsQuery.mockReturnValue({
       loading: false,

@@ -1,25 +1,37 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const geocoderMocks = vi.hoisted(() => ({
-  reverseGeocode: vi.fn(),
+const graphqlMocks = vi.hoisted(() => ({
+  reverseGeocodePoint: vi.fn(),
 }))
 
-vi.mock('@/services/geocoder', () => geocoderMocks)
+vi.mock('@/__generated__/graphql', () => ({
+  useReverseGeocodePointLazyQuery: () => [graphqlMocks.reverseGeocodePoint],
+}))
 
 import { SegmentPointAddress } from './SegmentPointAddress'
 
-function geocoderResponse(label?: string) {
+function geocoderResponse(
+  label?: string,
+  status = label ? 'success' : 'no_coverage',
+) {
   return {
-    type: 'FeatureCollection',
-    features: label ? [{ properties: { label } }] : [],
+    data: {
+      reverseGeocodePoint: {
+        latitude: 40.7306,
+        longitude: -73.9352,
+        display_address: label ?? null,
+        status,
+        resolution_source: label ? 'database' : 'pelias',
+      },
+    },
   }
 }
 
 describe('SegmentPointAddress', () => {
   beforeEach(() => {
     vi.useRealTimers()
-    geocoderMocks.reverseGeocode.mockReset()
+    graphqlMocks.reverseGeocodePoint.mockReset()
   })
 
   afterEach(() => {
@@ -27,7 +39,7 @@ describe('SegmentPointAddress', () => {
   })
 
   it('resolves the start address, follows selection, and restores the cache', async () => {
-    geocoderMocks.reverseGeocode
+    graphqlMocks.reverseGeocodePoint
       .mockResolvedValueOnce(geocoderResponse('5th Ave, New York, NY, USA'))
       .mockResolvedValueOnce(
         geocoderResponse('Central Park, New York, NY, USA'),
@@ -46,12 +58,9 @@ describe('SegmentPointAddress', () => {
     expect(
       await screen.findByText('5th Ave, New York, NY, USA'),
     ).toBeInTheDocument()
-    expect(geocoderMocks.reverseGeocode).toHaveBeenNthCalledWith(
-      1,
-      40.7306,
-      -73.9352,
-      1,
-    )
+    expect(graphqlMocks.reverseGeocodePoint).toHaveBeenNthCalledWith(1, {
+      variables: { latitude: 40.7306, longitude: -73.9352 },
+    })
 
     rerender(
       <SegmentPointAddress
@@ -65,12 +74,9 @@ describe('SegmentPointAddress', () => {
     expect(
       await screen.findByText('Central Park, New York, NY, USA'),
     ).toBeInTheDocument()
-    expect(geocoderMocks.reverseGeocode).toHaveBeenNthCalledWith(
-      2,
-      40.7711,
-      -73.9742,
-      1,
-    )
+    expect(graphqlMocks.reverseGeocodePoint).toHaveBeenNthCalledWith(2, {
+      variables: { latitude: 40.7711, longitude: -73.9742 },
+    })
 
     rerender(
       <SegmentPointAddress
@@ -82,7 +88,7 @@ describe('SegmentPointAddress', () => {
 
     expect(screen.getByText('Start point address')).toBeInTheDocument()
     expect(screen.getByText('5th Ave, New York, NY, USA')).toBeInTheDocument()
-    expect(geocoderMocks.reverseGeocode).toHaveBeenCalledTimes(2)
+    expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledTimes(2)
   })
 
   it('handles invalid coordinates, empty results, and geocoder errors', async () => {
@@ -97,9 +103,9 @@ describe('SegmentPointAddress', () => {
     expect(screen.getByTestId('segment-point-address-value')).toHaveTextContent(
       '—',
     )
-    expect(geocoderMocks.reverseGeocode).not.toHaveBeenCalled()
+    expect(graphqlMocks.reverseGeocodePoint).not.toHaveBeenCalled()
 
-    geocoderMocks.reverseGeocode.mockResolvedValueOnce(geocoderResponse())
+    graphqlMocks.reverseGeocodePoint.mockResolvedValueOnce(geocoderResponse())
     rerender(
       <SegmentPointAddress
         latitude={40.70011}
@@ -109,7 +115,10 @@ describe('SegmentPointAddress', () => {
     )
     expect(await screen.findByText('No address found')).toBeInTheDocument()
 
-    geocoderMocks.reverseGeocode.mockRejectedValueOnce(new Error('offline'))
+    graphqlMocks.reverseGeocodePoint.mockResolvedValueOnce({
+      data: undefined,
+      error: new Error('offline'),
+    })
     rerender(
       <SegmentPointAddress
         latitude={40.70021}
@@ -120,9 +129,53 @@ describe('SegmentPointAddress', () => {
     expect(await screen.findByText('Unavailable')).toBeInTheDocument()
   })
 
+  it.each([
+    { status: 'error', latitude: 40.6801 },
+    { status: 'pending', latitude: 40.6802 },
+  ])(
+    'shows $status as unavailable without caching it',
+    async ({ status, latitude }) => {
+      graphqlMocks.reverseGeocodePoint
+        .mockResolvedValueOnce(geocoderResponse(undefined, status))
+        .mockResolvedValueOnce(
+          geocoderResponse('Recovered point, New York, NY, USA'),
+        )
+
+      const { rerender } = render(
+        <SegmentPointAddress
+          latitude={latitude}
+          longitude={-73.9501}
+          selected
+        />,
+      )
+
+      expect(await screen.findByText('Unavailable')).toBeInTheDocument()
+
+      rerender(
+        <SegmentPointAddress
+          latitude={Number.NaN}
+          longitude={-73.9501}
+          selected={false}
+        />,
+      )
+      rerender(
+        <SegmentPointAddress
+          latitude={latitude}
+          longitude={-73.9501}
+          selected
+        />,
+      )
+
+      expect(
+        await screen.findByText('Recovered point, New York, NY, USA'),
+      ).toBeInTheDocument()
+      expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledTimes(2)
+    },
+  )
+
   it('debounces rapid coordinate changes and resolves only the latest point', async () => {
     vi.useFakeTimers()
-    geocoderMocks.reverseGeocode.mockResolvedValue(
+    graphqlMocks.reverseGeocodePoint.mockResolvedValue(
       geocoderResponse('Latest selected point, New York, NY, USA'),
     )
 
@@ -143,12 +196,10 @@ describe('SegmentPointAddress', () => {
 
     await act(async () => vi.advanceTimersByTimeAsync(250))
 
-    expect(geocoderMocks.reverseGeocode).toHaveBeenCalledOnce()
-    expect(geocoderMocks.reverseGeocode).toHaveBeenCalledWith(
-      40.7202,
-      -73.9102,
-      1,
-    )
+    expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledOnce()
+    expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledWith({
+      variables: { latitude: 40.7202, longitude: -73.9102 },
+    })
     expect(
       screen.getByText('Latest selected point, New York, NY, USA'),
     ).toBeInTheDocument()

@@ -1507,6 +1507,8 @@ export type WithinReferenceResult = {
 
 /** Input for creating a saved Garmin segment (e.g. from an activity lap or climb). */
 
+/** Source used to resolve a point address. */
+
 /** Sort direction for query results. */
 
 export type GarminActivitiesQueryVariables = Exact<{
@@ -1640,6 +1642,14 @@ export type GeocodingStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GeocodingStatusQuery = { geocodingStatus: { total_locations: number, geocoded: number, success: number, pending: number, no_coverage: number, errors: number, coverage_percent: number } };
+
+export type ReverseGeocodePointQueryVariables = Exact<{
+  latitude: number;
+  longitude: number;
+}>;
+
+
+export type ReverseGeocodePointQuery = { reverseGeocodePoint: { latitude: number, longitude: number, display_address: string | null, status: string, resolution_source: PointAddressSource } };
 
 export type TriggerGeocodingMutationVariables = Exact<{
   batch_size?: number | null | undefined;
@@ -2832,6 +2842,54 @@ export type GeocodingStatusQueryHookResult = ReturnType<typeof useGeocodingStatu
 export type GeocodingStatusLazyQueryHookResult = ReturnType<typeof useGeocodingStatusLazyQuery>;
 export type GeocodingStatusSuspenseQueryHookResult = ReturnType<typeof useGeocodingStatusSuspenseQuery>;
 export type GeocodingStatusQueryResult = ApolloReactCommon.QueryResult<GeocodingStatusQuery, GeocodingStatusQueryVariables>;
+export const ReverseGeocodePointDocument = gql`
+    query ReverseGeocodePoint($latitude: Float!, $longitude: Float!) {
+  reverseGeocodePoint(latitude: $latitude, longitude: $longitude) {
+    latitude
+    longitude
+    display_address
+    status
+    resolution_source
+  }
+}
+    `;
+
+/**
+ * __useReverseGeocodePointQuery__
+ *
+ * To run a query within a React component, call `useReverseGeocodePointQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReverseGeocodePointQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReverseGeocodePointQuery({
+ *   variables: {
+ *      latitude: // value for 'latitude'
+ *      longitude: // value for 'longitude'
+ *   },
+ * });
+ */
+export function useReverseGeocodePointQuery(baseOptions: ApolloReactHooks.QueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables> & ({ variables: ReverseGeocodePointQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+      }
+export function useReverseGeocodePointLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+        }
+// @ts-ignore
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>;
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<ReverseGeocodePointQuery | undefined, ReverseGeocodePointQueryVariables>;
+export function useReverseGeocodePointSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>(ReverseGeocodePointDocument, options);
+        }
+export type ReverseGeocodePointQueryHookResult = ReturnType<typeof useReverseGeocodePointQuery>;
+export type ReverseGeocodePointLazyQueryHookResult = ReturnType<typeof useReverseGeocodePointLazyQuery>;
+export type ReverseGeocodePointSuspenseQueryHookResult = ReturnType<typeof useReverseGeocodePointSuspenseQuery>;
+export type ReverseGeocodePointQueryResult = ApolloReactCommon.QueryResult<ReverseGeocodePointQuery, ReverseGeocodePointQueryVariables>;
 export const TriggerGeocodingDocument = gql`
     mutation TriggerGeocoding($batch_size: Int, $retry_failed: Boolean) {
   triggerGeocoding(batch_size: $batch_size, retry_failed: $retry_failed) {

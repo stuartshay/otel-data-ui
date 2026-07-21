@@ -2,11 +2,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChartDataPoint } from './ActivityChartData'
 
-const geocoderMocks = vi.hoisted(() => ({
-  reverseGeocode: vi.fn(),
+const graphqlMocks = vi.hoisted(() => ({
+  reverseGeocodePoint: vi.fn(),
 }))
 
-vi.mock('@/services/geocoder', () => geocoderMocks)
+vi.mock('@/__generated__/graphql', () => ({
+  useReverseGeocodePointLazyQuery: () => [graphqlMocks.reverseGeocodePoint],
+}))
 
 import { ActivityHoverDetails } from './ActivityHoverDetails'
 
@@ -30,7 +32,7 @@ function chartPoint(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
 
 describe('ActivityHoverDetails', () => {
   beforeEach(() => {
-    geocoderMocks.reverseGeocode.mockReset()
+    graphqlMocks.reverseGeocodePoint.mockReset()
   })
 
   it('shows instructional copy when no point is selected', () => {
@@ -39,19 +41,20 @@ describe('ActivityHoverDetails', () => {
     expect(
       screen.getByText(/Hover the Elevation or Speed chart/i),
     ).toBeInTheDocument()
-    expect(geocoderMocks.reverseGeocode).not.toHaveBeenCalled()
+    expect(graphqlMocks.reverseGeocodePoint).not.toHaveBeenCalled()
   })
 
   it('renders metrics and resolves the point address', async () => {
-    geocoderMocks.reverseGeocode.mockResolvedValue({
-      type: 'FeatureCollection',
-      features: [
-        {
-          properties: {
-            label: 'Brooklyn Bridge, New York, NY, USA',
-          },
+    graphqlMocks.reverseGeocodePoint.mockResolvedValue({
+      data: {
+        reverseGeocodePoint: {
+          latitude: 40.7123,
+          longitude: -74.0057,
+          display_address: 'Brooklyn Bridge, New York, NY, USA',
+          status: 'success',
+          resolution_source: 'database',
         },
-      ],
+      },
     })
 
     render(<ActivityHoverDetails point={chartPoint()} />)
@@ -65,11 +68,9 @@ describe('ActivityHoverDetails', () => {
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
 
     await waitFor(() =>
-      expect(geocoderMocks.reverseGeocode).toHaveBeenCalledWith(
-        40.7123,
-        -74.0057,
-        1,
-      ),
+      expect(graphqlMocks.reverseGeocodePoint).toHaveBeenCalledWith({
+        variables: { latitude: 40.7123, longitude: -74.0057 },
+      }),
     )
     expect(
       await screen.findByText('Brooklyn Bridge, New York, NY, USA'),
@@ -77,9 +78,16 @@ describe('ActivityHoverDetails', () => {
   })
 
   it('shows empty, unavailable, and missing metric fallbacks', async () => {
-    geocoderMocks.reverseGeocode.mockResolvedValueOnce({
-      type: 'FeatureCollection',
-      features: [],
+    graphqlMocks.reverseGeocodePoint.mockResolvedValueOnce({
+      data: {
+        reverseGeocodePoint: {
+          latitude: 40.7129,
+          longitude: -74.0061,
+          display_address: null,
+          status: 'no_coverage',
+          resolution_source: 'pelias',
+        },
+      },
     })
 
     const { rerender } = render(
@@ -101,7 +109,7 @@ describe('ActivityHoverDetails', () => {
     expect(screen.getAllByText('—')).toHaveLength(6)
     expect(await screen.findByText('No address found')).toBeInTheDocument()
 
-    geocoderMocks.reverseGeocode.mockRejectedValueOnce(new Error('offline'))
+    graphqlMocks.reverseGeocodePoint.mockRejectedValueOnce(new Error('offline'))
     rerender(
       <ActivityHoverDetails
         point={chartPoint({ latitude: 40.71341, longitude: -74.00661 })}
