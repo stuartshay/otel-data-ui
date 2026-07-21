@@ -8,6 +8,7 @@ import {
   useGarminChartDataQuery,
   useGarminActivityClimbsQuery,
   useGarminActivityLapsQuery,
+  useGarminActivitySensorsQuery,
   useGarminActivityWeatherHourlyQuery,
   useGarminActivityWeatherQuery,
   useGarminExportPointsLazyQuery,
@@ -34,6 +35,7 @@ import { SavedPointsList } from '@/components/garmin/SavedPointsList'
 import { SegmentAnalysis } from '@/components/garmin/SegmentAnalysis'
 import { ActivityStatsPanel } from '@/components/garmin/ActivityStatsPanel'
 import { WeatherPanel } from '@/components/garmin/WeatherPanel'
+import { SensorsPanel } from '@/components/garmin/SensorsPanel'
 import { ActivityLapsTable } from '@/components/garmin/ActivityLapsTable'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -665,6 +667,14 @@ export function GarminDetailPage() {
     skip: !activityId,
   })
   const {
+    data: sensorsData,
+    loading: sensorsLoading,
+    error: sensorsError,
+  } = useGarminActivitySensorsQuery({
+    variables: { activity_id: activityId ?? '' },
+    skip: !activityId,
+  })
+  const {
     data: weatherData,
     loading: weatherLoading,
     error: weatherError,
@@ -809,6 +819,11 @@ export function GarminDetailPage() {
             loading={weatherLoading}
             error={weatherError?.message}
             hourly={weatherHourlyData?.garminActivityWeatherHourly}
+          />
+          <SensorsPanel
+            sensors={sensorsData?.garminActivitySensors ?? []}
+            loading={sensorsLoading}
+            error={sensorsError?.message}
           />
         </TabsContent>
 

@@ -390,6 +390,45 @@ export type GarminActivityLapsGroup = {
   laps: Array<GarminActivityLap>;
 };
 
+/** A FIT device_info record (head unit or paired sensor) for a Garmin activity. */
+export type GarminActivitySensor = {
+  __typename?: 'GarminActivitySensor';
+  /** Parent Garmin activity identifier */
+  activity_id: Scalars['String']['output'];
+  /** ANT network the sensor was paired on */
+  ant_network?: Maybe<Scalars['String']['output']>;
+  /** FIT battery_status: new, good, ok, low, critical, charging, unknown */
+  battery_status?: Maybe<Scalars['String']['output']>;
+  /** Sensor battery voltage */
+  battery_voltage?: Maybe<Scalars['Float']['output']>;
+  /** UTC timestamp when the row was inserted */
+  created_at?: Maybe<Scalars['String']['output']>;
+  /** FIT device_index: 0 for the head unit, 1+ for each paired sensor */
+  device_index: Scalars['Int']['output'];
+  /** FIT antplus_device_type (e.g. heart_rate, bike_power) */
+  device_type?: Maybe<Scalars['String']['output']>;
+  /** Raw Garmin product enum id from the FIT file */
+  garmin_product?: Maybe<Scalars['Int']['output']>;
+  /** Sensor hardware revision */
+  hardware_version?: Maybe<Scalars['Int']['output']>;
+  /** Unique sensor row identifier */
+  id: Scalars['Float']['output'];
+  /** True for the recording device (head unit / FIT creator record) */
+  is_primary: Scalars['Boolean']['output'];
+  /** Sensor manufacturer (e.g. garmin) */
+  manufacturer?: Maybe<Scalars['String']['output']>;
+  /** Friendly product name (e.g. Edge 540 Solar, HRM-Pro) */
+  product_name?: Maybe<Scalars['String']['output']>;
+  /** Sensor serial number, when reported */
+  serial_number?: Maybe<Scalars['Float']['output']>;
+  /** Sensor firmware/software version */
+  software_version?: Maybe<Scalars['String']['output']>;
+  /** Sensor connection type (ant, antplus, bluetooth_low_energy, ...) */
+  source_type?: Maybe<Scalars['String']['output']>;
+  /** UTC timestamp when the row was last updated */
+  updated_at?: Maybe<Scalars['String']['output']>;
+};
+
 /** Aggregated Garmin activity totals for a single time bucket (week, month, or year). */
 export type GarminActivityTotal = {
   __typename?: 'GarminActivityTotal';
@@ -1128,6 +1167,8 @@ export type Query = {
   garminActivityClimbs: Array<GarminActivityClimb>;
   /** Retrieve Garmin-native or derived laps for a Garmin activity. */
   garminActivityLaps: Array<GarminActivityLap>;
+  /** Retrieve the sensors (head unit + paired ANT+/BLE devices) recorded for a Garmin activity. */
+  garminActivitySensors: Array<GarminActivitySensor>;
   /** Aggregate Garmin activity totals grouped by week, month, or year. */
   garminActivityTotals: Array<GarminActivityTotal>;
   /**
@@ -1235,6 +1276,11 @@ export type QueryGarminActivityClimbsArgs = {
 
 
 export type QueryGarminActivityLapsArgs = {
+  activity_id: Scalars['String']['input'];
+};
+
+
+export type QueryGarminActivitySensorsArgs = {
   activity_id: Scalars['String']['input'];
 };
 
@@ -1542,6 +1588,13 @@ export type GarminActivityLapsQueryVariables = Exact<{
 
 
 export type GarminActivityLapsQuery = { garminActivityLaps: Array<{ id: number, activity_id: string, lap_index: number, start_time: string | null, end_time: string | null, duration_seconds: number | null, elapsed_duration_seconds: number | null, moving_duration_seconds: number | null, distance_meters: number | null, paved_distance_meters: number | null, unpaved_distance_meters: number | null, avg_speed_mps: number | null, avg_heart_rate: number | null, max_heart_rate: number | null, total_ascent_meters: number | null, total_descent_meters: number | null, calories: number | null, created_at: string | null, updated_at: string | null }> };
+
+export type GarminActivitySensorsQueryVariables = Exact<{
+  activity_id: string;
+}>;
+
+
+export type GarminActivitySensorsQuery = { garminActivitySensors: Array<{ id: number, activity_id: string, device_index: number, is_primary: boolean, device_type: string | null, manufacturer: string | null, product_name: string | null, software_version: string | null, battery_status: string | null, battery_voltage: number | null }> };
 
 export type GarminActivityWeatherQueryVariables = Exact<{
   activity_id: string;
@@ -2381,6 +2434,58 @@ export type GarminActivityLapsQueryHookResult = ReturnType<typeof useGarminActiv
 export type GarminActivityLapsLazyQueryHookResult = ReturnType<typeof useGarminActivityLapsLazyQuery>;
 export type GarminActivityLapsSuspenseQueryHookResult = ReturnType<typeof useGarminActivityLapsSuspenseQuery>;
 export type GarminActivityLapsQueryResult = ApolloReactCommon.QueryResult<GarminActivityLapsQuery, GarminActivityLapsQueryVariables>;
+export const GarminActivitySensorsDocument = gql`
+    query GarminActivitySensors($activity_id: String!) {
+  garminActivitySensors(activity_id: $activity_id) {
+    id
+    activity_id
+    device_index
+    is_primary
+    device_type
+    manufacturer
+    product_name
+    software_version
+    battery_status
+    battery_voltage
+  }
+}
+    `;
+
+/**
+ * __useGarminActivitySensorsQuery__
+ *
+ * To run a query within a React component, call `useGarminActivitySensorsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGarminActivitySensorsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGarminActivitySensorsQuery({
+ *   variables: {
+ *      activity_id: // value for 'activity_id'
+ *   },
+ * });
+ */
+export function useGarminActivitySensorsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables> & ({ variables: GarminActivitySensorsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+      }
+export function useGarminActivitySensorsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+        }
+// @ts-ignore
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>;
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GarminActivitySensorsQuery | undefined, GarminActivitySensorsQueryVariables>;
+export function useGarminActivitySensorsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>(GarminActivitySensorsDocument, options);
+        }
+export type GarminActivitySensorsQueryHookResult = ReturnType<typeof useGarminActivitySensorsQuery>;
+export type GarminActivitySensorsLazyQueryHookResult = ReturnType<typeof useGarminActivitySensorsLazyQuery>;
+export type GarminActivitySensorsSuspenseQueryHookResult = ReturnType<typeof useGarminActivitySensorsSuspenseQuery>;
+export type GarminActivitySensorsQueryResult = ApolloReactCommon.QueryResult<GarminActivitySensorsQuery, GarminActivitySensorsQueryVariables>;
 export const GarminActivityWeatherDocument = gql`
     query GarminActivityWeather($activity_id: String!) {
   garminActivityWeather(activity_id: $activity_id) {

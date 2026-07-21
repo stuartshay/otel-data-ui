@@ -275,6 +275,23 @@ export const GARMIN_ACTIVITY_LAPS_QUERY = gql`
   }
 `
 
+export const GARMIN_ACTIVITY_SENSORS_QUERY = gql`
+  query GarminActivitySensors($activity_id: String!) {
+    garminActivitySensors(activity_id: $activity_id) {
+      id
+      activity_id
+      device_index
+      is_primary
+      device_type
+      manufacturer
+      product_name
+      software_version
+      battery_status
+      battery_voltage
+    }
+  }
+`
+
 export const GARMIN_ACTIVITY_WEATHER_QUERY = gql`
   query GarminActivityWeather($activity_id: String!) {
     garminActivityWeather(activity_id: $activity_id) {
