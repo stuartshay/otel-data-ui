@@ -321,7 +321,6 @@ describe('SegmentElevationProfile', () => {
 
     // Advance to the end of the animation window; playback should stop and
     // report the final profile point.
-    now.mockReturnValue(6000)
     act(() => frameCallbacks.shift()?.(6000))
     act(() => frameCallbacks.shift()?.(6000))
 
@@ -364,6 +363,45 @@ describe('SegmentElevationProfile', () => {
     await user.click(
       screen.getByRole('button', { name: 'Hover profile point' }),
     )
+    expect(cancelFrame).toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+
+    requestFrame.mockRestore()
+    cancelFrame.mockRestore()
+    now.mockRestore()
+  })
+
+  it('resets the Play button when the route changes mid-playback', async () => {
+    const frameCallbacks: FrameRequestCallback[] = []
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const user = userEvent.setup()
+
+    const { rerender } = render(
+      <SegmentElevationProfile routePoints={routePoints} />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    act(() => frameCallbacks.shift()?.(0))
+    expect(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    ).toBeVisible()
+
+    const otherRoutePoints = routePoints.map((point) => ({ ...point }))
+    act(() => {
+      rerender(<SegmentElevationProfile routePoints={otherRoutePoints} />)
+    })
+
     expect(cancelFrame).toHaveBeenCalled()
     expect(
       screen.getByRole('button', { name: 'Play route playback' }),

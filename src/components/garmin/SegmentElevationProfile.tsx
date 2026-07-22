@@ -167,12 +167,14 @@ export function SegmentElevationProfile({
   }, [playingIndex, startPlayback, stopPlayback])
 
   // Stop any in-flight playback when the underlying route changes (e.g. a
-  // different segment is viewed) or the component unmounts.
+  // different segment is viewed), so the button doesn't get stuck showing
+  // Pause with no animation running.
   useEffect(() => {
     return () => {
       if (playbackFrameRef.current != null) {
         window.cancelAnimationFrame(playbackFrameRef.current)
         playbackFrameRef.current = null
+        setPlayingIndex(null)
       }
     }
   }, [routePoints])
