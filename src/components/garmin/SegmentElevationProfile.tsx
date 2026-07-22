@@ -1,18 +1,24 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Pause, Play } from 'lucide-react'
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import type { ActivityChartTrackPoint } from '@/components/garmin/ActivityChartData'
+import { Button } from '@/components/ui/button'
 import {
   buildSegmentElevationProfile,
   type SegmentElevationChartPoint,
 } from './SegmentElevationProfile.helpers'
+
+/** Total wall-clock time to animate from start to finish, in milliseconds. */
+const PLAYBACK_DURATION_MS = 6000
 
 type TooltipState =
   Readonly<{ activeTooltipIndex?: number | string | null }> | undefined
@@ -107,6 +113,70 @@ export function SegmentElevationProfile({
     [],
   )
 
+  const profile = useMemo(
+    () => buildSegmentElevationProfile(routePoints),
+    [routePoints],
+  )
+
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const playbackFrameRef = useRef<number | null>(null)
+
+  const stopPlayback = useCallback(() => {
+    if (playbackFrameRef.current != null) {
+      window.cancelAnimationFrame(playbackFrameRef.current)
+      playbackFrameRef.current = null
+    }
+    setPlayingIndex(null)
+    queueActivePointChange(null)
+  }, [queueActivePointChange])
+
+  const startPlayback = useCallback(() => {
+    if (!profile || profile.points.length < 2) return
+
+    const totalPoints = profile.points.length
+    const startTime = performance.now()
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(1, elapsed / PLAYBACK_DURATION_MS)
+      const index = Math.min(
+        totalPoints - 1,
+        Math.floor(progress * (totalPoints - 1)),
+      )
+
+      setPlayingIndex(index)
+      queueActivePointChange(profile.points[index])
+
+      if (progress >= 1) {
+        playbackFrameRef.current = null
+        setPlayingIndex(null)
+        return
+      }
+      playbackFrameRef.current = window.requestAnimationFrame(step)
+    }
+
+    playbackFrameRef.current = window.requestAnimationFrame(step)
+  }, [profile, queueActivePointChange])
+
+  const togglePlayback = useCallback(() => {
+    if (playbackFrameRef.current != null || playingIndex != null) {
+      stopPlayback()
+    } else {
+      startPlayback()
+    }
+  }, [playingIndex, startPlayback, stopPlayback])
+
+  // Stop any in-flight playback when the underlying route changes (e.g. a
+  // different segment is viewed) or the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (playbackFrameRef.current != null) {
+        window.cancelAnimationFrame(playbackFrameRef.current)
+        playbackFrameRef.current = null
+      }
+    }
+  }, [routePoints])
+
   if (loading) {
     return (
       <div
@@ -117,8 +187,6 @@ export function SegmentElevationProfile({
       </div>
     )
   }
-
-  const profile = buildSegmentElevationProfile(routePoints)
 
   if (!profile) {
     return (
@@ -131,6 +199,8 @@ export function SegmentElevationProfile({
     )
   }
 
+  const isPlaying = playingIndex != null
+  const playingPoint = isPlaying ? profile.points[playingIndex] : null
   const accessibleSummary = `Elevation profile from ${formatFeet(profile.startElevationFeet)} at the segment start to ${formatFeet(profile.finishElevationFeet)} at the finish, with ${formatFeet(profile.elevationGainFeet)} of elevation gain over ${profile.distanceMiles.toFixed(2)} miles.`
 
   return (
@@ -140,11 +210,33 @@ export function SegmentElevationProfile({
       aria-labelledby="segment-elevation-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 id="segment-elevation-heading" className="text-sm font-semibold">
-            Elevation
-          </h3>
-          <p className="text-xs text-muted-foreground">Start to finish</p>
+        <div className="flex items-start gap-3">
+          <div>
+            <h3
+              id="segment-elevation-heading"
+              className="text-sm font-semibold"
+            >
+              Elevation
+            </h3>
+            <p className="text-xs text-muted-foreground">Start to finish</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="segment-elevation-play-button"
+            aria-label={
+              isPlaying ? 'Pause route playback' : 'Play route playback'
+            }
+            onClick={togglePlayback}
+            disabled={profile.points.length < 2}
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Play className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
         </div>
         <dl className="grid grid-cols-3 gap-x-5">
           <ElevationStat
@@ -174,10 +266,14 @@ export function SegmentElevationProfile({
             onMouseMove={(state: {
               activeTooltipIndex?: number | string | null
             }) => {
+              if (isPlaying) stopPlayback()
               const point = pointFromTooltipState(state, profile.points)
               if (point) queueActivePointChange(point)
             }}
-            onMouseLeave={() => queueActivePointChange(null)}
+            onMouseLeave={() => {
+              if (isPlaying) return
+              queueActivePointChange(null)
+            }}
           >
             <defs>
               <linearGradient
@@ -220,6 +316,17 @@ export function SegmentElevationProfile({
               dot={false}
               activeDot={{ r: 4 }}
             />
+            {playingPoint && (
+              <ReferenceDot
+                x={playingPoint.distanceMiles}
+                y={playingPoint.elevationFeet}
+                r={5}
+                stroke="#111827"
+                strokeWidth={2}
+                fill="#ffffff"
+                ifOverflow="extendDomain"
+              />
+            )}
           </AreaChart>
         </ResponsiveContainer>
       </div>
