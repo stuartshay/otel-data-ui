@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { SegmentElevationProfile } from './SegmentElevationProfile'
@@ -37,6 +37,9 @@ vi.mock('recharts', () => ({
   ),
   Area: () => null,
   CartesianGrid: () => null,
+  ReferenceDot: ({ x, y }: { x: number; y: number }) => (
+    <div data-testid="elevation-playing-dot" data-x={x} data-y={y} />
+  ),
   Tooltip: ({
     formatter,
     labelFormatter,
@@ -278,6 +281,135 @@ describe('SegmentElevationProfile', () => {
 
     expect(requestFrame).not.toHaveBeenCalled()
     requestFrame.mockRestore()
+  })
+
+  it('animates the active point from start to finish when Play is clicked', async () => {
+    const frameCallbacks: FrameRequestCallback[] = []
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const onActivePointChange = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <SegmentElevationProfile
+        routePoints={routePoints}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    expect(requestFrame).toHaveBeenCalledTimes(1)
+
+    // Run the first queued frame at t=0 (start of the animation).
+    act(() => frameCallbacks.shift()?.(0))
+    // queueActivePointChange defers the actual callback by one more frame.
+    act(() => frameCallbacks.shift()?.(0))
+    expect(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    ).toBeVisible()
+    expect(screen.getByTestId('elevation-playing-dot')).toBeInTheDocument()
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
+    )
+
+    // Advance to the end of the animation window; playback should stop and
+    // report the final profile point.
+    act(() => frameCallbacks.shift()?.(6000))
+    act(() => frameCallbacks.shift()?.(6000))
+
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: null, longitude: null }),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByTestId('elevation-playing-dot'),
+    ).not.toBeInTheDocument()
+
+    requestFrame.mockRestore()
+    now.mockRestore()
+  })
+
+  it('stops playback when the user hovers the chart manually', async () => {
+    const frameCallbacks: FrameRequestCallback[] = []
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const user = userEvent.setup()
+
+    render(<SegmentElevationProfile routePoints={routePoints} />)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    act(() => frameCallbacks.shift()?.(0))
+    expect(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hover profile point' }),
+    )
+    expect(cancelFrame).toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+
+    requestFrame.mockRestore()
+    cancelFrame.mockRestore()
+    now.mockRestore()
+  })
+
+  it('resets the Play button when the route changes mid-playback', async () => {
+    const frameCallbacks: FrameRequestCallback[] = []
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const user = userEvent.setup()
+
+    const { rerender } = render(
+      <SegmentElevationProfile routePoints={routePoints} />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    act(() => frameCallbacks.shift()?.(0))
+    expect(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    ).toBeVisible()
+
+    const otherRoutePoints = routePoints.map((point) => ({ ...point }))
+    act(() => {
+      rerender(<SegmentElevationProfile routePoints={otherRoutePoints} />)
+    })
+
+    expect(cancelFrame).toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+
+    requestFrame.mockRestore()
+    cancelFrame.mockRestore()
+    now.mockRestore()
   })
 
   it('coalesces multiple hover events into the latest animation frame point', () => {
