@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { SegmentEffortLiveCells } from './SegmentEffortLiveCells'
 import {
   EFFORT_SORTS,
   bestEffortKey,
@@ -26,12 +27,28 @@ import {
   type SegmentEffort,
 } from './segmentEfforts'
 
+/**
+ * Only this many top rows (under the current sort) fetch live series data.
+ * Roughly one screen's worth of rows; keeps the request fan-out bounded on segments with
+ * hundreds of efforts while covering the rows users actually watch.
+ */
+const LIVE_ROW_LIMIT = 20
+
 interface SegmentEffortsLeaderboardProps {
   efforts: SegmentEffort[]
+  /** Saved segment id, required for the per-row live series query. */
+  segmentId?: number
+  /**
+   * Current playback/hover position as a 0..1 fraction of the segment, or
+   * null when idle. When set, top rows show speed/HR at that position.
+   */
+  activeFraction?: number | null
 }
 
 export function SegmentEffortsLeaderboard({
   efforts,
+  segmentId,
+  activeFraction = null,
 }: Readonly<SegmentEffortsLeaderboardProps>) {
   const [sort, setSort] = useState<EffortSort>('date')
 
@@ -67,6 +84,8 @@ export function SegmentEffortsLeaderboard({
               <TableHead>Distance</TableHead>
               <TableHead>Avg HR</TableHead>
               <TableHead>Max HR</TableHead>
+              <TableHead>Speed @ pt</TableHead>
+              <TableHead>HR @ pt</TableHead>
               <TableHead className="text-right">Activity</TableHead>
             </TableRow>
           </TableHeader>
@@ -114,6 +133,19 @@ export function SegmentEffortsLeaderboard({
                   <TableCell className="tabular-nums">
                     {formatHeartRate(effort.max_heart_rate)}
                   </TableCell>
+                  {segmentId != null ? (
+                    <SegmentEffortLiveCells
+                      segmentId={segmentId}
+                      effort={effort}
+                      activeFraction={activeFraction}
+                      enabled={index < LIVE_ROW_LIMIT}
+                    />
+                  ) : (
+                    <>
+                      <TableCell className="tabular-nums">—</TableCell>
+                      <TableCell className="tabular-nums">—</TableCell>
+                    </>
+                  )}
                   <TableCell className="text-right">
                     <Link
                       to={`/garmin/${effort.activity_id}`}

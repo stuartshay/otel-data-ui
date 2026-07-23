@@ -19,7 +19,10 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
 import { SegmentElevationProfile } from '@/components/garmin/SegmentElevationProfile'
-import type { SegmentElevationChartPoint } from '@/components/garmin/SegmentElevationProfile.helpers'
+import {
+  buildSegmentElevationProfile,
+  type SegmentElevationChartPoint,
+} from '@/components/garmin/SegmentElevationProfile.helpers'
 import { SegmentPointAddress } from '@/components/garmin/SegmentPointAddress'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
@@ -113,6 +116,25 @@ export function GarminSegmentDetailPage() {
           lat: activeElevationPoint.latitude,
           lng: activeElevationPoint.longitude,
         }
+      : null
+  // Same pure computation SegmentElevationProfile performs internally; the
+  // page needs the total distance to normalize the active point into a 0..1
+  // fraction for the leaderboard's live speed/HR cells.
+  const elevationProfile = useMemo(
+    () => buildSegmentElevationProfile(routePoints),
+    [routePoints],
+  )
+  const activeFraction =
+    activeElevationPoint != null &&
+    elevationProfile != null &&
+    elevationProfile.distanceMiles > 0
+      ? Math.min(
+          Math.max(
+            activeElevationPoint.distanceMiles / elevationProfile.distanceMiles,
+            0,
+          ),
+          1,
+        )
       : null
 
   const backLink = (
@@ -272,7 +294,11 @@ export function GarminSegmentDetailPage() {
           </CardHeader>
           <CardContent>
             {effortsStatusNode ?? (
-              <SegmentEffortsLeaderboard efforts={efforts} />
+              <SegmentEffortsLeaderboard
+                efforts={efforts}
+                segmentId={id}
+                activeFraction={activeFraction}
+              />
             )}
           </CardContent>
         </Card>

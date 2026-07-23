@@ -9,6 +9,10 @@ const segmentHooks = vi.hoisted(() => ({
   useGarminSegmentQuery: vi.fn(),
   useGarminSegmentEffortsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
+  useGarminSegmentEffortSeriesQuery: vi.fn(() => ({
+    data: undefined,
+    loading: false,
+  })),
 }))
 
 vi.mock('@/__generated__/graphql', () => segmentHooks)

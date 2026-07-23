@@ -1,9 +1,15 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SegmentEffortsLeaderboard } from './SegmentEffortsLeaderboard'
 import type { SegmentEffort } from './segmentEfforts'
+
+const seriesHooks = vi.hoisted(() => ({
+  useGarminSegmentEffortSeriesQuery: vi.fn(),
+}))
+
+vi.mock('@/__generated__/graphql', () => seriesHooks)
 
 function effort(overrides: Partial<SegmentEffort>): SegmentEffort {
   return {
@@ -22,13 +28,46 @@ function effort(overrides: Partial<SegmentEffort>): SegmentEffort {
   }
 }
 
-function renderLeaderboard(efforts: SegmentEffort[]) {
+function seriesResult(
+  bins: Array<Partial<{ speed_kmh: number | null; heart_rate: number | null }>>,
+) {
+  return {
+    loading: false,
+    data: {
+      garminSegmentEffortSeries: {
+        activity_id: 'activity',
+        effort_start: '2026-07-01T10:00:00Z',
+        effort_end: '2026-07-01T10:01:30Z',
+        bin_count: bins.length,
+        bins: bins.map((b, index) => ({
+          index,
+          fraction: (index + 0.5) / bins.length,
+          speed_kmh: b.speed_kmh ?? null,
+          heart_rate: b.heart_rate ?? null,
+        })),
+      },
+    },
+  }
+}
+
+function renderLeaderboard(
+  efforts: SegmentEffort[],
+  props: { segmentId?: number; activeFraction?: number | null } = {},
+) {
   render(
     <MemoryRouter>
-      <SegmentEffortsLeaderboard efforts={efforts} />
+      <SegmentEffortsLeaderboard efforts={efforts} {...props} />
     </MemoryRouter>,
   )
 }
+
+beforeEach(() => {
+  seriesHooks.useGarminSegmentEffortSeriesQuery.mockReset()
+  seriesHooks.useGarminSegmentEffortSeriesQuery.mockReturnValue({
+    data: undefined,
+    loading: false,
+  })
+})
 
 describe('SegmentEffortsLeaderboard', () => {
   it('defaults to most recent sort', () => {
@@ -130,5 +169,77 @@ describe('SegmentEffortsLeaderboard', () => {
       within(rows[0]).queryByTestId('segment-effort-pr'),
     ).not.toBeInTheDocument()
     expect(within(rows[1]).getByTestId('segment-effort-pr')).toBeVisible()
+  })
+
+  it('shows em dashes in the live columns when idle', () => {
+    renderLeaderboard([effort({})], { segmentId: 5, activeFraction: null })
+
+    const row = screen.getByTestId('segment-effort-row')
+    expect(
+      within(row).getByTestId('segment-effort-live-speed'),
+    ).toHaveTextContent('—')
+    expect(within(row).getByTestId('segment-effort-live-hr')).toHaveTextContent(
+      '—',
+    )
+    // Idle rows must not fetch: the query is mounted but skipped.
+    for (const call of seriesHooks.useGarminSegmentEffortSeriesQuery.mock
+      .calls) {
+      expect(call[0].skip).toBe(true)
+    }
+  })
+
+  it('shows speed and HR at the active fraction during playback', () => {
+    seriesHooks.useGarminSegmentEffortSeriesQuery.mockReturnValue(
+      seriesResult([
+        { speed_kmh: 16.09, heart_rate: 120 },
+        { speed_kmh: 32.19, heart_rate: 140 },
+      ]),
+    )
+
+    renderLeaderboard([effort({})], { segmentId: 5, activeFraction: 0.75 })
+
+    const row = screen.getByTestId('segment-effort-row')
+    // Fraction 0.75 of 2 bins → bin 1 (32.19 km/h ≈ 20.0 mph, 140 bpm).
+    expect(
+      within(row).getByTestId('segment-effort-live-speed'),
+    ).toHaveTextContent('20.0 mph')
+    expect(within(row).getByTestId('segment-effort-live-hr')).toHaveTextContent(
+      '140',
+    )
+
+    const call =
+      seriesHooks.useGarminSegmentEffortSeriesQuery.mock.calls.at(-1)?.[0]
+    expect(call.skip).toBe(false)
+    expect(call.variables).toEqual({
+      id: 5,
+      activity_id: 'activity',
+      effort_start: '2026-07-01T10:00:00Z',
+      effort_end: '2026-07-01T10:01:30Z',
+    })
+  })
+
+  it('only lets the top 20 rows of the current sort fetch series data', () => {
+    const efforts = Array.from({ length: 25 }, (_, i) =>
+      effort({
+        activity_id: `activity-${i}`,
+        activity_start_time: `2026-06-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
+        effort_start: `2026-06-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
+      }),
+    )
+
+    renderLeaderboard(efforts, { segmentId: 5, activeFraction: 0.5 })
+
+    const calls = seriesHooks.useGarminSegmentEffortSeriesQuery.mock.calls
+    expect(calls).toHaveLength(25)
+    const active = calls.filter((call) => call[0].skip === false)
+    expect(active).toHaveLength(20)
+  })
+
+  it('renders static em dashes without a segment id', () => {
+    renderLeaderboard([effort({})], { activeFraction: 0.5 })
+
+    expect(seriesHooks.useGarminSegmentEffortSeriesQuery).not.toHaveBeenCalled()
+    const row = screen.getByTestId('segment-effort-row')
+    expect(within(row).getAllByText('—').length).toBeGreaterThanOrEqual(2)
   })
 })
