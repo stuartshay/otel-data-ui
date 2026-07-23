@@ -9,7 +9,7 @@ const segmentHooks = vi.hoisted(() => ({
   useGarminSegmentQuery: vi.fn(),
   useGarminSegmentEffortsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
-  useGarminSegmentEffortSeriesQuery: vi.fn(() => ({
+  useGarminSegmentEffortSeriesBatchQuery: vi.fn(() => ({
     data: undefined,
     loading: false,
   })),

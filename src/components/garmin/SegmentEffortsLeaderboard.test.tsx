@@ -6,7 +6,7 @@ import { SegmentEffortsLeaderboard } from './SegmentEffortsLeaderboard'
 import type { SegmentEffort } from './segmentEfforts'
 
 const seriesHooks = vi.hoisted(() => ({
-  useGarminSegmentEffortSeriesQuery: vi.fn(),
+  useGarminSegmentEffortSeriesBatchQuery: vi.fn(),
 }))
 
 vi.mock('@/__generated__/graphql', () => seriesHooks)
@@ -28,22 +28,26 @@ function effort(overrides: Partial<SegmentEffort>): SegmentEffort {
   }
 }
 
-function seriesResult(
-  bins: Array<Partial<{ speed_kmh: number | null; heart_rate: number | null }>>,
+function batchResult(
+  itemsBins: Array<
+    Array<Partial<{ speed_kmh: number | null; heart_rate: number | null }>>
+  >,
 ) {
   return {
     loading: false,
     data: {
-      garminSegmentEffortSeries: {
-        activity_id: 'activity',
-        effort_start: '2026-07-01T10:00:00Z',
-        effort_end: '2026-07-01T10:01:30Z',
-        bin_count: bins.length,
-        bins: bins.map((b, index) => ({
-          index,
-          fraction: (index + 0.5) / bins.length,
-          speed_kmh: b.speed_kmh ?? null,
-          heart_rate: b.heart_rate ?? null,
+      garminSegmentEffortSeriesBatch: {
+        items: itemsBins.map((bins) => ({
+          activity_id: 'activity',
+          effort_start: '2026-07-01T10:00:00Z',
+          effort_end: '2026-07-01T10:01:30Z',
+          bin_count: bins.length,
+          bins: bins.map((b, index) => ({
+            index,
+            fraction: (index + 0.5) / bins.length,
+            speed_kmh: b.speed_kmh ?? null,
+            heart_rate: b.heart_rate ?? null,
+          })),
         })),
       },
     },
@@ -62,8 +66,8 @@ function renderLeaderboard(
 }
 
 beforeEach(() => {
-  seriesHooks.useGarminSegmentEffortSeriesQuery.mockReset()
-  seriesHooks.useGarminSegmentEffortSeriesQuery.mockReturnValue({
+  seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mockReset()
+  seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mockReturnValue({
     data: undefined,
     loading: false,
   })
@@ -181,18 +185,19 @@ describe('SegmentEffortsLeaderboard', () => {
     expect(within(row).getByTestId('segment-effort-live-hr')).toHaveTextContent(
       '—',
     )
-    // Idle rows must not fetch: the query is mounted but skipped.
-    for (const call of seriesHooks.useGarminSegmentEffortSeriesQuery.mock
-      .calls) {
-      expect(call[0].skip).toBe(true)
-    }
+    // Idle: the batch query is mounted but skipped, no fetch fires.
+    const call =
+      seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mock.calls.at(-1)?.[0]
+    expect(call.skip).toBe(true)
   })
 
   it('shows speed and HR at the active fraction during playback', () => {
-    seriesHooks.useGarminSegmentEffortSeriesQuery.mockReturnValue(
-      seriesResult([
-        { speed_kmh: 16.09, heart_rate: 120 },
-        { speed_kmh: 32.19, heart_rate: 140 },
+    seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mockReturnValue(
+      batchResult([
+        [
+          { speed_kmh: 16.09, heart_rate: 120 },
+          { speed_kmh: 32.19, heart_rate: 140 },
+        ],
       ]),
     )
 
@@ -208,17 +213,21 @@ describe('SegmentEffortsLeaderboard', () => {
     )
 
     const call =
-      seriesHooks.useGarminSegmentEffortSeriesQuery.mock.calls.at(-1)?.[0]
+      seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mock.calls.at(-1)?.[0]
     expect(call.skip).toBe(false)
     expect(call.variables).toEqual({
       id: 5,
-      activity_id: 'activity',
-      effort_start: '2026-07-01T10:00:00Z',
-      effort_end: '2026-07-01T10:01:30Z',
+      efforts: [
+        {
+          activity_id: 'activity',
+          effort_start: '2026-07-01T10:00:00Z',
+          effort_end: '2026-07-01T10:01:30Z',
+        },
+      ],
     })
   })
 
-  it('only lets the top 20 rows of the current sort fetch series data', () => {
+  it('only includes the top 20 rows of the current sort in the batch request', () => {
     const efforts = Array.from({ length: 25 }, (_, i) =>
       effort({
         activity_id: `activity-${i}`,
@@ -229,16 +238,22 @@ describe('SegmentEffortsLeaderboard', () => {
 
     renderLeaderboard(efforts, { segmentId: 5, activeFraction: 0.5 })
 
-    const calls = seriesHooks.useGarminSegmentEffortSeriesQuery.mock.calls
-    expect(calls).toHaveLength(25)
-    const active = calls.filter((call) => call[0].skip === false)
-    expect(active).toHaveLength(20)
+    // One batched call total (not one per row), covering only the top 20.
+    expect(
+      seriesHooks.useGarminSegmentEffortSeriesBatchQuery,
+    ).toHaveBeenCalledTimes(1)
+    const call =
+      seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mock.calls[0][0]
+    expect(call.skip).toBe(false)
+    expect(call.variables.efforts).toHaveLength(20)
   })
 
   it('renders static em dashes without a segment id', () => {
     renderLeaderboard([effort({})], { activeFraction: 0.5 })
 
-    expect(seriesHooks.useGarminSegmentEffortSeriesQuery).not.toHaveBeenCalled()
+    const call =
+      seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mock.calls.at(-1)?.[0]
+    expect(call.skip).toBe(true)
     const row = screen.getByTestId('segment-effort-row')
     expect(within(row).getAllByText('—').length).toBeGreaterThanOrEqual(2)
   })

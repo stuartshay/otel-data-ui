@@ -1,50 +1,42 @@
 import { TableCell } from '@/components/ui/table'
-import { useGarminSegmentEffortSeriesQuery } from '@/__generated__/graphql'
+import { formatHeartRate, formatSpeedMph } from './segmentEfforts'
 import {
-  formatHeartRate,
-  formatSpeedMph,
-  type SegmentEffort,
-} from './segmentEfforts'
-import { sampleAtFraction } from './segmentEffortSeries'
+  sampleAtFraction,
+  type SegmentEffortSeriesBin,
+} from './segmentEffortSeries'
 
 interface SegmentEffortLiveCellsProps {
-  segmentId: number
-  effort: SegmentEffort
+  /**
+   * This effort's series bins from the batched leaderboard-level fetch, or
+   * undefined while the batch is loading/hasn't been requested for this row.
+   */
+  bins: readonly SegmentEffortSeriesBin[] | undefined
   /**
    * Current playback/hover position as a 0..1 fraction of the segment, or
-   * null when idle. The series is only fetched once a position is active.
+   * null when idle.
    */
   activeFraction: number | null
-  /** Only top-ranked rows fetch series data; disabled rows render em dashes. */
+  /** Whether this row is within the batch's fetch window (top N rows). */
   enabled: boolean
+  /** Whether the batch request covering this row is in flight. */
+  loading: boolean
 }
 
 /**
- * The two live-value cells ("Speed @ pt" / "HR @ pt") for one leaderboard row.
- * Owns the per-effort series query so each row loads lazily and caches
- * independently; an effort's window is immutable, so the series never needs
- * refetching.
+ * The two live-value cells ("Speed @ pt" / "HR @ pt") for one leaderboard
+ * row. Purely presentational: the leaderboard fetches one batched series
+ * request for all visible rows and passes each row its own slice, so
+ * re-sorting or scrubbing playback never fans out into per-row requests.
  */
 export function SegmentEffortLiveCells({
-  segmentId,
-  effort,
+  bins,
   activeFraction,
   enabled,
+  loading,
 }: Readonly<SegmentEffortLiveCellsProps>) {
-  const { data, loading } = useGarminSegmentEffortSeriesQuery({
-    variables: {
-      id: segmentId,
-      activity_id: effort.activity_id,
-      effort_start: effort.effort_start,
-      effort_end: effort.effort_end,
-    },
-    skip: !enabled || activeFraction == null,
-    fetchPolicy: 'cache-first',
-  })
-
   const sample =
-    activeFraction != null && data
-      ? sampleAtFraction(data.garminSegmentEffortSeries.bins, activeFraction)
+    activeFraction != null && bins
+      ? sampleAtFraction(bins, activeFraction)
       : null
 
   if (activeFraction != null && enabled && loading) {

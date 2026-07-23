@@ -112,6 +112,29 @@ export const GARMIN_SEGMENT_EFFORT_SERIES_QUERY = gql`
   }
 `
 
+export const GARMIN_SEGMENT_EFFORT_SERIES_BATCH_QUERY = gql`
+  query GarminSegmentEffortSeriesBatch(
+    $id: Int!
+    $efforts: [GarminSegmentEffortSeriesBatchItemInput!]!
+    $bins: Int
+  ) {
+    garminSegmentEffortSeriesBatch(id: $id, efforts: $efforts, bins: $bins) {
+      items {
+        activity_id
+        effort_start
+        effort_end
+        bin_count
+        bins {
+          index
+          fraction
+          speed_kmh
+          heart_rate
+        }
+      }
+    }
+  }
+`
+
 export const CREATE_GARMIN_SEGMENT_MUTATION = gql`
   mutation CreateGarminSegment($input: CreateGarminSegmentInput!) {
     createGarminSegment(input: $input) {
