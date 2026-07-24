@@ -24,6 +24,7 @@ import {
   type SegmentElevationChartPoint,
 } from '@/components/garmin/SegmentElevationProfile.helpers'
 import { SegmentPointAddress } from '@/components/garmin/SegmentPointAddress'
+import { useReverseGeocodedRouteAddresses } from '@/components/garmin/useReverseGeocodedRouteAddresses'
 import { SegmentEffortsLeaderboard } from '@/components/garmin/SegmentEffortsLeaderboard'
 import { DeleteSegmentButton } from '@/components/garmin/DeleteSegmentButton'
 import {
@@ -107,6 +108,7 @@ export function GarminSegmentDetailPage() {
         : [],
     [segment, sourceTrackData?.garminChartData],
   )
+  useReverseGeocodedRouteAddresses(routePoints)
   const activeLatLng =
     activeElevationPoint?.latitude != null &&
     Number.isFinite(activeElevationPoint.latitude) &&
