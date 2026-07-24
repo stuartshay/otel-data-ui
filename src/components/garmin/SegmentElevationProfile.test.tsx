@@ -175,6 +175,25 @@ describe('SegmentElevationProfile', () => {
     ).toBeVisible()
   })
 
+  it('reuses a profile precomputed by the parent', () => {
+    const precomputedProfile = buildSegmentElevationProfile(routePoints)
+
+    render(
+      <SegmentElevationProfile
+        routePoints={[]}
+        precomputedProfile={precomputedProfile}
+      />,
+    )
+
+    expect(screen.getByTestId('elevation-area-chart')).toHaveAttribute(
+      'data-point-count',
+      '3',
+    )
+    expect(
+      screen.queryByTestId('segment-elevation-profile-empty'),
+    ).not.toBeInTheDocument()
+  })
+
   it('renders a clear fallback when elevation data is unavailable', () => {
     render(
       <SegmentElevationProfile

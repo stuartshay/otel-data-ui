@@ -83,6 +83,58 @@ export const GARMIN_SEGMENT_EFFORTS_QUERY = gql`
   }
 `
 
+export const GARMIN_SEGMENT_EFFORT_SERIES_QUERY = gql`
+  query GarminSegmentEffortSeries(
+    $id: Int!
+    $activity_id: String!
+    $effort_start: String!
+    $effort_end: String!
+    $bins: Int
+  ) {
+    garminSegmentEffortSeries(
+      id: $id
+      activity_id: $activity_id
+      effort_start: $effort_start
+      effort_end: $effort_end
+      bins: $bins
+    ) {
+      activity_id
+      effort_start
+      effort_end
+      bin_count
+      bins {
+        index
+        fraction
+        speed_kmh
+        heart_rate
+      }
+    }
+  }
+`
+
+export const GARMIN_SEGMENT_EFFORT_SERIES_BATCH_QUERY = gql`
+  query GarminSegmentEffortSeriesBatch(
+    $id: Int!
+    $efforts: [GarminSegmentEffortSeriesBatchItemInput!]!
+    $bins: Int
+  ) {
+    garminSegmentEffortSeriesBatch(id: $id, efforts: $efforts, bins: $bins) {
+      items {
+        activity_id
+        effort_start
+        effort_end
+        bin_count
+        bins {
+          index
+          fraction
+          speed_kmh
+          heart_rate
+        }
+      }
+    }
+  }
+`
+
 export const CREATE_GARMIN_SEGMENT_MUTATION = gql`
   mutation CreateGarminSegment($input: CreateGarminSegmentInput!) {
     createGarminSegment(input: $input) {
