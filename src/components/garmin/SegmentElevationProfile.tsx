@@ -126,22 +126,58 @@ export function SegmentElevationProfile({
   )
 
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  // Whether the animation loop is actively advancing. Distinct from
+  // playingIndex != null, which stays set while paused so the marker and
+  // Speed/HR cells keep showing the paused position instead of resetting.
+  const [isAnimating, setIsAnimating] = useState(false)
+  // The index playback was paused at, so Play resumes from there instead of
+  // always restarting at the beginning. Cleared whenever playback runs to
+  // completion or the route changes, so a finished or freshly-loaded route
+  // starts over from index 0.
+  const [pausedIndex, setPausedIndex] = useState<number | null>(null)
   const playbackFrameRef = useRef<number | null>(null)
 
+  // True stop/reset: cancels the animation frame and clears the active point
+  // entirely. Used when the route changes or the chart is hovered (which
+  // takes over the active-point display), not by the Pause button itself --
+  // that calls pausePlayback below so position is kept.
   const stopPlayback = useCallback(() => {
     if (playbackFrameRef.current != null) {
       window.cancelAnimationFrame(playbackFrameRef.current)
       playbackFrameRef.current = null
     }
+    setIsAnimating(false)
     setPlayingIndex(null)
+    setPausedIndex(null)
     queueActivePointChange(null)
   }, [queueActivePointChange])
+
+  // Pauses in place: cancels the animation frame but keeps the current
+  // position (both the displayed active point and pausedIndex), so a
+  // subsequent Play resumes from here instead of restarting.
+  const pausePlayback = useCallback(() => {
+    if (playbackFrameRef.current != null) {
+      window.cancelAnimationFrame(playbackFrameRef.current)
+      playbackFrameRef.current = null
+    }
+    setIsAnimating(false)
+    setPausedIndex(playingIndex)
+  }, [playingIndex])
 
   const startPlayback = useCallback(() => {
     if (!profile || profile.points.length < 2) return
 
     const totalPoints = profile.points.length
-    const startTime = performance.now()
+    const startIndex = pausedIndex ?? 0
+    // Back-date the start time so elapsed/PLAYBACK_DURATION_MS already
+    // reflects startIndex's progress -- resuming partway through plays only
+    // the remaining distance, over its proportional share of the full
+    // duration, rather than restarting the full 6s from the resume point.
+    const startTime =
+      performance.now() -
+      (startIndex / (totalPoints - 1)) * PLAYBACK_DURATION_MS
+    setIsAnimating(true)
+    setPausedIndex(null)
 
     const step = (now: number) => {
       const elapsed = now - startTime
@@ -156,6 +192,7 @@ export function SegmentElevationProfile({
 
       if (progress >= 1) {
         playbackFrameRef.current = null
+        setIsAnimating(false)
         setPlayingIndex(null)
         return
       }
@@ -163,26 +200,28 @@ export function SegmentElevationProfile({
     }
 
     playbackFrameRef.current = window.requestAnimationFrame(step)
-  }, [profile, queueActivePointChange])
+  }, [profile, pausedIndex, queueActivePointChange])
 
   const togglePlayback = useCallback(() => {
-    if (playbackFrameRef.current != null || playingIndex != null) {
-      stopPlayback()
+    if (isAnimating) {
+      pausePlayback()
     } else {
       startPlayback()
     }
-  }, [playingIndex, startPlayback, stopPlayback])
+  }, [isAnimating, pausePlayback, startPlayback])
 
   // Stop any in-flight playback when the underlying route changes (e.g. a
   // different segment is viewed), so the button doesn't get stuck showing
-  // Pause with no animation running.
+  // Pause with no animation running, and a new route always starts fresh.
   useEffect(() => {
     return () => {
       if (playbackFrameRef.current != null) {
         window.cancelAnimationFrame(playbackFrameRef.current)
         playbackFrameRef.current = null
-        setPlayingIndex(null)
       }
+      setIsAnimating(false)
+      setPlayingIndex(null)
+      setPausedIndex(null)
     }
   }, [routePoints])
 
@@ -208,8 +247,8 @@ export function SegmentElevationProfile({
     )
   }
 
-  const isPlaying = playingIndex != null
-  const playingPoint = isPlaying ? profile.points[playingIndex] : null
+  const hasPlaybackPosition = playingIndex != null
+  const playingPoint = hasPlaybackPosition ? profile.points[playingIndex] : null
   const accessibleSummary = `Elevation profile from ${formatFeet(profile.startElevationFeet)} at the segment start to ${formatFeet(profile.finishElevationFeet)} at the finish, with ${formatFeet(profile.elevationGainFeet)} of elevation gain over ${profile.distanceMiles.toFixed(2)} miles.`
 
   return (
@@ -235,12 +274,12 @@ export function SegmentElevationProfile({
             size="sm"
             data-testid="segment-elevation-play-button"
             aria-label={
-              isPlaying ? 'Pause route playback' : 'Play route playback'
+              isAnimating ? 'Pause route playback' : 'Play route playback'
             }
             onClick={togglePlayback}
             disabled={profile.points.length < 2}
           >
-            {isPlaying ? (
+            {isAnimating ? (
               <Pause className="h-4 w-4" aria-hidden="true" />
             ) : (
               <Play className="h-4 w-4" aria-hidden="true" />
@@ -275,12 +314,12 @@ export function SegmentElevationProfile({
             onMouseMove={(state: {
               activeTooltipIndex?: number | string | null
             }) => {
-              if (isPlaying) stopPlayback()
+              if (hasPlaybackPosition) stopPlayback()
               const point = pointFromTooltipState(state, profile.points)
               if (point) queueActivePointChange(point)
             }}
             onMouseLeave={() => {
-              if (isPlaying) return
+              if (hasPlaybackPosition) return
               queueActivePointChange(null)
             }}
           >
