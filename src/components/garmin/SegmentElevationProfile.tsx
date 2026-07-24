@@ -178,6 +178,11 @@ export function SegmentElevationProfile({
       (startIndex / (totalPoints - 1)) * PLAYBACK_DURATION_MS
     setIsAnimating(true)
     setPausedIndex(null)
+    // Set synchronously (not left to the first step() tick) so a Pause
+    // clicked before the first animation frame runs still has a position to
+    // pause at, instead of pausedIndex falling back to null/a reset.
+    setPlayingIndex(startIndex)
+    queueActivePointChange(profile.points[startIndex])
 
     const step = (now: number) => {
       const elapsed = now - startTime

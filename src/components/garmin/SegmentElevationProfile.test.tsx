@@ -324,16 +324,17 @@ describe('SegmentElevationProfile', () => {
     await user.click(
       screen.getByRole('button', { name: 'Play route playback' }),
     )
-    expect(requestFrame).toHaveBeenCalledTimes(1)
-
-    // Run the first queued frame at t=0 (start of the animation).
-    act(() => frameCallbacks.shift()?.(0))
-    // queueActivePointChange defers the actual callback by one more frame.
-    act(() => frameCallbacks.shift()?.(0))
+    // startPlayback emits the starting point synchronously (so a Pause
+    // clicked before the first tick still has a position), which itself
+    // queues one coalescing frame, plus the actual playback step frame.
+    expect(requestFrame).toHaveBeenCalledTimes(2)
     expect(
       screen.getByRole('button', { name: 'Pause route playback' }),
     ).toBeVisible()
     expect(screen.getByTestId('elevation-playing-dot')).toBeInTheDocument()
+
+    // Run the queued coalescing frame for the synchronous starting point.
+    act(() => frameCallbacks.shift()?.(0))
     expect(onActivePointChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
     )
@@ -380,6 +381,15 @@ describe('SegmentElevationProfile', () => {
     await user.click(
       screen.getByRole('button', { name: 'Play route playback' }),
     )
+    // startPlayback emits the starting point (index 0) synchronously, which
+    // queues one coalescing frame in addition to the real playback step.
+    // Drain it first so onActivePointChange reflects the start point before
+    // advancing into the animation itself.
+    act(() => frameCallbacks.shift()?.(0))
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
+    )
+
     // Advance partway through the animation (half the 6s duration), landing
     // on the middle profile point (index 1 of 3).
     act(() => frameCallbacks.shift()?.(3000))
@@ -419,6 +429,13 @@ describe('SegmentElevationProfile', () => {
     await user.click(
       screen.getByRole('button', { name: 'Play route playback' }),
     )
+    // Resuming also emits the paused point synchronously, queuing its own
+    // coalescing frame ahead of the real resumed step; drain it first.
+    act(() => frameCallbacks.shift()?.(100))
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.795, longitude: -73.955 }),
+    )
+
     act(() => frameCallbacks.shift()?.(3100))
     act(() => frameCallbacks.shift()?.(3100))
     expect(onActivePointChange).toHaveBeenLastCalledWith(
