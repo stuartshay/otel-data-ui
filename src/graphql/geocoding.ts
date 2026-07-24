@@ -26,6 +26,19 @@ export const REVERSE_GEOCODE_POINT_QUERY = gql`
   }
 `
 
+export const REVERSE_GEOCODE_POINTS_BATCH_QUERY = gql`
+  query ReverseGeocodePointsBatch($points: [ReverseGeocodePointInput!]!) {
+    reverseGeocodePointsBatch(points: $points) {
+      items {
+        latitude
+        longitude
+        display_address
+        status
+      }
+    }
+  }
+`
+
 export const TRIGGER_GEOCODING_MUTATION = gql`
   mutation TriggerGeocoding($batch_size: Int, $retry_failed: Boolean) {
     triggerGeocoding(batch_size: $batch_size, retry_failed: $retry_failed) {

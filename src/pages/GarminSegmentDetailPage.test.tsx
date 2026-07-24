@@ -13,6 +13,10 @@ const segmentHooks = vi.hoisted(() => ({
     data: undefined,
     loading: false,
   })),
+  useReverseGeocodePointsBatchQuery: vi.fn(() => ({
+    data: undefined,
+    loading: false,
+  })),
 }))
 
 vi.mock('@/__generated__/graphql', () => segmentHooks)

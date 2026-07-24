@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { useReverseGeocodePointLazyQuery } from '@/__generated__/graphql'
 
 export type ReverseGeocodedAddressState =
@@ -9,13 +15,70 @@ export type ReverseGeocodedAddressState =
   | { status: 'error' }
 
 // Round to ~11m precision so small jitter between adjacent samples reuses the
-// cache and we do not flood the geocoder while a cursor sweeps a chart.
-function roundCoord(value: number): number {
+// cache and we do not flood the geocoder while a cursor sweeps a chart. Also
+// the cell size used by otel-data-api's dense point-cell cache, so a rounded
+// key here matches one there exactly.
+export function roundCoord(value: number): number {
   return Math.round(value * 10_000) / 10_000
+}
+
+export function coordinateCacheKey(
+  latitude: number,
+  longitude: number,
+): string {
+  return `${roundCoord(latitude)},${roundCoord(longitude)}`
 }
 
 const DEBOUNCE_MS = 250
 const addressCache = new Map<string, string | null>()
+
+// Mutating addressCache alone does not re-render already-mounted consumers,
+// since it is a plain Map rather than React state. Seeding bumps this
+// version and notifies subscribers below so a point already on screen when a
+// batch prefetch lands picks up the newly-cached address immediately instead
+// of waiting on an unrelated re-render.
+let cacheVersion = 0
+const cacheSubscribers = new Set<() => void>()
+
+/**
+ * Seed the module-level address cache from a batch reverse-geocode prefetch
+ * (see useReverseGeocodedRouteAddresses). Only 'success' results are cached;
+ * 'pending'/'no_coverage'/'error' cells are left unset so the debounced
+ * single-point lookup in useReverseGeocodedAddress still runs for them when
+ * the cursor actually lands there, instead of permanently showing "No
+ * address found" for a point the batch endpoint simply hadn't cached yet.
+ */
+export function seedReverseGeocodedAddressCache(
+  results: readonly {
+    latitude: number
+    longitude: number
+    display_address?: string | null
+    status: string
+  }[],
+): void {
+  let seededAny = false
+  for (const result of results) {
+    if (result.status !== 'success') continue
+    const key = coordinateCacheKey(result.latitude, result.longitude)
+    if (!addressCache.has(key)) {
+      addressCache.set(key, result.display_address ?? null)
+      seededAny = true
+    }
+  }
+  if (seededAny) {
+    cacheVersion += 1
+    for (const notify of cacheSubscribers) notify()
+  }
+}
+
+function subscribeToCache(onChange: () => void): () => void {
+  cacheSubscribers.add(onChange)
+  return () => cacheSubscribers.delete(onChange)
+}
+
+function getCacheVersion(): number {
+  return cacheVersion
+}
 
 interface CoordinateTarget {
   key: string
@@ -65,6 +128,10 @@ export function useReverseGeocodedAddress(
     state: ReverseGeocodedAddressState
   } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // Re-render when a route-level batch prefetch seeds addressCache, so a
+  // point already on screen picks up its address without waiting on an
+  // unrelated re-render (the cache itself is a plain Map, not React state).
+  useSyncExternalStore(subscribeToCache, getCacheVersion, getCacheVersion)
 
   useEffect(() => {
     if (!target || addressCache.has(target.key)) return
@@ -74,6 +141,13 @@ export function useReverseGeocodedAddress(
     abortRef.current = controller
 
     const timer = window.setTimeout(async () => {
+      // Re-check the cache: a route-level batch prefetch (see
+      // useReverseGeocodedRouteAddresses) can seed this exact cell while this
+      // timer was pending, e.g. when both hooks mount together and the batch
+      // response resolves synchronously from Apollo's cache. Skip the
+      // now-redundant single-point request in that case; the render path
+      // below already reads straight from the cache once it is set.
+      if (addressCache.has(target.key)) return
       try {
         const response = await reverseGeocodePoint({
           variables: {
