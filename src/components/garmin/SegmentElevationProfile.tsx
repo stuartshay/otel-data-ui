@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import {
   buildSegmentElevationProfile,
   type SegmentElevationChartPoint,
+  type SegmentElevationProfileData,
 } from './SegmentElevationProfile.helpers'
 
 /** Total wall-clock time to animate from start to finish, in milliseconds. */
@@ -73,10 +74,13 @@ function ElevationStat({
 
 export function SegmentElevationProfile({
   routePoints,
+  precomputedProfile,
   loading = false,
   onActivePointChange,
 }: Readonly<{
   routePoints: readonly ActivityChartTrackPoint[]
+  /** Reuse a profile already built by the parent when it also needs the data. */
+  precomputedProfile?: SegmentElevationProfileData | null
   loading?: boolean
   onActivePointChange?: (point: SegmentElevationChartPoint | null) => void
 }>) {
@@ -114,8 +118,11 @@ export function SegmentElevationProfile({
   )
 
   const profile = useMemo(
-    () => buildSegmentElevationProfile(routePoints),
-    [routePoints],
+    () =>
+      precomputedProfile === undefined
+        ? buildSegmentElevationProfile(routePoints)
+        : precomputedProfile,
+    [precomputedProfile, routePoints],
   )
 
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)

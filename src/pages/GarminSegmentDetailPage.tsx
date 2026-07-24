@@ -117,9 +117,8 @@ export function GarminSegmentDetailPage() {
           lng: activeElevationPoint.longitude,
         }
       : null
-  // Same pure computation SegmentElevationProfile performs internally; the
-  // page needs the total distance to normalize the active point into a 0..1
-  // fraction for the leaderboard's live speed/HR cells.
+  // Build once and share with SegmentElevationProfile; the page also needs the
+  // total distance to normalize the active point for the live speed/HR cells.
   const elevationProfile = useMemo(
     () => buildSegmentElevationProfile(routePoints),
     [routePoints],
@@ -255,6 +254,7 @@ export function GarminSegmentDetailPage() {
             />
             <SegmentElevationProfile
               routePoints={routePoints}
+              precomputedProfile={elevationProfile}
               loading={sourceTrackLoading}
               onActivePointChange={handleActiveElevationPointChange}
             />
