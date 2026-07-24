@@ -61,8 +61,8 @@ describe('useReverseGeocodedRouteAddresses', () => {
       expect.objectContaining({
         variables: {
           points: [
-            { latitude: 41.10011, longitude: -74.20011 },
-            { latitude: 41.10021, longitude: -74.20021 },
+            { latitude: 41.1001, longitude: -74.2001 },
+            { latitude: 41.1002, longitude: -74.2002 },
           ],
         },
         skip: false,

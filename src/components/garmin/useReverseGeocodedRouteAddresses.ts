@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useReverseGeocodePointsBatchQuery } from '@/__generated__/graphql'
 import {
+  roundCoord,
   coordinateCacheKey,
   seedReverseGeocodedAddressCache,
 } from './useReverseGeocodedAddress'
@@ -37,7 +38,13 @@ function dedupedBatchPoints(
     const key = coordinateCacheKey(point.latitude, point.longitude)
     if (seen.has(key)) continue
     seen.add(key)
-    result.push({ latitude: point.latitude, longitude: point.longitude })
+    // Send the same rounded coordinates the key is derived from, rather than
+    // the raw point, so the request is explicit about resolving one address
+    // per ~11m cell instead of relying on the server rounding independently.
+    result.push({
+      latitude: roundCoord(point.latitude),
+      longitude: roundCoord(point.longitude),
+    })
     if (result.length >= MAX_BATCH_POINTS) break
   }
   return result
