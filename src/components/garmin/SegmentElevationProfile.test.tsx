@@ -324,16 +324,17 @@ describe('SegmentElevationProfile', () => {
     await user.click(
       screen.getByRole('button', { name: 'Play route playback' }),
     )
-    expect(requestFrame).toHaveBeenCalledTimes(1)
-
-    // Run the first queued frame at t=0 (start of the animation).
-    act(() => frameCallbacks.shift()?.(0))
-    // queueActivePointChange defers the actual callback by one more frame.
-    act(() => frameCallbacks.shift()?.(0))
+    // startPlayback emits the starting point synchronously (so a Pause
+    // clicked before the first tick still has a position), which itself
+    // queues one coalescing frame, plus the actual playback step frame.
+    expect(requestFrame).toHaveBeenCalledTimes(2)
     expect(
       screen.getByRole('button', { name: 'Pause route playback' }),
     ).toBeVisible()
     expect(screen.getByTestId('elevation-playing-dot')).toBeInTheDocument()
+
+    // Run the queued coalescing frame for the synchronous starting point.
+    act(() => frameCallbacks.shift()?.(0))
     expect(onActivePointChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
     )
@@ -354,6 +355,98 @@ describe('SegmentElevationProfile', () => {
     ).not.toBeInTheDocument()
 
     requestFrame.mockRestore()
+    now.mockRestore()
+  })
+
+  it('pauses in place and resumes from the paused position instead of restarting', async () => {
+    const frameCallbacks: FrameRequestCallback[] = []
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const onActivePointChange = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <SegmentElevationProfile
+        routePoints={routePoints}
+        onActivePointChange={onActivePointChange}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    // startPlayback emits the starting point (index 0) synchronously, which
+    // queues one coalescing frame in addition to the real playback step.
+    // Drain it first so onActivePointChange reflects the start point before
+    // advancing into the animation itself.
+    act(() => frameCallbacks.shift()?.(0))
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.79, longitude: -73.96 }),
+    )
+
+    // Advance partway through the animation (half the 6s duration), landing
+    // on the middle profile point (index 1 of 3).
+    act(() => frameCallbacks.shift()?.(3000))
+    act(() => frameCallbacks.shift()?.(3000))
+    expect(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    ).toBeVisible()
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.795, longitude: -73.955 }),
+    )
+
+    // Pause: the animation frame is cancelled, but the marker/active point
+    // stay at the paused position rather than resetting to null.
+    await user.click(
+      screen.getByRole('button', { name: 'Pause route playback' }),
+    )
+    expect(cancelFrame).toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+    expect(screen.getByTestId('elevation-playing-dot')).toBeInTheDocument()
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.795, longitude: -73.955 }),
+    )
+    // The mocked requestAnimationFrame queue does not actually remove a
+    // frame cancelled via cancelAnimationFrame (unlike a real browser), so
+    // drop the stale pre-pause frame that's still sitting in the queue
+    // before resuming, or it would run ahead of the fresh resumed step.
+    frameCallbacks.length = 0
+
+    // Resume: pressing Play again continues from the paused index instead of
+    // restarting at t=0. Paused halfway through (index 1 of 2), so only the
+    // remaining half of the 6000ms duration (3000ms of wall-clock time from
+    // the resume click) is needed to reach the final point -- a fresh
+    // restart would need the full 6000ms instead.
+    now.mockReturnValue(100)
+    await user.click(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    )
+    // Resuming also emits the paused point synchronously, queuing its own
+    // coalescing frame ahead of the real resumed step; drain it first.
+    act(() => frameCallbacks.shift()?.(100))
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: 40.795, longitude: -73.955 }),
+    )
+
+    act(() => frameCallbacks.shift()?.(3100))
+    act(() => frameCallbacks.shift()?.(3100))
+    expect(onActivePointChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: null, longitude: null }),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Play route playback' }),
+    ).toBeVisible()
+
+    requestFrame.mockRestore()
+    cancelFrame.mockRestore()
     now.mockRestore()
   })
 
