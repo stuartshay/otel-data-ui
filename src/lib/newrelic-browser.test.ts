@@ -69,6 +69,31 @@ describe('newrelic-browser', () => {
     expect(config.init.ajax.deny_list).toContain('bam.nr-data.net')
   })
 
+  it('allows distributed tracing headers on the GraphQL gateway origin', async () => {
+    mocks.getConfigMock.mockImplementation((key: string, fallback?: string) => {
+      const values: Record<string, string> = {
+        NRBA_ACCOUNT_ID: '12345',
+        NRBA_APPLICATION_ID: '67890',
+        NRBA_LICENSE_KEY: 'test-license-key',
+        GRAPHQL_URL: 'https://gateway.lab.informationcart.com',
+      }
+      return values[key] ?? fallback ?? ''
+    })
+
+    const { initNewRelicBrowser } = await import('./newrelic-browser')
+    initNewRelicBrowser()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config = (mocks.BrowserAgentMock.mock.calls as any[][])[0][0]
+    expect(config.init.distributed_tracing.enabled).toBe(true)
+    expect(config.init.distributed_tracing.cors_use_tracecontext_headers).toBe(
+      true,
+    )
+    expect(config.init.distributed_tracing.allowed_origins).toEqual([
+      'https://gateway.lab.informationcart.com',
+    ])
+  })
+
   it('does not throw when BrowserAgent constructor throws', async () => {
     mocks.getConfigMock.mockImplementation((key: string, fallback?: string) => {
       const values: Record<string, string> = {
