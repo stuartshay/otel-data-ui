@@ -7,13 +7,16 @@ describe('runtime config', () => {
     // don't set it themselves can silently inherit a previous test's value.
     window.__ENV__ = undefined
     // Vite loads .env.local into import.meta.env for test runs same as
-    // dev/build. A developer's local NRBA_* values there would otherwise
-    // leak into these tests non-deterministically once an empty
-    // window.__ENV__ value correctly falls through to it.
+    // dev/build. A developer's local values there would otherwise leak
+    // into these tests non-deterministically once an empty window.__ENV__
+    // value correctly falls through to it.
     vi.unstubAllEnvs()
     vi.stubEnv('VITE_NRBA_ACCOUNT_ID', '')
     vi.stubEnv('VITE_NRBA_APPLICATION_ID', '')
     vi.stubEnv('VITE_NRBA_LICENSE_KEY', '')
+    vi.stubEnv('VITE_NRBA_TRUST_KEY', '')
+    vi.stubEnv('VITE_NRBA_AGENT_ID', '')
+    vi.stubEnv('VITE_APP_VERSION', '')
   })
 
   it('prefers runtime window config over Vite env values', () => {
