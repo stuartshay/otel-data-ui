@@ -16,12 +16,21 @@ window.__ENV__ = {
   COGNITO_ISSUER: "${VITE_COGNITO_ISSUER:-https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K}",
   APP_VERSION: "${VITE_APP_VERSION:-dev}",
   APP_NAME: "${VITE_APP_NAME:-otel-data-ui}",
-  GEOCODER_URL: "${VITE_GEOCODER_URL:-https://geocoder.lab.informationcart.com}"
+  GEOCODER_URL: "${VITE_GEOCODER_URL:-https://geocoder.lab.informationcart.com}",
+  NRBA_ACCOUNT_ID: "${VITE_NRBA_ACCOUNT_ID:-}",
+  NRBA_APPLICATION_ID: "${VITE_NRBA_APPLICATION_ID:-}",
+  NRBA_LICENSE_KEY: "${VITE_NRBA_LICENSE_KEY:-}",
+  NRBA_TRUST_KEY: "${VITE_NRBA_TRUST_KEY:-}",
+  NRBA_AGENT_ID: "${VITE_NRBA_AGENT_ID:-}"
 };
 EOF
 
 echo "Generated runtime configuration:"
-cat /usr/share/nginx/html/config.js
+# Redact NRBA_* values in the log output -- they're not secret (the browser
+# ships them to every visitor regardless), but printing them into container
+# logs is needless exposure and reads as a leaked credential to anyone
+# grepping logs for key-shaped strings.
+sed -E 's/(NRBA_[A-Z_]+: ")[^"]*(")/\1[redacted]\2/' /usr/share/nginx/html/config.js
 
 # Start nginx
 exec nginx -g "daemon off;"

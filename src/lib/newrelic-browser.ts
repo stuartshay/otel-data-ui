@@ -30,7 +30,9 @@ export function initNewRelicBrowser(): void {
       init: {
         distributed_tracing: { enabled: true },
         privacy: { cookies_enabled: true },
-        ajax: { deny_list: [] },
+        // Exclude the agent's own beacon endpoint so it doesn't monitor
+        // (and generate AJAX events for) its own telemetry uploads.
+        ajax: { deny_list: ['bam.nr-data.net'] },
       },
       info: {
         beacon: 'bam.nr-data.net',

@@ -64,6 +64,9 @@ describe('newrelic-browser', () => {
     expect(config.info.applicationID).toBe('67890')
     expect(config.info.licenseKey).toBe('test-license-key')
     expect(config.loader_config.accountID).toBe('12345')
+    // The agent's own beacon endpoint must stay out of AJAX monitoring, or
+    // it generates events for its own telemetry uploads.
+    expect(config.init.ajax.deny_list).toContain('bam.nr-data.net')
   })
 
   it('does not throw when BrowserAgent constructor throws', async () => {
