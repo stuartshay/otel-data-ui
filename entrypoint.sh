@@ -26,7 +26,11 @@ window.__ENV__ = {
 EOF
 
 echo "Generated runtime configuration:"
-cat /usr/share/nginx/html/config.js
+# Redact NRBA_* values in the log output -- they're not secret (the browser
+# ships them to every visitor regardless), but printing them into container
+# logs is needless exposure and reads as a leaked credential to anyone
+# grepping logs for key-shaped strings.
+sed -E 's/(NRBA_[A-Z_]+: ")[^"]*(")/\1[redacted]\2/' /usr/share/nginx/html/config.js
 
 # Start nginx
 exec nginx -g "daemon off;"
