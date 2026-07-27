@@ -94,6 +94,26 @@ describe('newrelic-browser', () => {
     ])
   })
 
+  it('still initializes the agent when GRAPHQL_URL cannot be parsed', async () => {
+    mocks.getConfigMock.mockImplementation((key: string, fallback?: string) => {
+      const values: Record<string, string> = {
+        NRBA_ACCOUNT_ID: '12345',
+        NRBA_APPLICATION_ID: '67890',
+        NRBA_LICENSE_KEY: 'test-license-key',
+        GRAPHQL_URL: 'http://[', // malformed even with a base URL
+      }
+      return values[key] ?? fallback ?? ''
+    })
+
+    const { initNewRelicBrowser } = await import('./newrelic-browser')
+    expect(() => initNewRelicBrowser()).not.toThrow()
+
+    expect(mocks.BrowserAgentMock).toHaveBeenCalledTimes(1)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config = (mocks.BrowserAgentMock.mock.calls as any[][])[0][0]
+    expect(config.init.distributed_tracing.allowed_origins).toEqual([])
+  })
+
   it('does not throw when BrowserAgent constructor throws', async () => {
     mocks.getConfigMock.mockImplementation((key: string, fallback?: string) => {
       const values: Record<string, string> = {

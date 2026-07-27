@@ -34,16 +34,26 @@ export function initNewRelicBrowser(): void {
     // standard W3C traceparent/tracestate headers (not just NR's
     // proprietary `newrelic` header), which is what the gateway's
     // OpenTelemetry SDK already knows how to continue as a parent span.
-    const graphqlOrigin = new URL(
-      getConfig('GRAPHQL_URL', 'https://gateway.lab.informationcart.com'),
-    ).origin
+    //
+    // Parsed defensively and outside the outer try: a malformed or
+    // relative GRAPHQL_URL must not abort NR agent init entirely (it would
+    // otherwise silently disable the agent even with valid NRBA config).
+    let graphqlOrigin: string | undefined
+    try {
+      graphqlOrigin = new URL(
+        getConfig('GRAPHQL_URL', 'https://gateway.lab.informationcart.com'),
+        window.location.origin,
+      ).origin
+    } catch {
+      graphqlOrigin = undefined
+    }
 
     agent = new BrowserAgent({
       init: {
         distributed_tracing: {
           enabled: true,
           cors_use_tracecontext_headers: true,
-          allowed_origins: [graphqlOrigin],
+          allowed_origins: graphqlOrigin ? [graphqlOrigin] : [],
         },
         privacy: { cookies_enabled: true },
         // Exclude the agent's own beacon endpoint so it doesn't monitor
