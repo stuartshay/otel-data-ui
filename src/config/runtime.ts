@@ -26,8 +26,17 @@ export function getConfig<K extends keyof RuntimeConfig>(
 ): string {
   if (typeof window !== 'undefined' && window.__ENV__) {
     const value = window.__ENV__[key]
-    if (value !== undefined && value !== null) {
-      if (value !== '' || fallback !== undefined) return value
+    // An empty string from window.__ENV__ (entrypoint.sh always writes every
+    // key, even when the underlying container env var is unset) must fall
+    // through to the Vite env / fallback below rather than winning outright
+    // -- otherwise a caller-supplied fallback can never actually be used at
+    // runtime. Verified live: this silently zeroed out NRBA_TRUST_KEY/
+    // NRBA_AGENT_ID (falling back to accountId/applicationId in
+    // newrelic-browser.ts), which made the agent's distributed-tracing
+    // payload generation bail out entirely (it requires a non-empty
+    // agentID) even with allowed_origins configured correctly.
+    if (value !== undefined && value !== null && value !== '') {
+      return value
     }
   }
 
