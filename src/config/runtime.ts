@@ -26,8 +26,11 @@ export function getConfig<K extends keyof RuntimeConfig>(
 ): string {
   if (typeof window !== 'undefined' && window.__ENV__) {
     const value = window.__ENV__[key]
-    if (value !== undefined && value !== null) {
-      if (value !== '' || fallback !== undefined) return value
+    // An empty string in window.__ENV__ must be treated as absent and fall
+    // through to the Vite env / fallback below -- otherwise a caller-
+    // supplied fallback can never actually be used at runtime.
+    if (value !== undefined && value !== null && value !== '') {
+      return value
     }
   }
 
