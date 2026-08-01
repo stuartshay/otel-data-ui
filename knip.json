@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/graphql/**/*.ts", "scripts/dedupe-generated-types.cjs"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.cjs"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreDependencies": [
+    "@sonar/scan",
+    "@stuartshay/otel-graphql-types",
+    "tailwindcss",
+    "tw-animate-css",
+    "@fontsource-variable/geist",
+    "shadcn"
+  ],
+  "ignoreBinaries": ["hadolint"]
+}
