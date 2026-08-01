@@ -13,7 +13,8 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
     "lint:spell": "cspell --no-progress --no-summary --gitignore \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \".github/**/*.{md,yml,yaml}\" \"docs/**/*.md\" \"*.md\" \"*.json\" \"*.ts\" \"*.js\" \"*.sh\" \"Dockerfile\" \"Makefile\" \"index.html\" \"nginx.conf\"",
-    "lint:all": "npm run lint && npm run lint:md && npm run lint:spell && npm run format:check",
+    "lint:docker": "if command -v hadolint >/dev/null 2>&1; then hadolint Dockerfile; else echo '⚠️  hadolint not installed, skipping Dockerfile lint (install: https://github.com/hadolint/hadolint#install)'; fi",
+    "lint:all": "npm run lint && npm run lint:md && npm run lint:docker && npm run lint:spell && npm run format:check",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\" \"**/*.md\"",
     "test": "vitest",
@@ -99,6 +100,9 @@
     "*.md": [
       "markdownlint-cli2 --fix",
       "prettier --write"
+    ],
+    "Dockerfile": [
+      "bash -c 'if command -v hadolint >/dev/null 2>&1; then hadolint Dockerfile; else echo \"⚠️  hadolint not installed, skipping Dockerfile lint (install: https://github.com/hadolint/hadolint#install)\"; fi'"
     ]
   }
 }
