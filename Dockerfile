@@ -1,10 +1,11 @@
 # =============================================================================
 # Stage 1: Build React application
 #
-# Pinned to $BUILDPLATFORM so multi-arch builds (linux/amd64,linux/arm64) run
-# `npm ci`/`vite build` natively on the runner instead of under QEMU. The
-# resulting dist/ is pure static assets and architecture-independent, so only
-# the final nginx stage needs to be cross-built.
+# Pinned to $BUILDPLATFORM so the cross-build to linux/arm64 (the only
+# deployment target, k8s-pi5-cluster) runs `npm ci`/`vite build` natively on
+# the amd64 GitHub runner instead of under QEMU. The resulting dist/ is pure
+# static assets and architecture-independent, so only the final nginx stage
+# needs to be cross-built.
 # =============================================================================
 FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
