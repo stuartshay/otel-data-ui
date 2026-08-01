@@ -227,25 +227,25 @@ describe('SegmentEffortsLeaderboard', () => {
     })
   })
 
-  it('only includes the top 20 rows of the current sort in the batch request', () => {
-    const efforts = Array.from({ length: 25 }, (_, i) =>
+  it('only includes the top 50 rows of the current sort in the batch request', () => {
+    const efforts = Array.from({ length: 55 }, (_, i) =>
       effort({
         activity_id: `activity-${i}`,
-        activity_start_time: `2026-06-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
-        effort_start: `2026-06-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
+        activity_start_time: `2026-06-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z`,
+        effort_start: `2026-06-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z`,
       }),
     )
 
     renderLeaderboard(efforts, { segmentId: 5, activeFraction: 0.5 })
 
-    // One batched call total (not one per row), covering only the top 20.
+    // One batched call total (not one per row), covering only the top 50.
     expect(
       seriesHooks.useGarminSegmentEffortSeriesBatchQuery,
     ).toHaveBeenCalledTimes(1)
     const call =
       seriesHooks.useGarminSegmentEffortSeriesBatchQuery.mock.calls[0][0]
     expect(call.skip).toBe(false)
-    expect(call.variables.efforts).toHaveLength(20)
+    expect(call.variables.efforts).toHaveLength(50)
   })
 
   it('renders static em dashes without a segment id', () => {

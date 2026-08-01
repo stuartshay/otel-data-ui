@@ -31,10 +31,13 @@ import {
 
 /**
  * Only this many top rows (under the current sort) fetch live series data.
- * Roughly one screen's worth of rows; keeps the request fan-out bounded on segments with
- * hundreds of efforts while covering the rows users actually watch.
+ * Matches the batch endpoint's request cap (SegmentEffortSeriesBatchRequest,
+ * otel-data-api's app/models/garmin.py) -- raising this further requires
+ * raising that limit too. Combined with the segment page's date-range
+ * filter, this keeps request fan-out bounded on segments with hundreds of
+ * efforts while covering the rows users actually watch.
  */
-const LIVE_ROW_LIMIT = 20
+const LIVE_ROW_LIMIT = 50
 
 interface SegmentEffortsLeaderboardProps {
   efforts: SegmentEffort[]
