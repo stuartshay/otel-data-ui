@@ -512,10 +512,27 @@ like other services. Do not pipe through `python3 -m json.tool` or `jq`.
 
 ### Dashboard Heatmap Smoke Test (Required)
 
-The Dashboard's Garmin Activity heatmap is the most common victim of GraphQL
-schema drift between this UI and `otel-data-gateway` (the `dailySummary` query
-shape changed from a bare array to a `DailySummaryConnection` with an `items`
-field). After every deploy, run these two checks before declaring success:
+The Dashboard's Garmin Activity heatmap has two independent known failure
+modes:
+
+1. GraphQL schema drift between this UI and `otel-data-gateway` (the
+   `dailySummary` query shape changed from a bare array to a
+   `DailySummaryConnection` with an `items` field).
+2. Stale data from `otel-data-api`'s `daily_activity_summary`
+   **materialized view** (converted from a plain view in migration 000037).
+   It only reflects reality when refreshed; a hung/failing
+   `daily_activity_summary_refresh` Airflow DAG (`@hourly`, otel-agents) lets
+   it silently freeze at its last-refresh snapshot while raw
+   `garmin_activities`/`locations` keep growing — no error, just a heatmap
+   that quietly stops advancing (this happened 2026-07-24 through 2026-07-31).
+   If the UI/gateway checks below pass but the heatmap still looks stale,
+   check the DAG's run history in the Airflow UI before assuming a UI bug,
+   or refresh it directly:
+   `curl -X POST https://<otel-data-api host>/internal/gps/daily-summary/refresh`
+   (internal-only endpoint; requires `INTERNAL_ENDPOINTS_ENABLED=true`, same
+   gate as the geocoding internal routes).
+
+After every deploy, run these two checks before declaring success:
 
 ```bash
 # 1) Verify the gateway returns the Connection shape with items.
