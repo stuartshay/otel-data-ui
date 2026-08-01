@@ -3,7 +3,7 @@
 [![Lint](https://github.com/stuartshay/otel-data-ui/actions/workflows/lint.yml/badge.svg)](https://github.com/stuartshay/otel-data-ui/actions/workflows/lint.yml)
 [![Docker](https://github.com/stuartshay/otel-data-ui/actions/workflows/docker.yml/badge.svg)](https://github.com/stuartshay/otel-data-ui/actions/workflows/docker.yml)
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-stuartshay%2Fotel--data--ui-blue?logo=docker)](https://hub.docker.com/repository/docker/stuartshay/otel-data-ui)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg?logo=renovatebot)](https://developer.mend.io/github/stuartshay/otel-data-ui)
 
@@ -26,8 +26,11 @@ flowchart LR
 ## Features
 
 - **GraphQL data layer** via Apollo Client — paginated queries, caching
-- **Interactive maps** with Leaflet / react-leaflet (OwnTracks + Garmin tracks)
+- **Interactive maps** with Leaflet (OwnTracks + Garmin tracks)
 - **Activity charts** with Recharts (elevation, speed, heart rate, temperature)
+- **Garmin segments** — saved route comparison with per-effort leaderboards
+- **Lap comparison** — side-by-side lap metrics across activities
+- **Geocoding tools** — reverse-geocode GPS points, coverage/backfill triggers
 - **AWS Cognito authentication** — PKCE flow via oidc-client-ts
 - **Runtime environment config** — container-friendly env injection at startup
 - **New Relic browser agent** — Real User Monitoring (RUM)
@@ -39,8 +42,8 @@ flowchart LR
 | Component     | Version           |
 | ------------- | ----------------- |
 | React         | 19.x              |
-| Vite          | 7.x               |
-| TypeScript    | 5.9               |
+| Vite          | 8.x               |
+| TypeScript    | 6.x               |
 | Apollo Client | 4.x               |
 | Tailwind CSS  | 4.x               |
 | shadcn/ui     | Manual components |
@@ -49,18 +52,23 @@ flowchart LR
 
 ## Routes
 
-| Path                   | Page                | Description                                            |
-| ---------------------- | ------------------- | ------------------------------------------------------ |
-| `/`                    | Dashboard           | Overview stats, device list, sport breakdown           |
-| `/locations`           | Locations           | OwnTracks GPS points with pagination and device filter |
-| `/locations/:id`       | Location Detail     | Single location with all fields                        |
-| `/garmin`              | Garmin Activities   | Activity table with sport filter                       |
-| `/garmin/:activityId`  | Garmin Detail       | Stats, elevation/speed charts, track map               |
-| `/map`                 | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
-| `/daily-summary`       | Daily Summary       | Combined daily activity table                          |
-| `/daily-summary/:date` | Daily Summary Day   | Day-level GPS point list with map                      |
-| `/references`          | Reference Locations | Saved location cards                                   |
-| `/spatial`             | Spatial Tools       | Nearby point search and distance calculator            |
+| Path                          | Page                | Description                                            |
+| ----------------------------- | ------------------- | ------------------------------------------------------ |
+| `/callback`                   | OAuth Callback      | Cognito PKCE redirect target; no sidebar/layout chrome |
+| `/`                           | Dashboard           | Overview stats, device list, sport breakdown           |
+| `/locations`                  | Locations           | OwnTracks GPS points with pagination and device filter |
+| `/locations/:id`              | Location Detail     | Single location with all fields                        |
+| `/garmin`                     | Garmin Activities   | Activity table with sport filter                       |
+| `/garmin/compare`             | Lap Comparison      | Side-by-side lap metrics across activities             |
+| `/garmin/segments`            | Saved Segments      | Named route segments (cards + mini-maps)               |
+| `/garmin/segments/:segmentId` | Segment Detail      | Segment map, elevation profile, effort leaderboard     |
+| `/garmin/:activityId`         | Garmin Detail       | Stats, elevation/speed charts, track map               |
+| `/map`                        | Unified Map         | Leaflet map with OwnTracks + Garmin points             |
+| `/daily-summary`              | Daily Summary       | Combined daily activity table                          |
+| `/daily-summary/:date`        | Daily Summary Day   | Day-level GPS point list with map                      |
+| `/references`                 | Reference Locations | Saved location cards                                   |
+| `/spatial`                    | Spatial Tools       | Nearby point search and distance calculator            |
+| `/geocoding`                  | Geocoding           | Reverse-geocoding coverage and manual trigger controls |
 
 ### Daily Summary Day detail (`/daily-summary/:date`)
 
@@ -120,34 +128,50 @@ npm run dev
 
 ## Environment Variables
 
-Create `.env.local`:
+Copy `.env.example` to `.env.local` and fill in `SONAR_TOKEN` (only needed
+for `make sonar`). The defaults already point at the shared lab gateway and
+Cognito pool:
 
 ```bash
 VITE_GRAPHQL_URL=https://gateway.lab.informationcart.com
 VITE_COGNITO_DOMAIN=homelab-auth.auth.us-east-1.amazoncognito.com
 VITE_COGNITO_CLIENT_ID=5j475mtdcm4qevh7q115qf1sfj
-VITE_COGNITO_REDIRECT_URI=https://data-ui.lab.informationcart.com/callback
+VITE_COGNITO_REDIRECT_URI=http://localhost:5173/callback
 VITE_COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ZL7M5Qa7K
+VITE_APP_VERSION=dev
+VITE_APP_NAME=otel-data-ui
 SONAR_HOST_URL=https://sonar.lab.informationcart.com
 SONAR_PROJECT_KEY=otel-data-ui
 SONAR_PROJECT_NAME=otel-data-ui
 SONAR_TOKEN=<generated SonarQube user token>
 ```
 
+`VITE_COGNITO_REDIRECT_URI` must match the callback URI registered for the
+Cognito app client — use `http://localhost:5173/callback` for local dev.
+The deployed environment injects its own values (including the production
+redirect URI) into `config.js` from the container's ConfigMap at startup,
+so this `.env.local` is only consulted for `npm run dev`/`npm run build`.
+
 ## Commands
 
 ```bash
 npm run dev           # Development server (port 5173)
-npm run build         # Production build
+npm run build         # Production build (tsc -b && vite build)
+npm run preview       # Preview the production build locally
+npm run codegen       # Regenerate GraphQL types from the gateway schema
+npm run codegen:watch # Regenerate on file change
 npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
+npm run lint:md       # Markdown lint
+npm run lint:docker   # Dockerfile lint (hadolint; skips gracefully if not installed)
+npm run lint:spell    # Spell check
 npm run format        # Prettier format
 npm run format:check  # Prettier check
-npm run lint:spell    # Spell check
+npm run lint:all      # All CI-blocking linters (lint, lint:md, lint:docker, lint:spell, format:check)
 npm run test          # Vitest watch mode
+npm run test:run      # Vitest single run
 npm run test:coverage # Vitest coverage run
 npm run type-check    # TypeScript check
-npm run lint:all      # All linters
 make sonar            # Coverage + SonarQube analysis
 ```
 
@@ -166,13 +190,13 @@ npx playwright test       # E2E tests (requires running services)
 
 ## CI/CD
 
-| Workflow           | File                     | Purpose                                                              |
-| ------------------ | ------------------------ | -------------------------------------------------------------------- |
-| Lint and Validate  | `lint.yml`               | ESLint, TypeScript, cspell, markdownlint, tests, hadolint, npm audit |
-| Docker             | `docker.yml`             | Build and push image to Docker Hub on master merge                   |
-| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published           |
-| Auto Approve       | `auto-approve.yml`       | Auto-approve PRs from renovate[bot] and dependabot[bot]              |
-| Validate PR Branch | `validate-pr-branch.yml` | Ensure PRs target the correct base branch                            |
+| Workflow           | File                     | Purpose                                                                                                                                   |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint and Validate  | `lint.yml`               | ESLint, TypeScript, cspell, markdownlint, hadolint, npm audit, and tests (80% minimum coverage enforced)                                  |
+| Docker             | `docker.yml`             | Build and push image to Docker Hub on master merge                                                                                        |
+| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published                                                                                |
+| Auto Approve       | `auto-approve.yml`       | Auto-approve renovate[bot]/dependabot[bot] PRs; for stuartshay-authored PRs, request a Copilot review then auto-approve once it completes |
+| Validate PR Branch | `validate-pr-branch.yml` | Enforce PR source branch naming (`feature/*`, `fix/*`, etc.)                                                                              |
 
 ## Docker
 
