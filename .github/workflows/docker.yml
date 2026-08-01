@@ -119,7 +119,8 @@ jobs:
         with:
           context: .
           # k8s-pi5-cluster (the only deployment target) is arm64-only --
-          # confirmed via `kubectl get nodes -o jsonpath='{.status.nodeInfo.architecture}'`
+          # confirmed via
+          # `kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}'`
           # across all 4 nodes. amd64 was never deployed, so building it
           # (on PRs and master alike) was pure waste; arm64 now covers both.
           platforms: linux/arm64
