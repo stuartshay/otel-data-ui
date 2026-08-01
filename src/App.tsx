@@ -12,7 +12,7 @@ import { CallbackPage } from '@/pages/CallbackPage'
 
 // Lazy-loaded so each route's code (and its dependencies, e.g. Leaflet,
 // Recharts) only downloads when a user actually navigates there, instead of
-// all 14 pages bundling into the single >800KB initial chunk. Dashboard and
+// all 15 pages bundling into the single >800KB initial chunk. Dashboard and
 // Callback stay static: Dashboard is the landing route (no loading flash on
 // first paint), Callback is the OAuth redirect target (must resolve fast).
 const LocationsPage = lazy(() =>
