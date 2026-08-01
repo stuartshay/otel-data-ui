@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -14,8 +14,9 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       output: {
         // Vite 8 uses Rolldown; the object form of `manualChunks` was removed.
-        // Use Rolldown's `advancedChunks.groups` to keep the same chunking.
-        advancedChunks: {
+        // Use Rolldown's `codeSplitting.groups` to keep the same chunking
+        // (this superseded `advancedChunks`, which is now deprecated).
+        codeSplitting: {
           groups: [
             {
               name: 'leaflet',
@@ -34,10 +35,4 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  ...(command === 'build' && {
-    esbuild: {
-      drop: ['debugger'],
-      pure: ['console.log', 'console.debug', 'console.info', 'console.warn'],
-    },
-  }),
 }))
