@@ -91,21 +91,23 @@ describe('App routes', () => {
     expect(screen.queryByText('Layout shell')).not.toBeInTheDocument()
   })
 
-  it('renders application routes inside the shared layout', () => {
+  it('renders application routes inside the shared layout', async () => {
     window.history.replaceState({}, '', '/references')
 
     render(<App />)
 
+    expect(await screen.findByText('References page')).toBeInTheDocument()
     expect(screen.getByText('Layout shell')).toBeInTheDocument()
-    expect(screen.getByText('References page')).toBeInTheDocument()
   })
 
-  it('renders the daily summary detail route inside the shared layout', () => {
+  it('renders the daily summary detail route inside the shared layout', async () => {
     window.history.replaceState({}, '', '/daily-summary/2026-03-14')
 
     render(<App />)
 
+    expect(
+      await screen.findByText('Daily summary detail page'),
+    ).toBeInTheDocument()
     expect(screen.getByText('Layout shell')).toBeInTheDocument()
-    expect(screen.getByText('Daily summary detail page')).toBeInTheDocument()
   })
 })
