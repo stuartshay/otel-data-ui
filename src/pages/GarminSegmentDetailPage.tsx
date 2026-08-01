@@ -5,16 +5,19 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { format as formatDate } from 'date-fns'
 import {
   useGarminSegmentQuery,
   useGarminSegmentEffortsQuery,
   useGarminChartDataQuery,
+  useGarminDateRangeQuery,
 } from '@/__generated__/graphql'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { DateRangePicker } from '@/components/shared/DateRangePicker'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SegmentStartEndMap } from '@/components/garmin/SegmentStartEndMap'
@@ -34,6 +37,7 @@ import {
 } from '@/components/garmin/segmentEfforts'
 import { getSegmentRoutePoints } from '@/components/garmin/segmentRoute'
 import { setNRCustomAttribute } from '@/lib/newrelic-browser'
+import { parseDateRangeParams, toLocalDate } from '@/lib/date-range'
 
 // 500 is the otel-data-api's max; an activity that laps a loop segment
 // several times now yields one effort per lap instead of just its fastest,
@@ -48,6 +52,7 @@ interface ActiveElevationSelection {
 export function GarminSegmentDetailPage() {
   const { segmentId } = useParams<{ segmentId: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const id = Number(segmentId)
   const validId = Number.isInteger(id) && id > 0
   const [activeElevationSelection, setActiveElevationSelection] =
@@ -75,13 +80,37 @@ export function GarminSegmentDetailPage() {
     refetch: refetchSegment,
   } = useGarminSegmentQuery({ variables: { id }, skip: !validId })
 
+  const dateFromParam = searchParams.get('date_from')
+  const dateToParam = searchParams.get('date_to')
+  const { data: dateRangeData } = useGarminDateRangeQuery()
+  const DATA_MIN_DATE = dateRangeData?.garminDateRange?.min_date
+    ? toLocalDate(dateRangeData.garminDateRange.min_date)
+    : undefined
+  const DATA_MAX_DATE = dateRangeData?.garminDateRange?.max_date
+    ? toLocalDate(dateRangeData.garminDateRange.max_date)
+    : new Date()
+  const {
+    dateFrom,
+    dateTo,
+    dateFromParam: dateFromStr,
+    dateToParam: dateToStr,
+  } = parseDateRangeParams(dateFromParam, dateToParam, {
+    minDate: DATA_MIN_DATE,
+    maxDate: DATA_MAX_DATE,
+  })
+
   const {
     data: effortsData,
     loading: effortsLoading,
     error: effortsError,
     refetch: refetchEfforts,
   } = useGarminSegmentEffortsQuery({
-    variables: { id, limit: EFFORTS_LIMIT },
+    variables: {
+      id,
+      limit: EFFORTS_LIMIT,
+      date_from: dateFromStr,
+      date_to: dateToStr,
+    },
     skip: !validId,
   })
 
@@ -209,7 +238,11 @@ export function GarminSegmentDetailPage() {
     effortsStatusNode = (
       <EmptyState
         title="No efforts yet"
-        message="No activities have traversed this segment's corridor."
+        message={
+          dateFromStr || dateToStr
+            ? 'No efforts match the selected date range. Try a different range.'
+            : "No activities have traversed this segment's corridor."
+        }
       />
     )
   }
@@ -291,8 +324,23 @@ export function GarminSegmentDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>Effort leaderboard</CardTitle>
+            <DateRangePicker
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              minDate={DATA_MIN_DATE}
+              maxDate={DATA_MAX_DATE}
+              onRangeChange={(from, to) => {
+                const params = new URLSearchParams(searchParams)
+                if (from)
+                  params.set('date_from', formatDate(from, 'yyyy-MM-dd'))
+                else params.delete('date_from')
+                if (to) params.set('date_to', formatDate(to, 'yyyy-MM-dd'))
+                else params.delete('date_to')
+                setSearchParams(params)
+              }}
+            />
           </CardHeader>
           <CardContent>
             {effortsStatusNode ?? (

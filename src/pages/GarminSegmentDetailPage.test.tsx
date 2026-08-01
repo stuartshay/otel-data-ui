@@ -9,6 +9,12 @@ const segmentHooks = vi.hoisted(() => ({
   useGarminSegmentQuery: vi.fn(),
   useGarminSegmentEffortsQuery: vi.fn(),
   useGarminChartDataQuery: vi.fn(),
+  useGarminDateRangeQuery: vi.fn(() => ({
+    data: {
+      garminDateRange: { min_date: '2010-01-01', max_date: '2026-07-31' },
+    },
+    loading: false,
+  })),
   useGarminSegmentEffortSeriesBatchQuery: vi.fn(() => ({
     data: undefined,
     loading: false,
