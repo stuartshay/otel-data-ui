@@ -332,6 +332,9 @@ describe('GarminSegmentDetailPage', () => {
         skip: true,
       }),
     )
+    expect(segmentHooks.useGarminDateRangeQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: true }),
+    )
   })
 
   it('renders the segment loading state', () => {

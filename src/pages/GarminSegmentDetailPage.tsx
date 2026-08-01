@@ -82,7 +82,7 @@ export function GarminSegmentDetailPage() {
 
   const dateFromParam = searchParams.get('date_from')
   const dateToParam = searchParams.get('date_to')
-  const { data: dateRangeData } = useGarminDateRangeQuery()
+  const { data: dateRangeData } = useGarminDateRangeQuery({ skip: !validId })
   const DATA_MIN_DATE = dateRangeData?.garminDateRange?.min_date
     ? toLocalDate(dateRangeData.garminDateRange.min_date)
     : undefined
