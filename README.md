@@ -54,6 +54,7 @@ flowchart LR
 
 | Path                          | Page                | Description                                            |
 | ----------------------------- | ------------------- | ------------------------------------------------------ |
+| `/callback`                   | OAuth Callback      | Cognito PKCE redirect target; no sidebar/layout chrome |
 | `/`                           | Dashboard           | Overview stats, device list, sport breakdown           |
 | `/locations`                  | Locations           | OwnTracks GPS points with pagination and device filter |
 | `/locations/:id`              | Location Detail     | Single location with all fields                        |
@@ -189,13 +190,13 @@ npx playwright test       # E2E tests (requires running services)
 
 ## CI/CD
 
-| Workflow           | File                     | Purpose                                                                                                  |
-| ------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Lint and Validate  | `lint.yml`               | ESLint, TypeScript, cspell, markdownlint, hadolint, npm audit, and tests (80% minimum coverage enforced) |
-| Docker             | `docker.yml`             | Build and push image to Docker Hub on master merge                                                       |
-| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published                                               |
-| Auto Approve       | `auto-approve.yml`       | Auto-approve PRs from renovate[bot] and dependabot[bot]                                                  |
-| Validate PR Branch | `validate-pr-branch.yml` | Enforce PR source branch naming (`feature/*`, `fix/*`, etc.)                                             |
+| Workflow           | File                     | Purpose                                                                                                                                   |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint and Validate  | `lint.yml`               | ESLint, TypeScript, cspell, markdownlint, hadolint, npm audit, and tests (80% minimum coverage enforced)                                  |
+| Docker             | `docker.yml`             | Build and push image to Docker Hub on master merge                                                                                        |
+| Update Types       | `update-types.yml`       | Auto-PR when `@stuartshay/otel-graphql-types` is published                                                                                |
+| Auto Approve       | `auto-approve.yml`       | Auto-approve renovate[bot]/dependabot[bot] PRs; for stuartshay-authored PRs, request a Copilot review then auto-approve once it completes |
+| Validate PR Branch | `validate-pr-branch.yml` | Enforce PR source branch naming (`feature/*`, `fix/*`, etc.)                                                                              |
 
 ## Docker
 
