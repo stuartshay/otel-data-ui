@@ -118,7 +118,12 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # k8s-pi5-cluster (the only deployment target) is arm64-only --
+          # confirmed via
+          # `kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}'`
+          # across all 4 nodes. amd64 was never deployed, so building it
+          # (on PRs and master alike) was pure waste; arm64 now covers both.
+          platforms: linux/arm64
           push: ${{ steps.push.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
