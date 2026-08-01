@@ -21,7 +21,7 @@ jobs:
           echo "Target branch: ${{ github.base_ref }}"
 
           # Check if source branch matches allowed patterns
-          if [[ "$HEAD_REF" =~ ^(develop|feature/.+|fix/.+|perf/.+|test/.+|codex/.+|update-.+|renovate/.+)$ ]]; then
+          if [[ "$HEAD_REF" =~ ^(develop|feature/.+|fix/.+|perf/.+|chore/.+|test/.+|codex/.+|update-.+|renovate/.+)$ ]]; then
             echo "✅ Valid source branch: $HEAD_REF"
             echo "PR is from an allowed branch - APPROVED"
           else
@@ -36,6 +36,7 @@ jobs:
             echo "  ✓ feature/* branches"
             echo "  ✓ fix/* branches"
             echo "  ✓ perf/* branches"
+            echo "  ✓ chore/* branches"
             echo "  ✓ test/* branches"
             echo "  ✓ codex/* branches"
             echo "  ✓ update-* branches (automated dependency updates)"
