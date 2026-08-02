@@ -14,7 +14,7 @@ export interface ComparisonLap {
   calories: number | null
 }
 
-export interface ComparisonActivity {
+interface ComparisonActivity {
   activity_id: string
   sport?: string | null
   sub_sport?: string | null
@@ -124,7 +124,7 @@ export function getMetricDef(metric: LapMetric): MetricDef {
   return LAP_METRICS.find((m) => m.key === metric) ?? LAP_METRICS[0]
 }
 
-export interface MatrixCell {
+interface MatrixCell {
   lapIndex: number
   value: number | null
   formatted: string
@@ -134,13 +134,13 @@ export interface MatrixCell {
   isPR: boolean
 }
 
-export interface MatrixRow {
+interface MatrixRow {
   activityId: string
   startTime: string | null
   cells: MatrixCell[]
 }
 
-export interface ColumnSummary {
+interface ColumnSummary {
   lapIndex: number
   best: string
   worst: string
