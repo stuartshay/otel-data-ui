@@ -12,7 +12,7 @@ import {
   type WeatherHourlyPoint,
 } from './WeatherHourlyBreakdown'
 
-export interface WeatherPanelData {
+interface WeatherPanelData {
   temperature_c?: number | null
   apparent_temperature_c?: number | null
   relative_humidity_pct?: number | null

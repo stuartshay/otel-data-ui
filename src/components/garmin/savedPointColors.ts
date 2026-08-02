@@ -3,7 +3,7 @@
  * from the route speed legend (blue/green/yellow/red) and the chart series
  * colors (gray elevation, blue speed) so saved markers stay visually separable.
  */
-export const SAVED_POINT_PALETTE = [
+const SAVED_POINT_PALETTE = [
   '#a855f7', // purple
   '#14b8a6', // teal
   '#ec4899', // pink
